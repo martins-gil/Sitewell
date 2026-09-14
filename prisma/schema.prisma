@@ -1,0 +1,287 @@
+// Sitepilot — Clinical Trial Site Platform
+// Prisma schema per PROJECT_SPEC.md section 3.
+// Row-level security (organization_id isolation) and the audit-log trigger
+// are added as raw SQL in prisma/migrations/<ts>_rls_and_audit/migration.sql
+// — Prisma's schema language cannot express RLS policies or triggers.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Runtime connection: the least-privilege app_runtime role (RLS-bound).
+  url       = env("DATABASE_URL")
+  // Migrations/seed connection: the owner role (full privileges, bypasses RLS).
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  CRC
+  PI
+  ORG_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum SubjectStatus {
+  IDENTIFIED
+  PRE_SCREENED
+  SCREENED
+  CONSENTED
+  ENROLLED
+  SCREEN_FAILED
+  WITHDRAWN
+}
+
+enum VisitStatus {
+  SCHEDULED
+  COMPLETED
+  MISSED
+  RESCHEDULED
+}
+
+enum DocumentType {
+  PROTOCOL
+  IB
+  ICF
+  DELEGATION_LOG
+  TRAINING_RECORD
+  OTHER
+}
+
+enum DocumentStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  SUPERSEDED
+}
+
+enum AuditAction {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  plan              String   @default("pilot")
+  region            String?
+  hostingPreference String?  @map("hosting_preference")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  users            User[]
+  studies          Study[]
+  sites            Site[]
+  subjects         Subject[]
+  studyAssignments StudyAssignment[]
+  templates        VisitScheduleTemplate[]
+  visits           Visit[]
+  documents        Document[]
+  auditLogs        AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  organizationId  String?  @map("organization_id")
+  email           String   @unique
+  passwordHash    String   @map("password_hash")
+  name            String
+  role            UserRole
+  isPlatformAdmin Boolean  @default(false) @map("is_platform_admin")
+
+  mfaEnabled Boolean @default(false) @map("mfa_enabled")
+  mfaSecret  String? @map("mfa_secret")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization     Organization?     @relation(fields: [organizationId], references: [id])
+  studyAssignments StudyAssignment[]
+  auditLogsAsActor AuditLog[]        @relation("auditActor")
+  signedDocuments  Document[]        @relation("documentSigner")
+
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Study {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  protocolId     String   @map("protocol_id")
+  title          String
+  phase          String?
+  status         String   @default("active")
+  sponsor        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization            @relation(fields: [organizationId], references: [id])
+  sites        Site[]
+  subjects     Subject[]
+  templates    VisitScheduleTemplate[]
+  documents    Document[]
+  assignments  StudyAssignment[]
+  visits       Visit[]
+
+  @@unique([organizationId, protocolId])
+  @@index([organizationId])
+  @@map("studies")
+}
+
+model Site {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  studyId        String?  @map("study_id")
+  name           String
+  address        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  study        Study?       @relation(fields: [studyId], references: [id])
+
+  @@index([organizationId])
+  @@map("sites")
+}
+
+model StudyAssignment {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  userId         String   @map("user_id")
+  studyId        String   @map("study_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id])
+  study        Study        @relation(fields: [studyId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, studyId])
+  @@index([organizationId])
+  @@map("study_assignments")
+}
+
+model Subject {
+  id                 String        @id @default(cuid())
+  organizationId     String        @map("organization_id")
+  studyId            String        @map("study_id")
+  subjectCode        String        @map("subject_code")
+  status             SubjectStatus @default(IDENTIFIED)
+  referralSource     String?       @map("referral_source")
+  ieCriteriaSnapshot Json?         @map("ie_criteria_snapshot")
+  isTestData         Boolean       @default(true) @map("is_test_data")
+  enrolledAt         DateTime?     @map("enrolled_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  study        Study        @relation(fields: [studyId], references: [id])
+  visits       Visit[]
+  documents    Document[]
+
+  @@unique([studyId, subjectCode])
+  @@index([organizationId])
+  @@index([studyId, status])
+  @@map("subjects")
+}
+
+model VisitScheduleTemplate {
+  id               String   @id @default(cuid())
+  organizationId   String   @map("organization_id")
+  studyId          String   @map("study_id")
+  name             String
+  targetDayOffset  Int      @map("target_day_offset")
+  windowBeforeDays Int      @default(0) @map("window_before_days")
+  windowAfterDays  Int      @default(0) @map("window_after_days")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  study        Study        @relation(fields: [studyId], references: [id])
+  visits       Visit[]
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([studyId])
+  @@map("visit_schedule_templates")
+}
+
+model Visit {
+  id             String      @id @default(cuid())
+  organizationId String      @map("organization_id")
+  subjectId      String      @map("subject_id")
+  studyId        String      @map("study_id")
+  templateId     String?     @map("template_id")
+  visitType      String      @map("visit_type")
+  targetDate     DateTime    @map("target_date")
+  windowStart    DateTime    @map("window_start")
+  windowEnd      DateTime    @map("window_end")
+  actualDate     DateTime?   @map("actual_date")
+  status         VisitStatus @default(SCHEDULED)
+  reminderSentAt DateTime?   @map("reminder_sent_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  subject      Subject                @relation(fields: [subjectId], references: [id])
+  study        Study                  @relation(fields: [studyId], references: [id])
+  template     VisitScheduleTemplate? @relation(fields: [templateId], references: [id])
+  organization Organization           @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([studyId, targetDate])
+  @@index([subjectId])
+  @@map("visits")
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  organizationId String         @map("organization_id")
+  studyId        String         @map("study_id")
+  subjectId      String?        @map("subject_id")
+  type           DocumentType
+  title          String
+  version        String
+  fileUrl        String         @map("file_url")
+  expiryDate     DateTime?      @map("expiry_date")
+  status         DocumentStatus @default(ACTIVE)
+  signedById     String?        @map("signed_by_id")
+  signedAt       DateTime?      @map("signed_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  study        Study        @relation(fields: [studyId], references: [id])
+  subject      Subject?     @relation(fields: [subjectId], references: [id])
+  signedBy     User?        @relation("documentSigner", fields: [signedById], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+  @@index([studyId, type])
+  @@index([expiryDate])
+  @@map("documents")
+}
+
+// Append-only. Writes happen exclusively via the audit_trigger_fn() Postgres
+// trigger (see the rls_and_audit migration) — application code never inserts
+// into this table directly, so the log reflects what actually happened at
+// the DB layer even if a bug bypasses app-level logging.
+model AuditLog {
+  id             String      @id @default(cuid())
+  organizationId String?     @map("organization_id")
+  tableName      String      @map("table_name")
+  recordId       String      @map("record_id")
+  action         AuditAction
+  actorId        String?     @map("actor_id")
+  before         Json?
+  after          Json?
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  actor        User?         @relation("auditActor", fields: [actorId], references: [id])
+
+  @@index([organizationId])
+  @@index([tableName, recordId])
+  @@map("audit_log")
+}
