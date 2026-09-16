@@ -37,17 +37,31 @@ picks this repo up next.
   to the console) — no email provider is configured. The due-visit query and
   `reminderSentAt` bookkeeping are real; only `sendReminderEmail`'s body is a
   stand-in.
+- **`audit_log.organizationId`/`actorId` have NO foreign keys**, deliberately.
+  They did originally; deleting an `organizations` row failed because the
+  trigger's own insert (logging the delete) violated the FK to the row being
+  deleted in the same statement, and the same shape of bug would block
+  deleting any user who'd ever performed a logged action. An audit trail has
+  to outlive the rows it describes. Don't add these FKs back.
+- **The proxy/middleware matcher excludes all of `/api/*`**, not just
+  `/api/auth` — found by testing: the `authorized` callback's redirect-to-
+  `/login` turns an unauthenticated `fetch()` into a 302-to-HTML instead of
+  JSON, breaking `res.json()` on the client. Each API route enforces its own
+  auth via `requireTenantContext()` instead. Don't narrow the matcher back to
+  just `api/auth` without re-solving this.
 
 ## Before calling a change done
 
 Run, in order: `npm run lint`, `npx tsc --noEmit`, `npm run build`. All three
-were clean as of Phase 0 — keep them that way.
+are clean as of this writing — keep them that way.
 
 ## Environment
 
-Built on a machine with no Git, Docker, or local Postgres — Node.js only.
-Migrations have not been run against a live database. If you're picking this
-up somewhere that has Postgres/Docker, treat `prisma/rls_and_audit.sql` as
-unverified until you've actually run it once and confirmed cross-org
-isolation with a manual test (create two orgs, confirm org A's session can't
-see org B's rows even as a raw SQL check against `app_runtime`).
+PostgreSQL 17 is installed locally (via winget) and the app has been run and
+clicked through end-to-end against it — login, MFA, RLS isolation (verified
+directly with raw SQL: a second org's rows are invisible to `app_runtime`
+scoped to org A, and a cross-tenant insert is rejected), the audit trigger,
+enrollment → auto visit generation, visit status actions, document
+upload/versioning/download, and the sign-permission check. No Docker.
+`.env` (gitignored) has the working local connection strings; `.env.example`
+documents the shape for setting this up elsewhere.

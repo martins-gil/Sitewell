@@ -79,7 +79,6 @@ model Organization {
   templates        VisitScheduleTemplate[]
   visits           Visit[]
   documents        Document[]
-  auditLogs        AuditLog[]
 
   @@map("organizations")
 }
@@ -101,7 +100,6 @@ model User {
 
   organization     Organization?     @relation(fields: [organizationId], references: [id])
   studyAssignments StudyAssignment[]
-  auditLogsAsActor AuditLog[]        @relation("auditActor")
   signedDocuments  Document[]        @relation("documentSigner")
 
   @@index([organizationId])
@@ -267,6 +265,15 @@ model Document {
 // trigger (see the rls_and_audit migration) — application code never inserts
 // into this table directly, so the log reflects what actually happened at
 // the DB layer even if a bug bypasses app-level logging.
+//
+// organizationId/actorId are deliberately NOT foreign keys. An audit trail
+// has to outlive the rows it describes — including the "organizations" row
+// itself: the trigger's own insert while deleting an org would otherwise
+// violate a FK to the row being deleted in the same statement, and a
+// legitimately deleted user would permanently block deletion via every past
+// audit_log row naming them as actor. Confirmed by testing (see README) that
+// deleting an org previously failed for exactly this reason before the FK
+// was removed.
 model AuditLog {
   id             String      @id @default(cuid())
   organizationId String?     @map("organization_id")
@@ -277,9 +284,6 @@ model AuditLog {
   before         Json?
   after          Json?
   createdAt      DateTime    @default(now()) @map("created_at")
-
-  organization Organization? @relation(fields: [organizationId], references: [id])
-  actor        User?         @relation("auditActor", fields: [actorId], references: [id])
 
   @@index([organizationId])
   @@index([tableName, recordId])

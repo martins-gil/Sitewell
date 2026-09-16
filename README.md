@@ -9,7 +9,21 @@ sequence; this file covers local setup and current status.
 (see PROJECT_SPEC.md section 0 / section 10). Rename before any real
 branding, domain, or commercial use.
 
-## Status: Phases 0–2 complete, Phase 3 mostly done
+## Status: Phases 0–2 complete, Phase 3 mostly done — running and verified locally
+
+PostgreSQL 17 is now installed locally and everything below has actually been
+run and clicked through, not just lint/typecheck/build: login, MFA
+setup/verify/disable, subject enrollment → auto visit generation, visit
+complete/miss/reschedule actions, the reminder pass, document upload with
+version supersede, download, and the sign-permission check. Two real bugs
+turned up during that testing and are fixed (see git log): `audit_log`'s
+foreign keys to `organizations`/`users` made the audit trigger break tenant
+deletion (removed — an audit trail needs to outlive what it describes), and
+the proxy/middleware matcher was redirecting unauthenticated API calls
+(`/api/login/precheck`) to the login *page* instead of failing as JSON,
+breaking the client fetch. RLS cross-tenant isolation was verified directly
+against Postgres (a second org's rows are invisible to `app_runtime` scoped
+to org A, and a cross-tenant insert is rejected).
 
 - ✅ Next.js 16 + TypeScript + Tailwind, App Router
 - ✅ Prisma schema for the full data model (organizations, studies, sites,
@@ -48,22 +62,24 @@ branding, domain, or commercial use.
 
 ## Environment note
 
-This was built on a machine with **no Git, Docker, or local Postgres
-installed** — only Node.js. That shaped a few decisions:
-
-- No local Postgres container. You need a cloud dev database (Neon or
-  Supabase both have a free tier and take a couple of minutes to set up —
-  see PROJECT_SPEC.md section 8) before you can actually run this.
-- The RLS + audit-trigger SQL (`prisma/rls_and_audit.sql`) couldn't be
-  applied or tested against a live database yet — it's written and
-  internally consistent, but treat it as unverified until you've run it once.
-- The repo has not been initialized as a git repository yet — do that
-  yourself (`git init`) once Git is available, or ask your assistant to.
+This machine originally had no Git, Docker, or local Postgres — only
+Node.js. Git and PostgreSQL 17 have since been installed (via winget) so the
+app could actually be run and tested rather than just typechecked. There's
+still no Docker. Local dev now runs against that local PostgreSQL 17
+instance (database `sitepilot`); see `.env` for the connection strings (not
+committed — `.env.example` documents the shape). A real deployment should
+still move to a managed host per PROJECT_SPEC.md section 8 — Phase 5, not
+before.
 
 ## First-time setup
 
-1. **Get a Postgres database.** Easiest: [neon.tech](https://neon.tech) or
-   [supabase.com](https://supabase.com), free tier, same region as you.
+This repo already has a working local `.env` (PostgreSQL 17 installed
+locally, migrations applied, seeded). These steps are for setting it up
+somewhere else — a teammate's machine, a cloud dev database, CI, etc.
+
+1. **Get a Postgres database.** Locally: install PostgreSQL and create a
+   database. Or in the cloud: [neon.tech](https://neon.tech) or
+   [supabase.com](https://supabase.com), free tier.
 2. **Copy `.env.example` to `.env`** and fill in `DATABASE_URL` /
    `DIRECT_URL` (see the comments in that file — they need to be two
    different Postgres *roles*, not just the same URL twice) and generate an
