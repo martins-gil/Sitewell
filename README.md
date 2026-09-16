@@ -9,7 +9,7 @@ sequence; this file covers local setup and current status.
 (see PROJECT_SPEC.md section 0 / section 10). Rename before any real
 branding, domain, or commercial use.
 
-## Status: Phase 0 complete (foundation), Phase 1 started
+## Status: Phases 0–2 complete, Phase 3 mostly done
 
 - ✅ Next.js 16 + TypeScript + Tailwind, App Router
 - ✅ Prisma schema for the full data model (organizations, studies, sites,
@@ -22,19 +22,27 @@ branding, domain, or commercial use.
 - ✅ Auth: email/password (Auth.js/NextAuth v5, credentials provider,
   bcrypt) + TOTP-based MFA (`otplib` + QR provisioning), JWT sessions
 - ✅ RBAC roles modeled (CRC, PI, Org Admin, Platform Admin) — enforcement is
-  via RLS + the `organizationId`/`role`/`isPlatformAdmin` on the session;
-  per-route/per-action authorization checks beyond "is the row in my org"
-  are still thin and should be hardened before Phase 5
+  via RLS + the `organizationId`/`role`/`isPlatformAdmin` on the session, plus
+  a couple of explicit role checks (signing a document); per-route/per-action
+  authorization is otherwise still coarse and should be hardened before
+  Phase 5
 - ✅ Seed script (`prisma/seed.ts`) generating one synthetic demo
   organization, 5 users, 2 studies, visit schedule templates, ~20-24
   subjects per study across the recruitment funnel, generated visits, and
   sample eISF documents — all flagged `is_test_data: true`
-- ✅ Module 1 (Recruitment): subject list with study/stage filters, I/E
-  criteria checklist display, referral source
-- 🟡 Module 2 (Visits): read-only list, not yet the calendar view or the
-  N-days-before email reminder
-- 🟡 Module 3 (Documents): read-only list with expiry highlighting, not yet
-  upload/versioning
+- ✅ Module 1 (Recruitment): subject list with study/stage filters, subject
+  detail page, I/E criteria checklist, referral source
+- ✅ Module 2 (Visits): protocol visit-schedule builder per study
+  (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
+  visits on enrollment, visit status actions (complete/miss/reschedule), a
+  manually-triggered N-days-before reminder pass (`/api/reminders/run` —
+  "sending" currently just logs to the server console; no email provider is
+  wired up yet, see `src/lib/reminders.ts`). Still a flat list, not a real
+  calendar view.
+- 🟡 Module 3 (Documents): upload with automatic version supersede, local-disk
+  storage (`src/lib/storage.ts` — prototype only, not Phase-5-ready), expiry
+  highlighting, a lightweight "sign" action. Not yet done: delegation
+  log/training-record-specific workflows beyond generic upload.
 - ⬜ Phase 3.5 (pilot testing), Phase 4 (dashboards), Phase 5 (commercial
   hardening) — not started, by design (see PROJECT_SPEC.md)
 

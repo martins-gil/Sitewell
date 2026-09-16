@@ -27,6 +27,16 @@ picks this repo up next.
   `true`. Per PROJECT_SPEC.md, no real subject/patient data is allowed in
   this system before Phase 5 — don't build a path that creates subjects with
   `is_test_data: false`.
+- **Document storage is local disk** (`src/lib/storage.ts`, files under the
+  gitignored `uploads/`), because no object storage (S3/R2/Vercel Blob) is
+  configured. `/api/documents/[id]/file` re-checks org access via
+  `withTenantContext` before reading the file — don't add a route that reads
+  from `uploads/` directly by path without going through that check first.
+  Swap `storage.ts` for a real object-storage client in Phase 5.
+- **Visit reminders don't send real email** yet (`src/lib/reminders.ts` logs
+  to the console) — no email provider is configured. The due-visit query and
+  `reminderSentAt` bookkeeping are real; only `sendReminderEmail`'s body is a
+  stand-in.
 
 ## Before calling a change done
 

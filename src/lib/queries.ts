@@ -35,6 +35,29 @@ export async function getSubjects(filters: { studyId?: string; status?: SubjectS
   );
 }
 
+export async function getStudyWithTemplates(studyId: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.study.findUnique({
+      where: { id: studyId },
+      include: { templates: { orderBy: { sortOrder: "asc" } } },
+    }),
+  );
+}
+
+export async function getSubjectById(id: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.subject.findUnique({
+      where: { id },
+      include: {
+        study: { select: { id: true, title: true, protocolId: true } },
+        visits: { orderBy: { targetDate: "asc" } },
+      },
+    }),
+  );
+}
+
 export async function getSubjectFunnelStats() {
   const ctx = await requireTenantContext();
   const grouped = await withTenantContext(ctx, (tx) =>
@@ -81,7 +104,10 @@ export async function getDocuments() {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
     tx.document.findMany({
-      include: { study: { select: { title: true, protocolId: true } } },
+      include: {
+        study: { select: { title: true, protocolId: true } },
+        signedBy: { select: { name: true } },
+      },
       orderBy: [{ expiryDate: "asc" }, { createdAt: "desc" }],
     }),
   );

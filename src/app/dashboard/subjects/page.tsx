@@ -1,4 +1,5 @@
 import type { SubjectStatus } from "@prisma/client";
+import Link from "next/link";
 import { getSubjects, getStudies } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
@@ -90,7 +91,9 @@ export default async function SubjectsPage({
               return (
                 <tr key={subject.id}>
                   <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
-                    {subject.subjectCode}
+                    <Link href={`/dashboard/subjects/${subject.id}`} className="hover:underline">
+                      {subject.subjectCode}
+                    </Link>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{subject.study.protocolId}</td>
                   <td className="whitespace-nowrap px-4 py-2">
