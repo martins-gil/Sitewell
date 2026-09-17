@@ -32,7 +32,18 @@ picks this repo up next.
   configured. `/api/documents/[id]/file` re-checks org access via
   `withTenantContext` before reading the file — don't add a route that reads
   from `uploads/` directly by path without going through that check first.
-  Swap `storage.ts` for a real object-storage client in Phase 5.
+  **This does not work on Vercel** — serverless functions there have a
+  read-only filesystem outside `/tmp`, and even `/tmp` doesn't persist or
+  share across invocations, so an uploaded file is gone (or the write fails
+  outright) by the time anything tries to read it back. Swap `storage.ts` for
+  a real object-storage client (S3/R2/Vercel Blob) before relying on document
+  upload in the deployed environment — this is the biggest gap between "runs
+  locally" and "actually usable by pilot testers on the deployed URL."
+- **`package.json` needs `"postinstall": "prisma generate"`.** Without it,
+  Vercel's build installs dependencies but never generates the Prisma
+  Client, and every page that touches the database 500s in production with
+  no useful error message (found by deploying and hitting a bare "Internal
+  Server Error" on the homepage). Don't remove this script.
 - **Visit reminders send real email via Resend** (`src/lib/email.ts`) when
   `RESEND_API_KEY` is set; otherwise `sendEmail` falls back to logging to the
   console. No Resend account exists in this environment, so the Resend path
