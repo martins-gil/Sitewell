@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_ADDRESS = process.env.EMAIL_FROM || "Sitepilot <onboarding@resend.dev>";
+const FROM_ADDRESS = process.env.EMAIL_FROM || "SiteWell-ct <onboarding@resend.dev>";
 
 let resendClient: Resend | null = null;
 function getResendClient(): Resend | null {

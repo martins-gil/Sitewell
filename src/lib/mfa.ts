@@ -1,7 +1,7 @@
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 
-const ISSUER = "Sitepilot";
+const ISSUER = "SiteWell-ct";
 
 export function generateMfaSecret(): string {
   return authenticator.generateSecret();

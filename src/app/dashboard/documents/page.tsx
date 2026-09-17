@@ -1,5 +1,6 @@
 import { getDocuments, getStudies } from "@/lib/queries";
 import { formatDate, humanizeEnum, isWithinDays } from "@/lib/format";
+import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { UploadDocumentForm } from "./upload-form";
 import { SignButton } from "./sign-button";
@@ -36,6 +37,7 @@ export default async function DocumentsPage() {
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {documents.map((doc) => {
               const expiringSoon = isWithinDays(doc.expiryDate, 60);
+              const displayStatus = getDocumentDisplayStatus(doc);
               const downloadHref = doc.fileUrl.startsWith("http")
                 ? doc.fileUrl
                 : `/api/documents/${doc.id}/file`;
@@ -59,13 +61,13 @@ export default async function DocumentsPage() {
                     {formatDate(doc.expiryDate)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">
-                    <Badge value={doc.status} />
+                    <Badge value={displayStatus} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                     {doc.signedBy ? `${doc.signedBy.name} · ${formatDate(doc.signedAt)}` : "—"}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">
-                    {!doc.signedBy && doc.status === "ACTIVE" && <SignButton documentId={doc.id} />}
+                    {displayStatus === "PENDING" && <SignButton documentId={doc.id} />}
                   </td>
                 </tr>
               );

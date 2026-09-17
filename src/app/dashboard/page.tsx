@@ -3,8 +3,9 @@ import { getSubjectFunnelStats, getUpcomingVisits, getExpiringDocuments } from "
 import { formatDate, humanizeEnum } from "@/lib/format";
 
 export default async function DashboardOverviewPage() {
-  const [funnel, upcomingVisits, expiringDocs] = await Promise.all([
+  const [funnel, visitsNextWeek, upcomingVisits, expiringDocs] = await Promise.all([
     getSubjectFunnelStats(),
+    getUpcomingVisits(7),
     getUpcomingVisits(14),
     getExpiringDocuments(60),
   ]);
@@ -18,11 +19,15 @@ export default async function DashboardOverviewPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/dashboard/subjects" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
-          <div className="text-sm text-neutral-500">Subjects in funnel</div>
+          <div className="text-sm text-neutral-500">Patients in funnel</div>
           <div className="mt-1 text-3xl font-semibold">{funnel.total}</div>
           <div className="mt-1 text-xs text-neutral-500">{funnel.conversionRate}% enrolled</div>
+        </Link>
+        <Link href="/dashboard/visits" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
+          <div className="text-sm text-neutral-500">Visits next week</div>
+          <div className="mt-1 text-3xl font-semibold">{visitsNextWeek.length}</div>
         </Link>
         <Link href="/dashboard/visits" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
           <div className="text-sm text-neutral-500">Visits in next 14 days</div>

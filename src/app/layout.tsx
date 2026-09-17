@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sitepilot",
-  description: "Clinical trial site platform — recruitment, visits, and eISF documents.",
+  title: "SiteWell-ct",
+  description: "Clinical trial site platform — patients, visits, and eISF documents.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

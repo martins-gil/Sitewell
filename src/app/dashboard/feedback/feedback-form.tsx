@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { submitFeedback } from "./actions";
 
 const AREAS = [
-  { value: "RECRUITMENT", label: "Recruitment" },
+  { value: "RECRUITMENT", label: "Patients" },
   { value: "VISITS", label: "Visits" },
   { value: "DOCUMENTS", label: "Documents" },
   { value: "STUDIES", label: "Studies" },

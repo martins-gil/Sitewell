@@ -238,6 +238,7 @@ model Visit {
   study        Study                  @relation(fields: [studyId], references: [id])
   template     VisitScheduleTemplate? @relation(fields: [templateId], references: [id])
   organization Organization           @relation(fields: [organizationId], references: [id])
+  documents    Document[]
 
   @@index([organizationId])
   @@index([studyId, targetDate])
@@ -250,6 +251,7 @@ model Document {
   organizationId String         @map("organization_id")
   studyId        String         @map("study_id")
   subjectId      String?        @map("subject_id")
+  visitId        String?        @map("visit_id")
   type           DocumentType
   title          String
   version        String
@@ -263,12 +265,14 @@ model Document {
 
   study        Study        @relation(fields: [studyId], references: [id])
   subject      Subject?     @relation(fields: [subjectId], references: [id])
+  visit        Visit?       @relation(fields: [visitId], references: [id])
   signedBy     User?        @relation("documentSigner", fields: [signedById], references: [id])
   organization Organization @relation(fields: [organizationId], references: [id])
 
   @@index([organizationId])
   @@index([studyId, type])
   @@index([expiryDate])
+  @@index([visitId])
   @@map("documents")
 }
 

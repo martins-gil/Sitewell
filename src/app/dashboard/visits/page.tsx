@@ -1,15 +1,16 @@
-import { getAllVisits } from "@/lib/queries";
+import { getAllVisits, getStudies } from "@/lib/queries";
 import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
 import type { CalendarVisit } from "./visits-calendar";
 
 export default async function VisitsPage() {
-  const visits = await getAllVisits();
+  const [visits, studies] = await Promise.all([getAllVisits(), getStudies()]);
 
   const calendarVisits: CalendarVisit[] = visits.map((v) => ({
     id: v.id,
     subjectId: v.subjectId,
     subjectCode: v.subject.subjectCode,
+    studyId: v.studyId,
     protocolId: v.study.protocolId,
     visitType: v.visitType,
     targetDate: v.targetDate.toISOString(),
@@ -28,7 +29,7 @@ export default async function VisitsPage() {
         <SendRemindersButton />
       </div>
 
-      <VisitsView tableVisits={visits} calendarVisits={calendarVisits} />
+      <VisitsView tableVisits={visits} calendarVisits={calendarVisits} studies={studies} />
     </div>
   );
 }

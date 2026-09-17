@@ -6,6 +6,7 @@ import { VisitRowActions } from "./visit-row-actions";
 export type TableVisit = {
   id: string;
   subjectId: string;
+  studyId: string;
   visitType: string;
   targetDate: Date;
   windowStart: Date;
@@ -41,7 +42,11 @@ export function VisitsTable({ visits }: { visits: TableVisit[] }) {
                 </Link>
               </td>
               <td className="whitespace-nowrap px-4 py-2">{v.study.protocolId}</td>
-              <td className="whitespace-nowrap px-4 py-2">{v.visitType}</td>
+              <td className="whitespace-nowrap px-4 py-2">
+                <Link href={`/dashboard/visits/${v.id}`} className="hover:underline">
+                  {v.visitType}
+                </Link>
+              </td>
               <td className="whitespace-nowrap px-4 py-2">{formatDate(v.targetDate)}</td>
               <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                 {formatDate(v.windowStart)} – {formatDate(v.windowEnd)}

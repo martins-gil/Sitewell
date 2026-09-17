@@ -82,6 +82,40 @@ picks this repo up next.
   WHERE migration_name = '...'` with the SHA-256 of the new file content
   (`Get-FileHash -Algorithm SHA256`), never `migrate reset` on a database with
   real work in it.
+- **Document status is computed, not stored** (`src/lib/document-status.ts`'s
+  `getDocumentDisplayStatus`) — Pending/Active/Expired derive live from
+  `signedAt`/`expiryDate`; the `status` column on `Document` only still holds
+  meaning for `SUPERSEDED` (set by the upload action when a newer version
+  replaces one). Never read `doc.status` directly for a user-facing badge —
+  always go through `getDocumentDisplayStatus`, or a fixed expiry date and an
+  unsigned document will keep showing whatever stale status it was created
+  with.
+- **Documents can be scoped to a study, a subject, AND/OR a specific visit**
+  (`Document.visitId`, nullable, added after the initial schema). The
+  supersede-on-reupload match key in `documents/actions.ts` includes
+  `visitId` — two documents with the same type/title but different visits
+  are NOT the same document version.
+- **Two ways of pushing a schema change to production**: `prisma migrate dev`
+  locally against `localhost:5432/sitepilot`, then `prisma migrate deploy`
+  against Neon with `DATABASE_URL`/`DIRECT_URL` temporarily overridden to the
+  Neon owner connection (see git history around the `add_document_visit_link`
+  migration for the exact commands). Vercel does NOT run migrations itself on
+  deploy — a schema change that's only applied locally will 500 in production
+  the moment a query touches the new column/table.
+- **Windows PowerShell + literal `$` in SQL (bcrypt hashes, anything
+  containing `$`)**: use a single-quoted here-string (`@'...'@`), never a
+  double-quoted one (`@"..."@`) — double-quoted here-strings interpolate `$`
+  as PowerShell variable references and will silently mangle a bcrypt hash
+  (found by creating a user whose password then didn't work — the stored
+  hash had been corrupted to a fragment of itself).
+- **Open request, not yet built**: a configurable per-visit procedure
+  checklist (ordered steps like "Registo no IWRS," "Colheita de sangue,"
+  each with a checkbox) that generates a document reproducing the site's
+  existing Word template layout (header with PI/Site No./Protocol No., a
+  table of steps with a "Verificado" column). Needs scoping before starting:
+  one global template vs. per-study/per-visit-type templates, and whether
+  the deliverable is a real generated file (e.g. via the `docx` npm package)
+  or an in-app fill-and-view checklist. Don't guess at this — ask.
 
 ## Before calling a change done
 
@@ -98,3 +132,11 @@ enrollment → auto visit generation, visit status actions, document
 upload/versioning/download, and the sign-permission check. No Docker.
 `.env` (gitignored) has the working local connection strings; `.env.example`
 documents the shape for setting this up elsewhere.
+
+**Also deployed and live**: https://sitewell-ct.vercel.app, GitHub repo
+`martins-gil/Sitewell`, Neon Postgres for production. Two databases exist —
+local (`sitepilot`) and Neon (`neondb`) — with independent seeded data
+(different random subject counts; that's expected, not a bug). Document
+upload does NOT work on the deployed site (see the local-disk-storage note
+above) even though it works locally — remember which environment you're
+testing against.

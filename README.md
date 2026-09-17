@@ -1,13 +1,19 @@
-# Sitepilot (working name)
+# SiteWell-ct
 
-Clinical trial site platform — recruitment tracking, visit scheduling, and
-eISF/regulatory documents, multi-tenant from the data model up. See
+Clinical trial site platform — patients, visit scheduling, and eISF/
+regulatory documents, multi-tenant from the data model up. See
 [PROJECT_SPEC.md](./PROJECT_SPEC.md) for the full product spec and build
-sequence; this file covers local setup and current status.
+sequence; this file covers local setup and current status. The npm package
+name and repo folder are still `sitepilot` — the app's own branding (title,
+login page, sidebar) is "SiteWell-ct," matching the deployed domain.
 
-**"Sitepilot" is a placeholder name** — it has not been trademark-checked
-(see PROJECT_SPEC.md section 0 / section 10). Rename before any real
-branding, domain, or commercial use.
+**"SiteWell-ct" has not been trademark-checked** (see PROJECT_SPEC.md
+section 0 / section 10). Confirm before any real commercial use — the
+"-ct" suffix exists only because "sitewell" was already taken on Vercel,
+not because it's part of an intended brand name; revisit before this goes
+any further.
+
+**Live deployment:** https://sitewell-ct.vercel.app (Vercel + Neon Postgres)
 
 ## Status: Phases 0–2 complete, Phase 3 mostly done — running and verified locally
 
@@ -44,22 +50,32 @@ to org A, and a cross-tenant insert is rejected).
   organization, 5 users, 2 studies, visit schedule templates, ~20-24
   subjects per study across the recruitment funnel, generated visits, and
   sample eISF documents — all flagged `is_test_data: true`
-- ✅ Module 1 (Recruitment): subject list with study/stage filters, subject
-  detail page, I/E criteria checklist, referral source
+- ✅ Module 1 (Patients — renamed from "Recruitment" per pilot feedback):
+  patient list with study/stage filters, patient detail page, an
+  interactively-editable I/E criteria list (free-text criterion + met/not-met,
+  not just the seeded snapshot), referral source
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a
-  coordinator calendar view (month grid, click a visit to jump to its
-  subject) with a toggle back to the flat list, and a manually-triggered
+  coordinator calendar with a study filter and a Month/Year toggle (Year
+  shows all 12 months at once with a dot per day that has a visit; clicking
+  a month or a marked day drills into Month view for it), a dedicated visit
+  detail page (`/dashboard/visits/[id]`) for uploading and browsing
+  documents scoped to that specific visit, and a manually-triggered
   N-days-before reminder pass (`/api/reminders/run`) that emails everyone
   assigned to the study via Resend (`src/lib/email.ts`) — falls back to
   logging to the console when `RESEND_API_KEY` isn't set (true in this
   environment; only the console path has actually been exercised — see
   CLAUDE.md).
-- 🟡 Module 3 (Documents): upload with automatic version supersede, local-disk
-  storage (`src/lib/storage.ts` — prototype only, not Phase-5-ready), expiry
-  highlighting, a lightweight "sign" action. Not yet done: delegation
-  log/training-record-specific workflows beyond generic upload.
+- 🟡 Module 3 (Documents): upload with automatic version supersede
+  (study+visit+type+title as the matching key), local-disk storage
+  (`src/lib/storage.ts` — prototype only, doesn't work on Vercel, see
+  CLAUDE.md), documents can now be scoped to a specific visit as well as a
+  study/subject, and status is Pending/Active/Expired/Superseded — computed
+  live from `signedAt`/`expiryDate` (`src/lib/document-status.ts`) rather
+  than a manually-maintained field, so it's never stale. Not yet done: a
+  configurable per-visit procedure checklist that generates a document
+  matching the site's existing Word template (open item — see CLAUDE.md).
 - 🟡 Phase 3.5 (pilot testing) started: an in-app `/dashboard/feedback` page
   (area tested, ease-of-use rating, what was confusing/broken, suggestions)
   that any logged-in user can submit and everyone in the org can read — not

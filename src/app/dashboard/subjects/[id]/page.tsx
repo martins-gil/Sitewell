@@ -4,6 +4,7 @@ import { getSubjectById } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { StatusControl } from "./status-control";
+import { IeCriteriaEditor } from "./ie-criteria";
 
 export default async function SubjectDetailPage({
   params,
@@ -20,7 +21,7 @@ export default async function SubjectDetailPage({
     <div className="max-w-3xl space-y-6">
       <div>
         <Link href="/dashboard/subjects" className="text-sm text-neutral-500 hover:underline">
-          ← Recruitment
+          ← Patients
         </Link>
         <div className="mt-1 flex items-center gap-3">
           <h1 className="font-mono text-2xl font-semibold tracking-tight">{subject.subjectCode}</h1>
@@ -42,20 +43,7 @@ export default async function SubjectDetailPage({
 
         <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
           <h2 className="mb-3 text-sm font-medium text-neutral-500">I/E criteria</h2>
-          {criteria && criteria.length > 0 ? (
-            <ul className="space-y-1 text-sm">
-              {criteria.map((c, i) => (
-                <li
-                  key={i}
-                  className={c.met ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}
-                >
-                  {c.met ? "✓" : "✗"} {c.criterion}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-neutral-400">No criteria recorded.</p>
-          )}
+          <IeCriteriaEditor subjectId={subject.id} initialCriteria={criteria ?? []} />
           <p className="mt-3 text-xs text-neutral-500">
             Referral source: {subject.referralSource ?? "—"}
           </p>
@@ -85,7 +73,11 @@ export default async function SubjectDetailPage({
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {subject.visits.map((v) => (
                 <tr key={v.id}>
-                  <td className="px-5 py-2">{v.visitType}</td>
+                  <td className="px-5 py-2">
+                    <Link href={`/dashboard/visits/${v.id}`} className="hover:underline">
+                      {v.visitType}
+                    </Link>
+                  </td>
                   <td className="px-5 py-2">{formatDate(v.targetDate)}</td>
                   <td className="px-5 py-2 text-neutral-500">
                     {formatDate(v.windowStart)} – {formatDate(v.windowEnd)}

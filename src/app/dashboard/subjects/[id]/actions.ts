@@ -34,3 +34,27 @@ export async function updateSubjectStatus(subjectId: string, status: SubjectStat
   revalidatePath("/dashboard/visits");
   revalidatePath("/dashboard");
 }
+
+type IeCriterion = { criterion: string; met: boolean };
+
+export async function addIeCriterion(subjectId: string, criterion: string, met: boolean) {
+  const ctx = await requireTenantContext();
+  const trimmed = criterion.trim();
+  if (!trimmed) throw new Error("Criterion text is required.");
+
+  await withTenantContext(ctx, async (tx) => {
+    const subject = await tx.subject.findUniqueOrThrow({
+      where: { id: subjectId },
+      select: { ieCriteriaSnapshot: true },
+    });
+    const existing = (subject.ieCriteriaSnapshot as IeCriterion[] | null) ?? [];
+    const updated = [...existing, { criterion: trimmed, met }];
+
+    await tx.subject.update({
+      where: { id: subjectId },
+      data: { ieCriteriaSnapshot: updated },
+    });
+  });
+
+  revalidatePath(`/dashboard/subjects/${subjectId}`);
+}

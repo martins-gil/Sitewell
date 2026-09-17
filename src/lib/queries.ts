@@ -58,6 +58,23 @@ export async function getSubjectById(id: string) {
   );
 }
 
+export async function getVisitById(id: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.visit.findUnique({
+      where: { id },
+      include: {
+        subject: { select: { id: true, subjectCode: true } },
+        study: { select: { id: true, title: true, protocolId: true } },
+        documents: {
+          include: { signedBy: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    }),
+  );
+}
+
 export async function getSubjectFunnelStats() {
   const ctx = await requireTenantContext();
   const grouped = await withTenantContext(ctx, (tx) =>

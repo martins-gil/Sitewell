@@ -10,6 +10,7 @@ export async function uploadDocument(formData: FormData) {
 
   const studyId = String(formData.get("studyId") ?? "");
   const subjectId = String(formData.get("subjectId") ?? "") || null;
+  const visitId = String(formData.get("visitId") ?? "") || null;
   const type = String(formData.get("type") ?? "") as DocumentType;
   const title = String(formData.get("title") ?? "").trim();
   const version = String(formData.get("version") ?? "").trim();
@@ -25,11 +26,11 @@ export async function uploadDocument(formData: FormData) {
     const study = await tx.study.findUniqueOrThrow({ where: { id: studyId } });
     const { relativePath } = await saveUploadedFile(study.organizationId, file);
 
-    // Versioning: uploading a document with the same study/subject/type/title
-    // as an existing ACTIVE one supersedes it rather than creating an
+    // Versioning: uploading a document with the same study/subject/visit/type/
+    // title as an existing ACTIVE one supersedes it rather than creating an
     // unrelated duplicate row.
     await tx.document.updateMany({
-      where: { studyId, subjectId, type, title, status: "ACTIVE" },
+      where: { studyId, subjectId, visitId, type, title, status: "ACTIVE" },
       data: { status: "SUPERSEDED" },
     });
 
@@ -38,6 +39,7 @@ export async function uploadDocument(formData: FormData) {
         organizationId: study.organizationId,
         studyId,
         subjectId,
+        visitId,
         type,
         title,
         version,
@@ -50,6 +52,7 @@ export async function uploadDocument(formData: FormData) {
 
   revalidatePath("/dashboard/documents");
   revalidatePath("/dashboard");
+  if (visitId) revalidatePath(`/dashboard/visits/${visitId}`);
 }
 
 // Stands in for a real 21 CFR Part 11 e-signature (Phase 5) — records who

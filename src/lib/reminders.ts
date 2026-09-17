@@ -18,7 +18,7 @@ async function sendReminderEmail(
     `Study: ${visit.study.protocolId}`,
     `Target date: ${visit.targetDate.toDateString()}`,
     ``,
-    `This is an automated reminder from Sitepilot.`,
+    `This is an automated reminder from SiteWell-ct.`,
   ].join("\n");
 
   await sendEmail({ to: recipients, subject, text });

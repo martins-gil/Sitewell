@@ -5,7 +5,7 @@ import { SignOutButton } from "./sign-out-button";
 
 const NAV = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/subjects", label: "Recruitment" },
+  { href: "/dashboard/subjects", label: "Patients" },
   { href: "/dashboard/studies", label: "Studies" },
   { href: "/dashboard/visits", label: "Visits" },
   { href: "/dashboard/documents", label: "Documents" },
@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <div className="flex min-h-full flex-1">
       <aside className="flex w-56 flex-col border-r border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
-        <div className="mb-6 px-2 text-lg font-semibold tracking-tight">Sitepilot</div>
+        <div className="mb-6 px-2 text-lg font-semibold tracking-tight">SiteWell-ct</div>
         <nav className="flex flex-1 flex-col gap-1">
           {NAV.map((item) => (
             <Link

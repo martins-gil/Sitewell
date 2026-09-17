@@ -15,7 +15,7 @@ const COLORS: Record<string, string> = {
   MISSED: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   RESCHEDULED: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   // Document status
-  DRAFT: "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300",
+  PENDING: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
   ACTIVE: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
   EXPIRED: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
   SUPERSEDED: "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
