@@ -85,6 +85,15 @@ to org A, and a cross-tenant insert is rejected).
   `study_assignments`, Site№ from `Site.siteNumber` — both blank-if-unset
   placeholders since neither is populated by the seed data yet), the
   ordered procedure table with a ✓ in Verificado for checked items.
+- ✅ Installable on iPad/Android as a PWA — "Add to Home Screen" from Safari
+  or Chrome gets an icon, a standalone (no browser chrome) window, and the
+  themed status bar (`src/app/manifest.ts`, icons in `public/icons/`, the
+  `appleWebApp`/`icons`/`other` block in `src/app/layout.tsx`). This is a
+  home-screen shortcut to the same web app, not a native app — no App
+  Store/Play Store listing, no offline mode (no service worker registered
+  on purpose, since one would risk serving a stale cached UI while this is
+  still under active iteration). Document upload still needs real
+  networking either way, so offline support wasn't a priority yet.
 - 🟡 Phase 3.5 (pilot testing) started: an in-app `/dashboard/feedback` page
   (area tested, ease-of-use rating, what was confusing/broken, suggestions)
   that any logged-in user can submit and everyone in the org can read — not
