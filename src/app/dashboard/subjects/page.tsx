@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSubjects, getStudies } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
+import { AddPatientForm } from "./add-patient-form";
 
 const STATUSES: SubjectStatus[] = [
   "IDENTIFIED",
@@ -31,11 +32,14 @@ export default async function SubjectsPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {subjects.length} subject{subjects.length === 1 ? "" : "s"} matching current filters
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            {subjects.length} subject{subjects.length === 1 ? "" : "s"} matching current filters
+          </p>
+        </div>
+        <AddPatientForm studies={studies} />
       </div>
 
       <form className="flex flex-wrap gap-3" method="get">
