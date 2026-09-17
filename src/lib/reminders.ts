@@ -1,30 +1,34 @@
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
+import { sendEmail } from "@/lib/email";
 
 const REMINDER_DAYS_BEFORE = 3;
 
-/**
- * No email provider is configured yet (prototype phase — see
- * PROJECT_SPEC.md section 7/8), so "sending" logs to the server console
- * instead of actually emailing anyone. Swap the body of this function for a
- * real provider call (Resend, SES, etc.) when one is wired up; every other
- * piece (the due-visit query, reminderSentAt bookkeeping) stays the same.
- */
-async function sendReminderEmail(visit: {
-  id: string;
-  visitType: string;
-  targetDate: Date;
-  subject: { subjectCode: string };
-  study: { protocolId: string };
-}) {
-  console.log(
-    `[reminder] ${visit.study.protocolId} ${visit.subject.subjectCode} — ${visit.visitType} due ${visit.targetDate.toDateString()}`,
-  );
+async function sendReminderEmail(
+  visit: {
+    visitType: string;
+    targetDate: Date;
+    subject: { subjectCode: string };
+    study: { protocolId: string };
+  },
+  recipients: string[],
+) {
+  const subject = `[${visit.study.protocolId}] Upcoming visit: ${visit.subject.subjectCode} — ${visit.visitType}`;
+  const text = [
+    `${visit.subject.subjectCode} has a ${visit.visitType} visit coming up.`,
+    `Study: ${visit.study.protocolId}`,
+    `Target date: ${visit.targetDate.toDateString()}`,
+    ``,
+    `This is an automated reminder from Sitepilot.`,
+  ].join("\n");
+
+  await sendEmail({ to: recipients, subject, text });
 }
 
 /**
  * Finds SCHEDULED visits whose target date is within REMINDER_DAYS_BEFORE
- * days and haven't had a reminder sent yet, "sends" one, and records
- * reminderSentAt so re-running this doesn't notify twice.
+ * days and haven't had a reminder sent yet, emails everyone assigned to
+ * that study (see study_assignments), and records reminderSentAt so
+ * re-running this doesn't notify twice.
  */
 export async function runDueReminders(): Promise<number> {
   const ctx = await requireTenantContext();
@@ -41,12 +45,18 @@ export async function runDueReminders(): Promise<number> {
       },
       include: {
         subject: { select: { subjectCode: true } },
-        study: { select: { protocolId: true } },
+        study: {
+          select: {
+            protocolId: true,
+            assignments: { select: { user: { select: { email: true } } } },
+          },
+        },
       },
     });
 
     for (const visit of dueVisits) {
-      await sendReminderEmail(visit);
+      const recipients = visit.study.assignments.map((a) => a.user.email);
+      await sendReminderEmail(visit, recipients);
       await tx.visit.update({ where: { id: visit.id }, data: { reminderSentAt: now } });
     }
 

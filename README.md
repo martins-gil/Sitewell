@@ -49,10 +49,13 @@ to org A, and a cross-tenant insert is rejected).
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a
-  manually-triggered N-days-before reminder pass (`/api/reminders/run` —
-  "sending" currently just logs to the server console; no email provider is
-  wired up yet, see `src/lib/reminders.ts`). Still a flat list, not a real
-  calendar view.
+  coordinator calendar view (month grid, click a visit to jump to its
+  subject) with a toggle back to the flat list, and a manually-triggered
+  N-days-before reminder pass (`/api/reminders/run`) that emails everyone
+  assigned to the study via Resend (`src/lib/email.ts`) — falls back to
+  logging to the console when `RESEND_API_KEY` isn't set (true in this
+  environment; only the console path has actually been exercised — see
+  CLAUDE.md).
 - 🟡 Module 3 (Documents): upload with automatic version supersede, local-disk
   storage (`src/lib/storage.ts` — prototype only, not Phase-5-ready), expiry
   highlighting, a lightweight "sign" action. Not yet done: delegation

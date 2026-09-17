@@ -33,10 +33,13 @@ picks this repo up next.
   `withTenantContext` before reading the file — don't add a route that reads
   from `uploads/` directly by path without going through that check first.
   Swap `storage.ts` for a real object-storage client in Phase 5.
-- **Visit reminders don't send real email** yet (`src/lib/reminders.ts` logs
-  to the console) — no email provider is configured. The due-visit query and
-  `reminderSentAt` bookkeeping are real; only `sendReminderEmail`'s body is a
-  stand-in.
+- **Visit reminders send real email via Resend** (`src/lib/email.ts`) when
+  `RESEND_API_KEY` is set; otherwise `sendEmail` falls back to logging to the
+  console. No Resend account exists in this environment, so the Resend path
+  itself is unverified — only the console fallback has actually been
+  exercised. Recipients are everyone in `study_assignments` for that visit's
+  study, not the subject (there's no subject email/contact info in the
+  schema — subjects are pseudonymized).
 - **`audit_log.organizationId`/`actorId` have NO foreign keys**, deliberately.
   They did originally; deleting an `organizations` row failed because the
   trigger's own insert (logging the delete) violated the FK to the row being
