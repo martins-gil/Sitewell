@@ -23,6 +23,7 @@ export type ChecklistDocxHeader = {
   visitType: string;
   protocolId: string;
   protocolAmendment: string | null;
+  protocolDate: Date | null;
   subjectCode: string;
   piName: string | null;
   siteNumber: string | null;
@@ -124,7 +125,11 @@ export async function generateChecklistDocx(
             spacing: { before: 400 },
             children: [
               new TextRun({
-                text: `Protocol ${header.protocolId}${amendmentSuffix}, generated ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`,
+                text: `Protocol ${header.protocolId}${amendmentSuffix}${
+                  header.protocolDate
+                    ? `, ${header.protocolDate.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`
+                    : ""
+                }`,
                 italics: true,
                 size: 18,
               }),

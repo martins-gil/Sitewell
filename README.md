@@ -77,14 +77,24 @@ to org A, and a cross-tenant insert is rejected).
 - ✅ Per-visit-type procedure checklists: each `VisitScheduleTemplate` (e.g.
   a study's "Baseline" visit) can define an ordered checklist of steps
   (`/dashboard/studies/[id]/templates/[templateId]/checklist`), matching the
-  site's existing paper "DOCUMENTO DE APOIO PARA A IP" form. Every subject's
-  visit of that type gets its own fill-in-able copy on the visit detail
-  page, and "Download filled checklist (.docx)" (`src/lib/checklist-docx.ts`,
-  the `docx` npm package) generates a real Word document reproducing that
-  form's layout — title, PI/Site№/Protocol№ header (PI resolved from
-  `study_assignments`, Site№ from `Site.siteNumber` — both blank-if-unset
-  placeholders since neither is populated by the seed data yet), the
-  ordered procedure table with a ✓ in Verificado for checked items.
+  site's existing paper "DOCUMENTO DE APOIO PARA A IP" form. Adding an item
+  picks from a reusable org-wide task library (`ChecklistTaskLibrary`) or
+  types a new one, which then joins the library for next time. Every
+  subject's visit of that type gets its own fill-in-able copy on the visit
+  detail page, and "Download filled checklist (.docx)"
+  (`src/lib/checklist-docx.ts`, the `docx` npm package) generates a real
+  Word document reproducing that form's layout — title, PI/Site№/Protocol№
+  header, the ordered procedure table with a ✓ in Verificado for checked
+  items. Header fields (PI name, protocol version/amendment, protocol
+  version date, Site№) are explicit fields set via a "Document header
+  details" form on the study's visit-schedule page — fixed facts about the
+  protocol document, not derived from whoever's logged in or when the file
+  happens to be downloaded.
+- ✅ Kits: a lightweight inventory module (`/dashboard/kits`) for physical/
+  lab kit batches — name, which study, optionally which visit type they're
+  earmarked for, and an expiry date (highlighted amber within 30 days, red
+  once past). Not tied to an individual subject's visit; this is site
+  inventory, not a per-subject dispensing log.
 - ✅ Installable on iPad/Android as a PWA — "Add to Home Screen" from Safari
   or Chrome gets an icon, a standalone (no browser chrome) window, and the
   themed status bar (`src/app/manifest.ts`, icons in `public/icons/`, the
@@ -152,8 +162,13 @@ somewhere else — a teammate's machine, a cloud dev database, CI, etc.
    ```bash
    npm run db:seed
    ```
-   Prints login credentials for the seeded users (all share one demo
-   password) at the end.
+   **This wipes every table first** (`TRUNCATE ... CASCADE` — organizations,
+   users, everything) before reseeding, so it's a full reset, not an
+   additive top-up. Fine for a synthetic-data prototype database; never run
+   it anywhere real data could exist. Prints login credentials for the
+   seeded users (all share one demo password, except the `site@...` account,
+   which keeps its own password across reseeds specifically so it doesn't
+   get pulled out from under whoever's actively testing with it) at the end.
 6. **Run it:**
    ```bash
    npm run dev

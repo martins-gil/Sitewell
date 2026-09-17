@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getTemplateWithChecklist } from "@/lib/queries";
+import { getTemplateWithChecklist, getChecklistTaskLibrary } from "@/lib/queries";
 import { addChecklistTemplateItem, deleteChecklistTemplateItem } from "./actions";
 import { DeleteChecklistItemButton } from "./delete-item-button";
+import { AddChecklistItemForm } from "./add-item-form";
 
 export default async function ChecklistTemplatePage({
   params,
@@ -10,7 +11,10 @@ export default async function ChecklistTemplatePage({
   params: Promise<{ id: string; templateId: string }>;
 }) {
   const { id: studyId, templateId } = await params;
-  const template = await getTemplateWithChecklist(templateId);
+  const [template, library] = await Promise.all([
+    getTemplateWithChecklist(templateId),
+    getChecklistTaskLibrary(),
+  ]);
   if (!template) notFound();
 
   const addItemWithIds = addChecklistTemplateItem.bind(null, studyId, templateId);
@@ -65,32 +69,7 @@ export default async function ChecklistTemplatePage({
         </table>
       </div>
 
-      <form action={addItemWithIds} className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
-        <h2 className="text-sm font-medium text-neutral-500">Add a checklist item</h2>
-        <div>
-          <label className="block text-xs font-medium">Item</label>
-          <input
-            name="label"
-            required
-            placeholder="e.g. Colheita de sangue"
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium">Detail (optional)</label>
-          <input
-            name="detail"
-            placeholder="e.g. hematologia, BQ, IgEt"
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
-        >
-          Add item
-        </button>
-      </form>
+      <AddChecklistItemForm library={library} addItem={addItemWithIds} />
     </div>
   );
 }

@@ -7,6 +7,14 @@ picks this repo up next.
 
 ## Load-bearing decisions — don't casually change these
 
+- **`prisma/seed.ts` now wipes all data first** (`TRUNCATE ... CASCADE`
+  across every table, run as the owner role via DIRECT_URL) before
+  reseeding. It was purely additive before — adding an org, subjects, etc.
+  on top of whatever existed. It is NOT additive anymore: running it against
+  a database with real work in it destroys that work. It recreates the
+  `site@riverside-research.dev` account with a fixed password on every run
+  specifically so a live testing session's login keeps working across a
+  reseed; other seeded accounts share the generic demo password.
 - **Two Postgres roles, two Prisma clients.** `src/lib/prisma.ts`
   (DATABASE_URL, `app_runtime`, RLS-bound) is used for every ordinary
   business query via `withTenantContext`/`requireTenantContext` in
@@ -118,14 +126,28 @@ picks this repo up next.
   up next time their checklist is viewed. Deleting a
   `ChecklistTemplateItem` must delete its `VisitChecklistResult` rows first
   (required FK, no cascade) — see `deleteChecklistTemplateItem`.
-- **Checklist docx header data is best-effort.** `getVisitChecklistHeader()`
-  takes the first `PI`-role user assigned to the study via
-  `study_assignments` and the org's first `Site.siteNumber` — neither is a
-  real "the PI for this study" or "the site for this visit" concept in the
-  data model, just the closest approximation available. Both render as
-  blank placeholders when absent (matches the paper form's own "PI: name"
-  placeholder style). Revisit if a study ever has more than one PI or site
-  and it matters which one prints on the document.
+- **Checklist docx header fields are explicit, not derived** —
+  `Study.piName`, `Study.protocolAmendment`, `Study.protocolDate`, and
+  `Site.siteNumber` (edited via the "Document header details" form on
+  `/dashboard/studies/[id]/templates`). This used to be resolved from
+  `study_assignments`' first PI-role user and "today's date" — deliberately
+  replaced, since the printed PI name and protocol date are fixed facts
+  about the protocol document, not whoever's logged in or when a copy
+  happens to be downloaded. `getVisitChecklistHeader()` still falls back to
+  the org's first `Site` row (a study could have more than one; revisit if
+  that ever needs picking).
+- **Checklist task library entries don't link back to templates.** Picking
+  one from the "Add a checklist item" dropdown just copies its label/detail
+  into a new `ChecklistTemplateItem` row — editing or deleting a
+  `ChecklistTaskLibrary` entry later never touches templates that already
+  used it. `addChecklistTemplateItem` upserts into the library on every add
+  (by `[organizationId, label]`), so the library only ever grows from real
+  usage; nothing prunes it.
+- **Kits are study/visit-type inventory, not per-subject.** `Kit` has no
+  link to an individual `Subject` or `Visit` — `visitScheduleTemplateId` is
+  which visit TYPE a batch is earmarked for (e.g. "Baseline kits, Lot B"),
+  not which subject received one. If a per-subject dispensing log is ever
+  wanted, that is a different model, not a change to this one.
 
 ## Before calling a change done
 

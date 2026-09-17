@@ -30,6 +30,14 @@ export async function addChecklistTemplateItem(
         sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
       },
     });
+
+    // Grow the reusable task library with anything new so it shows up in
+    // the dropdown next time — a no-op if this exact label already exists.
+    await tx.checklistTaskLibrary.upsert({
+      where: { organizationId_label: { organizationId: template.organizationId, label } },
+      create: { organizationId: template.organizationId, label, detail },
+      update: { detail },
+    });
   });
 
   revalidatePath(`/dashboard/studies/${studyId}/templates/${templateId}/checklist`);

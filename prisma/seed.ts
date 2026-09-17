@@ -37,17 +37,39 @@ const VISIT_TEMPLATE_DEFS = [
   { name: "End of Study", targetDayOffset: 168, windowBeforeDays: 7, windowAfterDays: 7, sortOrder: 4 },
 ];
 
-const FUNNEL_WEIGHTS: [SubjectStatus, number][] = [
-  ["IDENTIFIED", 20],
-  ["PRE_SCREENED", 15],
-  ["SCREENED", 15],
-  ["CONSENTED", 10],
-  ["ENROLLED", 30],
-  ["SCREEN_FAILED", 6],
-  ["WITHDRAWN", 4],
+// Matches the shape of the site's real paper checklist ("DOCUMENTO DE APOIO
+// PARA A IP") closely enough to demo the feature meaningfully, without
+// reproducing every line of an actual protocol-specific procedure list.
+const SCREENING_CHECKLIST = [
+  { label: "Registo no IWRS", detail: null },
+  { label: "Verificar cumprimento dos critérios de inclusão/exclusão", detail: null },
+  { label: "Sinais Vitais", detail: "temperatura, SpO2 e taxa respiratória e peso" },
+  { label: "Colheita de sangue e urina para análise central", detail: null },
+  { label: "Métodos de contraceção", detail: null },
+];
+
+const BASELINE_CHECKLIST = [
+  { label: "Registo no IWRS", detail: null },
+  { label: "Questionários PROMs", detail: "tablet" },
+  { label: "Verificar eDiary", detail: "preenchido ≥4/7 dias nas últimas duas semanas" },
+  { label: "Confirmar que não precisou de medicação de SOS", detail: null },
+  { label: "Efeitos adversos e medicação concomitante", detail: null },
+  { label: "Randomização (IWRS)", detail: null },
+  { label: "Dispensa da medicação para tratamento local", detail: null },
+  { label: "Peso e altura", detail: null },
+  { label: "Colheita de sangue e urina para análise central", detail: null },
 ];
 
 function weightedStatus(): SubjectStatus {
+  const FUNNEL_WEIGHTS: [SubjectStatus, number][] = [
+    ["IDENTIFIED", 20],
+    ["PRE_SCREENED", 15],
+    ["SCREENED", 15],
+    ["CONSENTED", 10],
+    ["ENROLLED", 30],
+    ["SCREEN_FAILED", 6],
+    ["WITHDRAWN", 4],
+  ];
   const total = FUNNEL_WEIGHTS.reduce((sum, [, w]) => sum + w, 0);
   let roll = Math.random() * total;
   for (const [status, weight] of FUNNEL_WEIGHTS) {
@@ -63,7 +85,21 @@ function addDays(base: Date, days: number): Date {
   return d;
 }
 
+async function wipeExistingData() {
+  console.log("Wiping existing data...");
+  await prisma.$executeRawUnsafe(`
+    TRUNCATE TABLE
+      organizations, users, studies, sites, study_assignments, subjects,
+      visit_schedule_templates, visits, documents, feedback_submissions,
+      checklist_template_items, visit_checklist_results,
+      checklist_task_library, kits, audit_log
+    RESTART IDENTITY CASCADE;
+  `);
+}
+
 async function main() {
+  await wipeExistingData();
+
   console.log("Seeding synthetic demo data...");
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
@@ -128,18 +164,50 @@ async function main() {
     },
   });
 
+  // Recreated on every reseed so the account you're actually using to test
+  // doesn't get wiped out from under you — same email/password as before.
+  const siteUserPasswordHash = await bcrypt.hash("Ensaios2026**", 12);
+  const siteUser = await prisma.user.create({
+    data: {
+      organizationId: org.id,
+      email: "site@riverside-research.dev",
+      passwordHash: siteUserPasswordHash,
+      name: "Site User",
+      role: "CRC",
+    },
+  });
+
   const site = await prisma.site.create({
-    data: { organizationId: org.id, name: "Riverside Main Site", address: "400 Research Pkwy, Riverside" },
+    data: {
+      organizationId: org.id,
+      name: "Riverside Main Site",
+      address: "400 Research Pkwy, Riverside",
+      siteNumber: "00001",
+    },
   });
 
   const studyDefs = [
-    { protocolId: "RCN-101", title: "A Phase II Study of Compound X in Adults with Condition A", phase: "Phase II", sponsor: "Meridian Therapeutics" },
-    { protocolId: "RCN-204", title: "A Phase III Study Evaluating Compound Y vs. Placebo", phase: "Phase III", sponsor: "Northbridge Biosciences" },
+    {
+      protocolId: "RCN-101",
+      title: "A Phase II Study of Compound X in Adults with Condition A",
+      phase: "Phase II",
+      sponsor: "Meridian Therapeutics",
+      protocolAmendment: "Amendment 3",
+      protocolDate: new Date("2025-11-04"),
+    },
+    {
+      protocolId: "RCN-204",
+      title: "A Phase III Study Evaluating Compound Y vs. Placebo",
+      phase: "Phase III",
+      sponsor: "Northbridge Biosciences",
+      protocolAmendment: "Amendment 5",
+      protocolDate: new Date("2026-01-20"),
+    },
   ];
 
   for (const def of studyDefs) {
     const study = await prisma.study.create({
-      data: { organizationId: org.id, ...def, status: "active" },
+      data: { organizationId: org.id, ...def, status: "active", piName: pi.name },
     });
 
     await prisma.site.update({ where: { id: site.id }, data: { studyId: study.id } }).catch(() => {});
@@ -151,9 +219,68 @@ async function main() {
         }),
       ),
     );
+    const screeningTemplate = templates.find((t) => t.name === "Screening")!;
+    const baselineTemplate = templates.find((t) => t.name === "Baseline / Day 0")!;
+    const week4Template = templates.find((t) => t.name === "Week 4")!;
+
+    for (const [i, item] of SCREENING_CHECKLIST.entries()) {
+      await prisma.checklistTemplateItem.create({
+        data: {
+          organizationId: org.id,
+          visitScheduleTemplateId: screeningTemplate.id,
+          sortOrder: i,
+          label: item.label,
+          detail: item.detail,
+        },
+      });
+    }
+    for (const [i, item] of BASELINE_CHECKLIST.entries()) {
+      await prisma.checklistTemplateItem.create({
+        data: {
+          organizationId: org.id,
+          visitScheduleTemplateId: baselineTemplate.id,
+          sortOrder: i,
+          label: item.label,
+          detail: item.detail,
+        },
+      });
+    }
+
+    await prisma.kit.createMany({
+      data: [
+        {
+          organizationId: org.id,
+          studyId: study.id,
+          visitScheduleTemplateId: screeningTemplate.id,
+          name: `${def.protocolId} Screening Lab Kits — Lot A`,
+          expiryDate: faker.date.soon({ days: 20 }),
+        },
+        {
+          organizationId: org.id,
+          studyId: study.id,
+          visitScheduleTemplateId: baselineTemplate.id,
+          name: `${def.protocolId} Baseline Blood Draw Kits — Lot B`,
+          expiryDate: faker.date.future({ years: 1 }),
+        },
+        {
+          organizationId: org.id,
+          studyId: study.id,
+          visitScheduleTemplateId: week4Template.id,
+          name: `${def.protocolId} Week 4 Kits — Lot C`,
+          expiryDate: faker.date.past({ years: 0.05 }),
+        },
+        {
+          organizationId: org.id,
+          studyId: study.id,
+          visitScheduleTemplateId: null,
+          name: `${def.protocolId} General Supply Kit`,
+          expiryDate: faker.date.future({ years: 1 }),
+        },
+      ],
+    });
 
     await Promise.all(
-      [crc1, crc2, pi].map((u) =>
+      [crc1, crc2, siteUser, pi].map((u) =>
         prisma.studyAssignment.create({
           data: { organizationId: org.id, userId: u.id, studyId: study.id },
         }),
@@ -245,11 +372,11 @@ async function main() {
           const targetDate = addDays(enrolledAt, template.targetDayOffset);
           const windowStart = addDays(targetDate, -template.windowBeforeDays);
           const windowEnd = addDays(targetDate, template.windowAfterDays);
-          const isPast = targetDate.getTime() < Date.now();
+          const isPastVisit = targetDate.getTime() < Date.now();
 
           let visitStatus: VisitStatus = "SCHEDULED";
           let actualDate: Date | null = null;
-          if (isPast) {
+          if (isPastVisit) {
             const roll = Math.random();
             if (roll < 0.75) {
               visitStatus = "COMPLETED";
@@ -280,6 +407,19 @@ async function main() {
     }
   }
 
+  // Populate the reusable checklist task library from everything just
+  // seeded, so the "Add a checklist item" dropdown has real content on a
+  // fresh database (mirrors what addChecklistTemplateItem does live).
+  const allItems = [...SCREENING_CHECKLIST, ...BASELINE_CHECKLIST];
+  const seenLabels = new Set<string>();
+  for (const item of allItems) {
+    if (seenLabels.has(item.label)) continue;
+    seenLabels.add(item.label);
+    await prisma.checklistTaskLibrary.create({
+      data: { organizationId: org.id, label: item.label, detail: item.detail },
+    });
+  }
+
   console.log("\nSeed complete.\n");
   console.log("Demo organization: Riverside Clinical Research Network");
   console.log(`Shared demo password for all seeded users: ${DEMO_PASSWORD}\n`);
@@ -287,6 +427,7 @@ async function main() {
   for (const u of [platformAdmin, orgAdmin, pi, crc1, crc2]) {
     console.log(`  ${u.role.padEnd(15)} ${u.email}`);
   }
+  console.log(`  ${siteUser.role.padEnd(15)} ${siteUser.email}  (password: Ensaios2026**)`);
 }
 
 main()

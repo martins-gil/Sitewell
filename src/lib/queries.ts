@@ -40,7 +40,10 @@ export async function getStudyWithTemplates(studyId: string) {
   return withTenantContext(ctx, (tx) =>
     tx.study.findUnique({
       where: { id: studyId },
-      include: { templates: { orderBy: { sortOrder: "asc" } } },
+      include: {
+        templates: { orderBy: { sortOrder: "asc" } },
+        sites: { orderBy: { createdAt: "asc" }, take: 1 },
+      },
     }),
   );
 }
@@ -55,6 +58,13 @@ export async function getTemplateWithChecklist(templateId: string) {
         checklistItems: { orderBy: { sortOrder: "asc" } },
       },
     }),
+  );
+}
+
+export async function getChecklistTaskLibrary() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.checklistTaskLibrary.findMany({ orderBy: { label: "asc" } }),
   );
 }
 
@@ -142,35 +152,29 @@ export async function getVisitChecklist(visitId: string) {
 }
 
 /** Header fields for the generated checklist document: PI name, site
- * number, protocol/amendment. Best-effort — clinical trial sites vary in
- * how they track "the" PI for a study, so this takes the first PI assigned
- * to the study and the org's first site, falling back to blanks. */
+ * number, protocol/amendment/date. All explicit fields on Study/Site (see
+ * the "Document header details" form on the study's visit schedule page) —
+ * fixed facts about the protocol document, not derived from who's assigned
+ * or when someone happens to download a copy. */
 export async function getVisitChecklistHeader(visitId: string) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, async (tx) => {
     const visit = await tx.visit.findUniqueOrThrow({
       where: { id: visitId },
       include: {
-        study: {
-          include: {
-            assignments: { include: { user: { select: { name: true, role: true } } } },
-            sites: { select: { siteNumber: true } },
-          },
-        },
+        study: { include: { sites: { select: { siteNumber: true }, take: 1 } } },
         subject: { select: { subjectCode: true } },
       },
     });
-
-    const pi = visit.study.assignments.find((a) => a.user.role === "PI")?.user.name ?? null;
-    const siteNumber = visit.study.sites[0]?.siteNumber ?? null;
 
     return {
       visitType: visit.visitType,
       protocolId: visit.study.protocolId,
       protocolAmendment: visit.study.protocolAmendment,
+      protocolDate: visit.study.protocolDate,
       subjectCode: visit.subject.subjectCode,
-      piName: pi,
-      siteNumber,
+      piName: visit.study.piName,
+      siteNumber: visit.study.sites[0]?.siteNumber ?? null,
     };
   });
 }
@@ -236,6 +240,35 @@ export async function getFeedbackSubmissions() {
     tx.feedbackSubmission.findMany({
       include: { submittedBy: { select: { name: true, role: true } } },
       orderBy: { createdAt: "desc" },
+    }),
+  );
+}
+
+export async function getKits() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.kit.findMany({
+      include: {
+        study: { select: { protocolId: true } },
+        visitScheduleTemplate: { select: { name: true } },
+      },
+      orderBy: [{ expiryDate: "asc" }, { createdAt: "desc" }],
+    }),
+  );
+}
+
+/** Studies with their visit types, for the Kits "assigned visit" cascading
+ * dropdown (pick a study, then narrow to one of its visit types). */
+export async function getStudiesWithTemplatesForKits() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.study.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        protocolId: true,
+        templates: { orderBy: { sortOrder: "asc" }, select: { id: true, name: true } },
+      },
     }),
   );
 }

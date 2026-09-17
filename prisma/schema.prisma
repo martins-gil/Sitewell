@@ -80,17 +80,19 @@ model Organization {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  users               User[]
-  studies             Study[]
-  sites               Site[]
-  subjects            Subject[]
-  studyAssignments    StudyAssignment[]
-  templates           VisitScheduleTemplate[]
-  visits              Visit[]
-  documents           Document[]
-  feedbackSubmissions FeedbackSubmission[]
-  checklistItems      ChecklistTemplateItem[]
-  checklistResults    VisitChecklistResult[]
+  users                User[]
+  studies              Study[]
+  sites                Site[]
+  subjects             Subject[]
+  studyAssignments     StudyAssignment[]
+  templates            VisitScheduleTemplate[]
+  visits               Visit[]
+  documents            Document[]
+  feedbackSubmissions  FeedbackSubmission[]
+  checklistItems       ChecklistTemplateItem[]
+  checklistResults     VisitChecklistResult[]
+  checklistTaskLibrary ChecklistTaskLibrary[]
+  kits                 Kit[]
 
   @@map("organizations")
 }
@@ -120,16 +122,23 @@ model User {
 }
 
 model Study {
-  id                String   @id @default(cuid())
-  organizationId    String   @map("organization_id")
-  protocolId        String   @map("protocol_id")
+  id                String    @id @default(cuid())
+  organizationId    String    @map("organization_id")
+  protocolId        String    @map("protocol_id")
   title             String
   phase             String?
-  status            String   @default("active")
+  status            String    @default("active")
   sponsor           String?
-  protocolAmendment String?  @map("protocol_amendment")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  protocolAmendment String?   @map("protocol_amendment")
+  // Explicit document-header fields for the generated checklist .docx (see
+  // src/lib/checklist-docx.ts) — set directly on the study rather than
+  // derived from study_assignments/"today", since the printed PI name and
+  // protocol date are fixed facts about the protocol document itself, not
+  // whoever happens to be logged in or whenever someone downloads a copy.
+  piName            String?   @map("pi_name")
+  protocolDate      DateTime? @map("protocol_date")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   organization Organization            @relation(fields: [organizationId], references: [id])
   sites        Site[]
@@ -138,6 +147,7 @@ model Study {
   documents    Document[]
   assignments  StudyAssignment[]
   visits       Visit[]
+  kits         Kit[]
 
   @@unique([organizationId, protocolId])
   @@index([organizationId])
@@ -217,6 +227,7 @@ model VisitScheduleTemplate {
   visits         Visit[]
   organization   Organization            @relation(fields: [organizationId], references: [id])
   checklistItems ChecklistTemplateItem[]
+  kits           Kit[]
 
   @@index([organizationId])
   @@index([studyId])
@@ -243,6 +254,49 @@ model ChecklistTemplateItem {
   @@index([organizationId])
   @@index([visitScheduleTemplateId])
   @@map("checklist_template_items")
+}
+
+// A reusable catalog of checklist step descriptions, org-wide, so adding a
+// checklist item to a new visit type can pick from what other templates
+// already use instead of retyping the same wording every time. Purely a
+// suggestion source for the "Add a checklist item" form — copying a library
+// entry into a template does not link back to it, so editing/removing a
+// library entry never touches templates that already used it.
+model ChecklistTaskLibrary {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  label          String
+  detail         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, label])
+  @@index([organizationId])
+  @@map("checklist_task_library")
+}
+
+// Physical/lab kit inventory — a batch of kits earmarked for a specific
+// visit type (e.g. "Baseline blood draw kits, Lot #4521"), with an expiry
+// date. Not tied to an individual subject's visit; this is site inventory,
+// not a per-subject dispensing log.
+model Kit {
+  id                      String    @id @default(cuid())
+  organizationId          String    @map("organization_id")
+  studyId                 String    @map("study_id")
+  visitScheduleTemplateId String?   @map("visit_schedule_template_id")
+  name                    String
+  expiryDate              DateTime? @map("expiry_date")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  organization          Organization           @relation(fields: [organizationId], references: [id])
+  study                 Study                  @relation(fields: [studyId], references: [id])
+  visitScheduleTemplate VisitScheduleTemplate? @relation(fields: [visitScheduleTemplateId], references: [id])
+
+  @@index([organizationId])
+  @@index([studyId])
+  @@map("kits")
 }
 
 model Visit {
