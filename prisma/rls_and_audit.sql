@@ -71,7 +71,8 @@ BEGIN
       ('subjects', 'organization_id'),
       ('visit_schedule_templates', 'organization_id'),
       ('visits', 'organization_id'),
-      ('documents', 'organization_id')
+      ('documents', 'organization_id'),
+      ('feedback_submissions', 'organization_id')
     ) AS x(table_name, org_column)
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t.table_name);
@@ -174,7 +175,8 @@ DECLARE
 BEGIN
   FOREACH tbl IN ARRAY ARRAY[
     'organizations', 'users', 'studies', 'sites', 'study_assignments',
-    'subjects', 'visit_schedule_templates', 'visits', 'documents'
+    'subjects', 'visit_schedule_templates', 'visits', 'documents',
+    'feedback_submissions'
   ]
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS audit_trigger ON %I', tbl);

@@ -60,8 +60,17 @@ to org A, and a cross-tenant insert is rejected).
   storage (`src/lib/storage.ts` — prototype only, not Phase-5-ready), expiry
   highlighting, a lightweight "sign" action. Not yet done: delegation
   log/training-record-specific workflows beyond generic upload.
-- ⬜ Phase 3.5 (pilot testing), Phase 4 (dashboards), Phase 5 (commercial
-  hardening) — not started, by design (see PROJECT_SPEC.md)
+- 🟡 Phase 3.5 (pilot testing) started: an in-app `/dashboard/feedback` page
+  (area tested, ease-of-use rating, what was confusing/broken, suggestions)
+  that any logged-in user can submit and everyone in the org can read — not
+  in PROJECT_SPEC.md's data model, added because this phase needs somewhere
+  for feedback to land besides a scattered chat thread. Deliberately built
+  into the app itself rather than as a separate form, since real pilot
+  coordinators won't have accounts in any Claude.ai organization, which a
+  Claude Artifact's shared database would have required. Still open: how
+  testers actually reach the app (local machine vs. deployed) — undecided.
+- ⬜ Phase 4 (dashboards), Phase 5 (commercial hardening) — not started, by
+  design (see PROJECT_SPEC.md)
 
 ## Environment note
 

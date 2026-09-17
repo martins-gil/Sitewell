@@ -62,6 +62,15 @@ enum AuditAction {
   DELETE
 }
 
+enum FeedbackArea {
+  RECRUITMENT
+  VISITS
+  DOCUMENTS
+  STUDIES
+  LOGIN_AND_SECURITY
+  OTHER
+}
+
 model Organization {
   id                String   @id @default(cuid())
   name              String
@@ -71,14 +80,15 @@ model Organization {
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
-  users            User[]
-  studies          Study[]
-  sites            Site[]
-  subjects         Subject[]
-  studyAssignments StudyAssignment[]
-  templates        VisitScheduleTemplate[]
-  visits           Visit[]
-  documents        Document[]
+  users               User[]
+  studies             Study[]
+  sites               Site[]
+  subjects            Subject[]
+  studyAssignments    StudyAssignment[]
+  templates           VisitScheduleTemplate[]
+  visits              Visit[]
+  documents           Document[]
+  feedbackSubmissions FeedbackSubmission[]
 
   @@map("organizations")
 }
@@ -98,9 +108,10 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  organization     Organization?     @relation(fields: [organizationId], references: [id])
-  studyAssignments StudyAssignment[]
-  signedDocuments  Document[]        @relation("documentSigner")
+  organization        Organization?        @relation(fields: [organizationId], references: [id])
+  studyAssignments    StudyAssignment[]
+  signedDocuments     Document[]           @relation("documentSigner")
+  feedbackSubmissions FeedbackSubmission[]
 
   @@index([organizationId])
   @@map("users")
@@ -259,6 +270,27 @@ model Document {
   @@index([studyId, type])
   @@index([expiryDate])
   @@map("documents")
+}
+
+// Phase 3.5 pilot-testing feedback — not in PROJECT_SPEC.md's data model,
+// added because Phase 3.5 ("get it in front of real coordinators") needs
+// somewhere for their feedback to land that isn't a scattered Slack thread.
+model FeedbackSubmission {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  submittedById   String       @map("submitted_by_id")
+  area            FeedbackArea
+  confusing       String?
+  broken          String?
+  suggestion      String?
+  easeOfUseRating Int          @map("ease_of_use_rating")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  submittedBy  User         @relation(fields: [submittedById], references: [id])
+
+  @@index([organizationId])
+  @@map("feedback_submissions")
 }
 
 // Append-only. Writes happen exclusively via the audit_trigger_fn() Postgres

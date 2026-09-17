@@ -113,6 +113,16 @@ export async function getDocuments() {
   );
 }
 
+export async function getFeedbackSubmissions() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.feedbackSubmission.findMany({
+      include: { submittedBy: { select: { name: true, role: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+}
+
 export async function getExpiringDocuments(daysAhead = 60) {
   const ctx = await requireTenantContext();
   const now = new Date();

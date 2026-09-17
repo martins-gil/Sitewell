@@ -52,6 +52,25 @@ picks this repo up next.
   JSON, breaking `res.json()` on the client. Each API route enforces its own
   auth via `requireTenantContext()` instead. Don't narrow the matcher back to
   just `api/auth` without re-solving this.
+- **Adding a new tenant-scoped table is a 3-step, not 1-step, change**:
+  (1) add the model in `schema.prisma` and `prisma migrate dev` it as usual,
+  (2) write a follow-up hand migration enabling RLS + the audit trigger on it
+  (copy the shape from `prisma/migrations/20260917145344_feedback_rls_and_audit`
+  — same policies, same `audit_trigger_fn()`), (3) add the table to both loop
+  arrays in `prisma/rls_and_audit.sql` so a *fresh* setup applies it too, not
+  just this already-migrated database. `ALTER DEFAULT PRIVILEGES` from the
+  original migration already covers `app_runtime`'s SELECT/INSERT/UPDATE/
+  DELETE grant on new tables automatically — confirmed when adding
+  `feedback_submissions` — but the RLS policies and trigger are NOT automatic
+  and silently leave a new table with no tenant isolation at all if skipped.
+- **Never hand-edit an already-applied migration.sql's content** (I did once,
+  scrubbing a dev password before committing) — `prisma migrate dev` checksums
+  applied migrations and refuses to proceed on a mismatch, offering
+  `migrate reset` (drops all data). If you must, the recovery is to reconcile
+  the stored checksum directly: `UPDATE _prisma_migrations SET checksum = ...
+  WHERE migration_name = '...'` with the SHA-256 of the new file content
+  (`Get-FileHash -Algorithm SHA256`), never `migrate reset` on a database with
+  real work in it.
 
 ## Before calling a change done
 
