@@ -51,9 +51,12 @@ to org A, and a cross-tenant insert is rejected).
   subjects per study across the recruitment funnel, generated visits, and
   sample eISF documents — all flagged `is_test_data: true`
 - ✅ Module 1 (Patients — renamed from "Recruitment" per pilot feedback):
-  patient list with study/stage filters, patient detail page, an
-  interactively-editable I/E criteria list (free-text criterion + met/not-met,
-  not just the seeded snapshot), referral source
+  patient list with study/stage filters, an "+ Add patient" form (choose a
+  study, optional subject code — auto-generated as PROTOCOL-NNNN if left
+  blank — optional referral source; always creates the subject with
+  `is_test_data: true`, no form control to override it, per PROJECT_SPEC.md's
+  Phase 5 gate), patient detail page, an interactively-editable I/E criteria
+  list (free-text criterion + met/not-met, not just the seeded snapshot)
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a
@@ -115,6 +118,11 @@ to org A, and a cross-tenant insert is rejected).
   testers actually reach the app (local machine vs. deployed) — undecided.
 - ⬜ Phase 4 (dashboards), Phase 5 (commercial hardening) — not started, by
   design (see PROJECT_SPEC.md)
+- ⬜ No UI yet to create a new Study, Site, or User/coordinator — those still
+  only exist via `prisma/seed.ts` (or a one-off manual SQL insert, in the
+  case of the live `site@riverside-research.dev` account). Adding a patient
+  is now possible from the UI (see Module 1 above); Study/User creation
+  forms are the next gap to close.
 
 ## Environment note
 
