@@ -89,6 +89,8 @@ model Organization {
   visits              Visit[]
   documents           Document[]
   feedbackSubmissions FeedbackSubmission[]
+  checklistItems      ChecklistTemplateItem[]
+  checklistResults    VisitChecklistResult[]
 
   @@map("organizations")
 }
@@ -118,15 +120,16 @@ model User {
 }
 
 model Study {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  protocolId     String   @map("protocol_id")
-  title          String
-  phase          String?
-  status         String   @default("active")
-  sponsor        String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  protocolId        String   @map("protocol_id")
+  title             String
+  phase             String?
+  status            String   @default("active")
+  sponsor           String?
+  protocolAmendment String?  @map("protocol_amendment")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   organization Organization            @relation(fields: [organizationId], references: [id])
   sites        Site[]
@@ -147,6 +150,7 @@ model Site {
   studyId        String?  @map("study_id")
   name           String
   address        String?
+  siteNumber     String?  @map("site_number")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
@@ -209,13 +213,36 @@ model VisitScheduleTemplate {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  study        Study        @relation(fields: [studyId], references: [id])
-  visits       Visit[]
-  organization Organization @relation(fields: [organizationId], references: [id])
+  study          Study                   @relation(fields: [studyId], references: [id])
+  visits         Visit[]
+  organization   Organization            @relation(fields: [organizationId], references: [id])
+  checklistItems ChecklistTemplateItem[]
 
   @@index([organizationId])
   @@index([studyId])
   @@map("visit_schedule_templates")
+}
+
+// One row per procedure/assessment step on a visit type's paper checklist
+// (e.g. "Registo no IWRS", "Colheita de sangue"). Belongs to the visit TYPE
+// (VisitScheduleTemplate), not to an individual subject's visit — every
+// subject's "Baseline" visit shares the same checklist definition.
+model ChecklistTemplateItem {
+  id                      String   @id @default(cuid())
+  organizationId          String   @map("organization_id")
+  visitScheduleTemplateId String   @map("visit_schedule_template_id")
+  sortOrder               Int      @default(0) @map("sort_order")
+  label                   String
+  detail                  String?
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  visitScheduleTemplate VisitScheduleTemplate  @relation(fields: [visitScheduleTemplateId], references: [id])
+  organization          Organization           @relation(fields: [organizationId], references: [id])
+  results               VisitChecklistResult[]
+
+  @@index([organizationId])
+  @@index([visitScheduleTemplateId])
+  @@map("checklist_template_items")
 }
 
 model Visit {
@@ -234,16 +261,37 @@ model Visit {
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
-  subject      Subject                @relation(fields: [subjectId], references: [id])
-  study        Study                  @relation(fields: [studyId], references: [id])
-  template     VisitScheduleTemplate? @relation(fields: [templateId], references: [id])
-  organization Organization           @relation(fields: [organizationId], references: [id])
-  documents    Document[]
+  subject          Subject                @relation(fields: [subjectId], references: [id])
+  study            Study                  @relation(fields: [studyId], references: [id])
+  template         VisitScheduleTemplate? @relation(fields: [templateId], references: [id])
+  organization     Organization           @relation(fields: [organizationId], references: [id])
+  documents        Document[]
+  checklistResults VisitChecklistResult[]
 
   @@index([organizationId])
   @@index([studyId, targetDate])
   @@index([subjectId])
   @@map("visits")
+}
+
+// One row per (visit, checklist item) pair — the "Verificado" checkbox state
+// for that specific subject's visit. Created lazily the first time the
+// visit's checklist is viewed (see ensureChecklistResults in queries.ts).
+model VisitChecklistResult {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  visitId        String   @map("visit_id")
+  templateItemId String   @map("template_item_id")
+  verified       Boolean  @default(false)
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  visit        Visit                 @relation(fields: [visitId], references: [id])
+  templateItem ChecklistTemplateItem @relation(fields: [templateItemId], references: [id])
+  organization Organization          @relation(fields: [organizationId], references: [id])
+
+  @@unique([visitId, templateItemId])
+  @@index([organizationId])
+  @@map("visit_checklist_results")
 }
 
 model Document {

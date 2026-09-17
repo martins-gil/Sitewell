@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getVisitById } from "@/lib/queries";
+import { getVisitById, getVisitChecklist } from "@/lib/queries";
 import { formatDate, humanizeEnum } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { VisitUploadForm } from "./visit-upload-form";
+import { VisitChecklist } from "./checklist";
 
 export default async function VisitDetailPage({
   params,
@@ -12,7 +13,7 @@ export default async function VisitDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const visit = await getVisitById(id);
+  const [visit, checklist] = await Promise.all([getVisitById(id), getVisitChecklist(id)]);
   if (!visit) notFound();
 
   return (
@@ -44,6 +45,11 @@ export default async function VisitDetailPage({
           <dt className="text-neutral-500">Actual date</dt>
           <dd>{formatDate(visit.actualDate)}</dd>
         </dl>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">Procedure checklist</h2>
+        <VisitChecklist visitId={visit.id} items={checklist} />
       </div>
 
       <div>

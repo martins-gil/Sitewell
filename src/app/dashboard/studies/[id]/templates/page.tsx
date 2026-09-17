@@ -39,6 +39,7 @@ export default async function VisitTemplatesPage({
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Target day offset</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Window</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500"></th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -50,6 +51,14 @@ export default async function VisitTemplatesPage({
                 <td className="px-4 py-2 text-neutral-500">
                   −{t.windowBeforeDays} / +{t.windowAfterDays} days
                 </td>
+                <td className="px-4 py-2">
+                  <Link
+                    href={`/dashboard/studies/${study.id}/templates/${t.id}/checklist`}
+                    className="text-neutral-600 hover:underline dark:text-neutral-400"
+                  >
+                    Checklist →
+                  </Link>
+                </td>
                 <td className="px-4 py-2 text-right">
                   <DeleteTemplateButton studyId={study.id} templateId={t.id} onDelete={deleteVisitTemplate} />
                 </td>
@@ -57,7 +66,7 @@ export default async function VisitTemplatesPage({
             ))}
             {study.templates.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-4 text-center text-neutral-400">
+                <td colSpan={6} className="px-4 py-4 text-center text-neutral-400">
                   No visits defined yet.
                 </td>
               </tr>

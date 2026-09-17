@@ -73,9 +73,18 @@ to org A, and a cross-tenant insert is rejected).
   CLAUDE.md), documents can now be scoped to a specific visit as well as a
   study/subject, and status is Pending/Active/Expired/Superseded — computed
   live from `signedAt`/`expiryDate` (`src/lib/document-status.ts`) rather
-  than a manually-maintained field, so it's never stale. Not yet done: a
-  configurable per-visit procedure checklist that generates a document
-  matching the site's existing Word template (open item — see CLAUDE.md).
+  than a manually-maintained field, so it's never stale.
+- ✅ Per-visit-type procedure checklists: each `VisitScheduleTemplate` (e.g.
+  a study's "Baseline" visit) can define an ordered checklist of steps
+  (`/dashboard/studies/[id]/templates/[templateId]/checklist`), matching the
+  site's existing paper "DOCUMENTO DE APOIO PARA A IP" form. Every subject's
+  visit of that type gets its own fill-in-able copy on the visit detail
+  page, and "Download filled checklist (.docx)" (`src/lib/checklist-docx.ts`,
+  the `docx` npm package) generates a real Word document reproducing that
+  form's layout — title, PI/Site№/Protocol№ header (PI resolved from
+  `study_assignments`, Site№ from `Site.siteNumber` — both blank-if-unset
+  placeholders since neither is populated by the seed data yet), the
+  ordered procedure table with a ✓ in Verificado for checked items.
 - 🟡 Phase 3.5 (pilot testing) started: an in-app `/dashboard/feedback` page
   (area tested, ease-of-use rating, what was confusing/broken, suggestions)
   that any logged-in user can submit and everyone in the org can read — not

@@ -108,14 +108,24 @@ picks this repo up next.
   as PowerShell variable references and will silently mangle a bcrypt hash
   (found by creating a user whose password then didn't work — the stored
   hash had been corrupted to a fragment of itself).
-- **Open request, not yet built**: a configurable per-visit procedure
-  checklist (ordered steps like "Registo no IWRS," "Colheita de sangue,"
-  each with a checkbox) that generates a document reproducing the site's
-  existing Word template layout (header with PI/Site No./Protocol No., a
-  table of steps with a "Verificado" column). Needs scoping before starting:
-  one global template vs. per-study/per-visit-type templates, and whether
-  the deliverable is a real generated file (e.g. via the `docx` npm package)
-  or an in-app fill-and-view checklist. Don't guess at this — ask.
+- **Per-visit-type checklists, two tables, both lazily linked.**
+  `ChecklistTemplateItem` belongs to a `VisitScheduleTemplate` (the
+  definition — every "Baseline" visit across subjects shares it).
+  `VisitChecklistResult` belongs to one specific `Visit` + one template item
+  (the fill-in state) and is created lazily the first time
+  `getVisitChecklist()` runs for that visit — there's no backfill step when
+  you add a new checklist item to a template; existing visits just pick it
+  up next time their checklist is viewed. Deleting a
+  `ChecklistTemplateItem` must delete its `VisitChecklistResult` rows first
+  (required FK, no cascade) — see `deleteChecklistTemplateItem`.
+- **Checklist docx header data is best-effort.** `getVisitChecklistHeader()`
+  takes the first `PI`-role user assigned to the study via
+  `study_assignments` and the org's first `Site.siteNumber` — neither is a
+  real "the PI for this study" or "the site for this visit" concept in the
+  data model, just the closest approximation available. Both render as
+  blank placeholders when absent (matches the paper form's own "PI: name"
+  placeholder style). Revisit if a study ever has more than one PI or site
+  and it matters which one prints on the document.
 
 ## Before calling a change done
 
