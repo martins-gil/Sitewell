@@ -3,10 +3,24 @@
 import { useState, useTransition } from "react";
 import { addSubject } from "./actions";
 
-export function AddPatientForm({ studies }: { studies: { id: string; protocolId: string; title: string }[] }) {
+type Study = { id: string; protocolId: string; title: string };
+type DuplicateCandidate = { id: string; subjectCode: string; studyId: string; visitCount: number };
+
+export function AddPatientForm({
+  studies,
+  duplicateCandidates,
+}: {
+  studies: Study[];
+  duplicateCandidates: DuplicateCandidate[];
+}) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [studyId, setStudyId] = useState(studies[0]?.id ?? "");
+
+  const candidatesForStudy = duplicateCandidates.filter(
+    (c) => c.studyId === studyId && c.visitCount > 0,
+  );
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -52,6 +66,8 @@ export function AddPatientForm({ studies }: { studies: { id: string; protocolId:
           <select
             name="studyId"
             required
+            value={studyId}
+            onChange={(e) => setStudyId(e.target.value)}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
             {studies.map((s) => (
@@ -76,6 +92,25 @@ export function AddPatientForm({ studies }: { studies: { id: string; protocolId:
             placeholder="e.g. Physician referral"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium">Duplicate visits from (optional)</label>
+          <select
+            name="duplicateFromSubjectId"
+            defaultValue=""
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          >
+            <option value="">Don&apos;t copy a visit schedule</option>
+            {candidatesForStudy.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.subjectCode} ({c.visitCount} visit{c.visitCount === 1 ? "" : "s"})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-neutral-500">
+            Copies that patient&apos;s visit types and dates onto this new one as a starting point —
+            adjust each date afterwards from the visit&apos;s Reschedule action.
+          </p>
         </div>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}

@@ -35,6 +35,23 @@ export async function getSubjects(filters: { studyId?: string; status?: SubjectS
   );
 }
 
+export async function getStudyById(studyId: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) => tx.study.findUnique({ where: { id: studyId } }));
+}
+
+/** Candidates for the Add-Patient form's "Duplicate visits from" picker —
+ * only subjects that already have a visit list worth copying. */
+export async function getSubjectsWithVisitCounts() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.subject.findMany({
+      select: { id: true, subjectCode: true, studyId: true, _count: { select: { visits: true } } },
+      orderBy: { subjectCode: "asc" },
+    }),
+  );
+}
+
 export async function getStudyWithTemplates(studyId: string) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
@@ -99,10 +116,16 @@ export async function getVisitById(id: string) {
 }
 
 /**
- * Returns the visit's checklist (ordered items + verified state), creating
- * any missing VisitChecklistResult rows first — lazy so that adding a new
- * checklist item to a template automatically appears on every visit of
- * that type without a backfill migration.
+ * Returns the visit's checklist (ordered items + verified state). Most rows
+ * come from the visit type's ChecklistTemplateItem list, lazily copied into
+ * VisitChecklistResult (with label/detail/sortOrder denormalized at creation
+ * time) the first time this visit's checklist is viewed, so a new template
+ * item automatically appears on every visit of that type without a backfill
+ * migration. A visit can also have its own one-off rows (templateItemId
+ * null, added via addVisitChecklistItem) since visits aren't static — see
+ * the schema comment on VisitChecklistResult. `removed` rows are excluded
+ * here but not deleted, so a removed template-derived item isn't seen as
+ * "missing" and recreated next time this function runs.
  */
 export async function getVisitChecklist(visitId: string) {
   const ctx = await requireTenantContext();
@@ -111,42 +134,49 @@ export async function getVisitChecklist(visitId: string) {
       where: { id: visitId },
       select: { organizationId: true, templateId: true },
     });
-    if (!visit.templateId) return [];
 
-    const items = await tx.checklistTemplateItem.findMany({
-      where: { visitScheduleTemplateId: visit.templateId },
-      orderBy: { sortOrder: "asc" },
-    });
-    if (items.length === 0) return [];
-
-    const existing = await tx.visitChecklistResult.findMany({
-      where: { visitId, templateItemId: { in: items.map((i) => i.id) } },
-    });
-    const existingItemIds = new Set(existing.map((r) => r.templateItemId));
-    const missing = items.filter((i) => !existingItemIds.has(i.id));
-
-    if (missing.length > 0) {
-      await tx.visitChecklistResult.createMany({
-        data: missing.map((i) => ({
-          organizationId: visit.organizationId,
-          visitId,
-          templateItemId: i.id,
-        })),
-        skipDuplicates: true,
+    if (visit.templateId) {
+      const templateItems = await tx.checklistTemplateItem.findMany({
+        where: { visitScheduleTemplateId: visit.templateId },
+        select: { id: true, label: true, detail: true, sortOrder: true },
       });
+
+      if (templateItems.length > 0) {
+        const existing = await tx.visitChecklistResult.findMany({
+          where: { visitId, templateItemId: { in: templateItems.map((i) => i.id) } },
+          select: { templateItemId: true },
+        });
+        const existingItemIds = new Set(existing.map((r) => r.templateItemId));
+        const missing = templateItems.filter((i) => !existingItemIds.has(i.id));
+
+        if (missing.length > 0) {
+          await tx.visitChecklistResult.createMany({
+            data: missing.map((i) => ({
+              organizationId: visit.organizationId,
+              visitId,
+              templateItemId: i.id,
+              label: i.label,
+              detail: i.detail,
+              sortOrder: i.sortOrder,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
     }
 
     const results = await tx.visitChecklistResult.findMany({
-      where: { visitId, templateItemId: { in: items.map((i) => i.id) } },
+      where: { visitId, removed: false },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "asc" }],
     });
-    const verifiedByItemId = new Map(results.map((r) => [r.templateItemId, r.verified]));
 
-    return items.map((item) => ({
-      id: item.id,
-      sortOrder: item.sortOrder,
-      label: item.label,
-      detail: item.detail,
-      verified: verifiedByItemId.get(item.id) ?? false,
+    return results.map((r) => ({
+      id: r.id,
+      sortOrder: r.sortOrder,
+      label: r.label,
+      detail: r.detail,
+      verified: r.verified,
+      isAdHoc: r.templateItemId === null,
     }));
   });
 }

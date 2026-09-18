@@ -31,15 +31,23 @@ export default async function StudiesPage() {
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {studies.map((s) => (
               <tr key={s.id}>
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">{s.protocolId}</td>
-                <td className="px-4 py-2">{s.title}</td>
+                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+                  <Link href={`/dashboard/studies/${s.id}`} className="hover:underline">
+                    {s.protocolId}
+                  </Link>
+                </td>
+                <td className="px-4 py-2">
+                  <Link href={`/dashboard/studies/${s.id}`} className="hover:underline">
+                    {s.title}
+                  </Link>
+                </td>
                 <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{s.status}</td>
                 <td className="whitespace-nowrap px-4 py-2">
                   <Link
                     href={`/dashboard/studies/${s.id}/templates`}
                     className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
                   >
-                    Details & schedule →
+                    Visit schedule →
                   </Link>
                 </td>
               </tr>

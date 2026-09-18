@@ -116,16 +116,29 @@ picks this repo up next.
   as PowerShell variable references and will silently mangle a bcrypt hash
   (found by creating a user whose password then didn't work — the stored
   hash had been corrupted to a fragment of itself).
-- **Per-visit-type checklists, two tables, both lazily linked.**
+- **Per-visit-type checklists, two tables, loosely linked.**
   `ChecklistTemplateItem` belongs to a `VisitScheduleTemplate` (the
   definition — every "Baseline" visit across subjects shares it).
-  `VisitChecklistResult` belongs to one specific `Visit` + one template item
-  (the fill-in state) and is created lazily the first time
-  `getVisitChecklist()` runs for that visit — there's no backfill step when
-  you add a new checklist item to a template; existing visits just pick it
-  up next time their checklist is viewed. Deleting a
-  `ChecklistTemplateItem` must delete its `VisitChecklistResult` rows first
-  (required FK, no cascade) — see `deleteChecklistTemplateItem`.
+  `VisitChecklistResult` belongs to one specific `Visit` and is created
+  lazily the first time `getVisitChecklist()` runs for that visit — there's
+  no backfill step when you add a new checklist item to a template; existing
+  visits just pick it up next time their checklist is viewed.
+  `VisitChecklistResult.templateItemId` is nullable (`ON DELETE SET NULL`,
+  not the default RESTRICT) and `label`/`detail`/`sortOrder` are
+  denormalized onto the result row at creation time, not joined from the
+  template item, for two reasons: (1) a coordinator can add a procedure to
+  just one visit (`addVisitChecklistItem`, `templateItemId: null`) since
+  visits aren't static — an unplanned extra step, or one that doesn't apply
+  this time — without touching the shared template every other subject's
+  visit of that type uses; (2) deleting a `ChecklistTemplateItem`
+  (`deleteChecklistTemplateItem`) no longer needs to force-delete every
+  visit's already-recorded row for it — the FK just detaches it, so that
+  visit's checked/unchecked history and label survive as a plain
+  visit-only row. Removing an item from one visit (`removeVisitChecklistItem`)
+  is a soft-delete (`removed: true`), not `.delete()` — for a
+  template-derived row, hard-deleting it would make `getVisitChecklist`'s
+  lazy-creation pass see it as "missing" and silently recreate it the next
+  time that visit's checklist is viewed.
 - **Checklist docx header fields are explicit, not derived** —
   `Study.piName`, `Study.protocolAmendment`, `Study.protocolDate`, and
   `Site.siteNumber` (edited via the "Document header details" form on

@@ -49,12 +49,11 @@ export async function deleteChecklistTemplateItem(
   itemId: string,
 ) {
   const ctx = await requireTenantContext();
-  await withTenantContext(ctx, async (tx) => {
-    // Results reference this item with a required FK — clear them first, or
-    // any visit that already has a checked/unchecked state for it blocks
-    // the delete.
-    await tx.visitChecklistResult.deleteMany({ where: { templateItemId: itemId } });
-    await tx.checklistTemplateItem.delete({ where: { id: itemId } });
-  });
+  // VisitChecklistResult.templateItemId is ON DELETE SET NULL, not a
+  // required FK — deleting this template item detaches any visit's
+  // already-recorded checklist row for it (label/detail/verified state is
+  // denormalized onto that row, so it survives as a plain visit-only item)
+  // rather than force-deleting that visit's history.
+  await withTenantContext(ctx, (tx) => tx.checklistTemplateItem.delete({ where: { id: itemId } }));
   revalidatePath(`/dashboard/studies/${studyId}/templates/${templateId}/checklist`);
 }

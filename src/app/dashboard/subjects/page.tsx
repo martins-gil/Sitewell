@@ -1,6 +1,6 @@
 import type { SubjectStatus } from "@prisma/client";
 import Link from "next/link";
-import { getSubjects, getStudies } from "@/lib/queries";
+import { getSubjects, getStudies, getSubjectsWithVisitCounts } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { AddPatientForm } from "./add-patient-form";
@@ -25,10 +25,17 @@ export default async function SubjectsPage({
     ? (params.status as SubjectStatus)
     : undefined;
 
-  const [subjects, studies] = await Promise.all([
+  const [subjects, studies, subjectsWithVisitCounts] = await Promise.all([
     getSubjects({ studyId: params.studyId, status }),
     getStudies(),
+    getSubjectsWithVisitCounts(),
   ]);
+  const duplicateCandidates = subjectsWithVisitCounts.map((s) => ({
+    id: s.id,
+    subjectCode: s.subjectCode,
+    studyId: s.studyId,
+    visitCount: s._count.visits,
+  }));
 
   return (
     <div className="space-y-6">
@@ -39,7 +46,7 @@ export default async function SubjectsPage({
             {subjects.length} subject{subjects.length === 1 ? "" : "s"} matching current filters
           </p>
         </div>
-        <AddPatientForm studies={studies} />
+        <AddPatientForm studies={studies} duplicateCandidates={duplicateCandidates} />
       </div>
 
       <form className="flex flex-wrap gap-3" method="get">

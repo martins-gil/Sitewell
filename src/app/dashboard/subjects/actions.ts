@@ -10,6 +10,7 @@ export async function addSubject(formData: FormData) {
   const studyId = String(formData.get("studyId") ?? "");
   const subjectCodeOverride = String(formData.get("subjectCode") ?? "").trim();
   const referralSource = String(formData.get("referralSource") ?? "").trim() || null;
+  const duplicateFromSubjectId = String(formData.get("duplicateFromSubjectId") ?? "").trim() || null;
 
   if (!studyId) throw new Error("Study is required.");
 
@@ -44,10 +45,45 @@ export async function addSubject(formData: FormData) {
         isTestData: true,
       },
     });
+
+    // Optionally duplicate another subject's visit list (same visit types,
+    // same dates) as a starting point for this new recruitment in the same
+    // trial — for a site that wants to hand-schedule the new patient's
+    // visits instead of waiting for the enrollment-offset auto-generation
+    // in src/lib/visit-generation.ts. Only the schedule shape is copied
+    // (type/target date/window), reset to SCHEDULED — not the source
+    // visit's own status/actualDate history, checklist results, or
+    // documents, since those belong to what actually happened at the
+    // source patient's visits, not this new one. The coordinator then
+    // adjusts each date via the existing reschedule action. Restricted to
+    // the same study server-side regardless of what the form offered.
+    if (duplicateFromSubjectId) {
+      const sourceVisits = await tx.visit.findMany({
+        where: { subjectId: duplicateFromSubjectId, studyId },
+        orderBy: { targetDate: "asc" },
+      });
+      if (sourceVisits.length > 0) {
+        await tx.visit.createMany({
+          data: sourceVisits.map((v) => ({
+            organizationId: study.organizationId,
+            subjectId: subject.id,
+            studyId,
+            templateId: v.templateId,
+            visitType: v.visitType,
+            targetDate: v.targetDate,
+            windowStart: v.windowStart,
+            windowEnd: v.windowEnd,
+            status: "SCHEDULED" as const,
+          })),
+        });
+      }
+    }
+
     return subject.id;
   });
 
   revalidatePath("/dashboard/subjects");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/visits");
   redirect(`/dashboard/subjects/${subjectId}`);
 }

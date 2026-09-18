@@ -1,10 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@/auth";
 import { getStudyWithTemplates } from "@/lib/queries";
 import { addVisitTemplate, deleteVisitTemplate, updateStudyDocumentDetails } from "./actions";
 import { DeleteTemplateButton } from "./delete-template-button";
-import { EditStudyForm } from "@/app/dashboard/studies/edit-study-form";
 
 function toDateInputValue(date: Date | null): string {
   if (!date) return "";
@@ -17,9 +15,8 @@ export default async function VisitTemplatesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, study] = await Promise.all([auth(), getStudyWithTemplates(id)]);
+  const study = await getStudyWithTemplates(id);
   if (!study) notFound();
-  const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
   const addTemplateWithId = addVisitTemplate.bind(null, study.id);
   const updateDocDetailsWithId = updateStudyDocumentDetails.bind(null, study.id);
@@ -28,8 +25,8 @@ export default async function VisitTemplatesPage({
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <Link href="/dashboard/studies" className="text-sm text-neutral-500 hover:underline">
-          ← Studies
+        <Link href={`/dashboard/studies/${study.id}`} className="text-sm text-neutral-500 hover:underline">
+          ← {study.protocolId}
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
           {study.protocolId} visit schedule
@@ -39,19 +36,6 @@ export default async function VisitTemplatesPage({
           marked Enrolled.
         </p>
       </div>
-
-      {canManage && (
-        <EditStudyForm
-          studyId={study.id}
-          study={{
-            protocolId: study.protocolId,
-            title: study.title,
-            phase: study.phase,
-            sponsor: study.sponsor,
-            status: study.status,
-          }}
-        />
-      )}
 
       <form
         action={updateDocDetailsWithId}
