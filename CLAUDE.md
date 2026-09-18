@@ -148,6 +148,22 @@ picks this repo up next.
   which visit TYPE a batch is earmarked for (e.g. "Baseline kits, Lot B"),
   not which subject received one. If a per-subject dispensing log is ever
   wanted, that is a different model, not a change to this one.
+- **Study and Team management (`/dashboard/studies` add/edit,
+  `/dashboard/team`) are gated to `ORG_ADMIN`/platform admin**, checked both
+  in the page (hides the UI, and `/dashboard/team` refuses to even query
+  member data for anyone else) and again in every server action in
+  `src/app/dashboard/studies/actions.ts` and
+  `src/app/dashboard/team/actions.ts` — the action-level check is the real
+  gate, since a server action is a callable endpoint regardless of what the
+  UI hides. Deleting a user (`deleteTeamMember`) can't just `user.delete` —
+  `StudyAssignment.userId`, `Document.signedById`, and
+  `FeedbackSubmission.submittedById` all reference `User` with no cascade.
+  The action clears the user's own `StudyAssignment` rows first (safe, just
+  a link) but blocks the whole delete with a friendly error if the user has
+  signed documents or feedback, rather than letting a raw FK violation
+  reach the client. Self-deletion is blocked outright. `PLATFORM_ADMIN` is
+  deliberately not an assignable role from this page — it's cross-org, not
+  something one org's admin should be able to grant.
 
 ## Before calling a change done
 

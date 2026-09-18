@@ -116,13 +116,27 @@ to org A, and a cross-tenant insert is rejected).
   coordinators won't have accounts in any Claude.ai organization, which a
   Claude Artifact's shared database would have required. Still open: how
   testers actually reach the app (local machine vs. deployed) — undecided.
+- ✅ Study creation and editing: an "+ Add study" form on `/dashboard/studies`
+  (protocol ID, title, phase, sponsor, status) and a "Study details" edit
+  form on the study's visit-schedule page for fixing typos after the fact —
+  both org-admin-only (`ORG_ADMIN` role or platform admin), kept as a
+  separate action/form from the existing "Document header details" form,
+  which owns a different set of fields (PI name, protocol version, site
+  number) printed on the generated checklist .docx.
+- ✅ Team management (`/dashboard/team`, org-admin-only — hidden from the nav
+  and blocked server-side for anyone else): add a coordinator/PI/org admin
+  with a temporary password they sign in with directly (no invite email or
+  self-service password change yet), edit a member's name/email/role, or
+  delete them. Deleting clears the member's own study assignments first but
+  is blocked if they have signed documents or submitted feedback — those
+  foreign keys have no cascade, and deleting anyway would silently erase
+  part of the record they belong to. An admin can't delete their own
+  account. Platform Admin isn't an assignable role here — it's a cross-org
+  role that doesn't make sense to grant from inside one org's team page.
+- ⬜ Still no UI to create a new Site independent of a study, or to change a
+  user's password once set — the org admin sets it at creation time only.
 - ⬜ Phase 4 (dashboards), Phase 5 (commercial hardening) — not started, by
   design (see PROJECT_SPEC.md)
-- ⬜ No UI yet to create a new Study, Site, or User/coordinator — those still
-  only exist via `prisma/seed.ts` (or a one-off manual SQL insert, in the
-  case of the live `site@riverside-research.dev` account). Adding a patient
-  is now possible from the UI (see Module 1 above); Study/User creation
-  forms are the next gap to close.
 
 ## Environment note
 
