@@ -273,6 +273,16 @@ export async function getStudiesWithTemplatesForKits() {
   );
 }
 
+export async function getTeamMembers() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.user.findMany({
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, email: true, role: true, mfaEnabled: true, createdAt: true },
+    }),
+  );
+}
+
 export async function getExpiringDocuments(daysAhead = 60) {
   const ctx = await requireTenantContext();
   const now = new Date();

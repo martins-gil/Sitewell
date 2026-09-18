@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { auth } from "@/auth";
 import { getStudies } from "@/lib/queries";
+import { AddStudyForm } from "./add-study-form";
 
 export default async function StudiesPage() {
-  const studies = await getStudies();
+  const [session, studies] = await Promise.all([auth(), getStudies()]);
+  const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
   return (
     <div className="space-y-6">
@@ -12,6 +15,8 @@ export default async function StudiesPage() {
           {studies.length} stud{studies.length === 1 ? "y" : "ies"}.
         </p>
       </div>
+
+      {canManage && <AddStudyForm />}
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
@@ -34,7 +39,7 @@ export default async function StudiesPage() {
                     href={`/dashboard/studies/${s.id}/templates`}
                     className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
                   >
-                    Visit schedule →
+                    Details & schedule →
                   </Link>
                 </td>
               </tr>

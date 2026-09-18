@@ -14,15 +14,19 @@ const NAV = [
   { href: "/dashboard/settings/security", label: "Security" },
 ];
 
+const TEAM_NAV_ITEM = { href: "/dashboard/team", label: "Team" };
+
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const session = await auth();
+  const canManageTeam = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
+  const nav = canManageTeam ? [...NAV, TEAM_NAV_ITEM] : NAV;
 
   return (
     <div className="flex min-h-full flex-1">
       <aside className="flex w-56 flex-col border-r border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
         <div className="mb-6 px-2 text-lg font-semibold tracking-tight">SiteWell-ct</div>
         <nav className="flex flex-1 flex-col gap-1">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
