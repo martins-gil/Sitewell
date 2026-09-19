@@ -4,7 +4,7 @@ import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
 import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
 import { pickProtocolDocument } from "@/lib/protocol-document";
-import { parseNursingSheet } from "@/lib/nursing-sheet";
+import { parseNursingSheet, defaultNursingSheet } from "@/lib/nursing-sheet";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -383,7 +383,11 @@ export async function getVisitChecklistHeader(visitId: string) {
       checklistColumn: (visit.template?.checklistColumn === "DATETIME" ? "DATETIME" : "VERIFIED") as
         | "VERIFIED"
         | "DATETIME",
-      nursingSheet: parseNursingSheet(visit.template?.nursingSheet),
+      // Every visit has a nursing sheet: the visit type's own if one was set
+      // up, else the standard one (custom visits, which have no visit type,
+      // always get the standard one).
+      nursingSheet: parseNursingSheet(visit.template?.nursingSheet) ?? defaultNursingSheet(),
+      nursingSheetIsCustom: parseNursingSheet(visit.template?.nursingSheet) !== null,
       // Kits linked to this visit — listed on both documents.
       kits: visit.kits.map((k) => k.name),
       notes: visit.notes,

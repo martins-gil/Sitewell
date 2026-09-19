@@ -21,9 +21,10 @@ export default async function NursingSheetPage({
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{template.name} nursing sheet</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          The standard nursing record for every {template.name} visit: which vital signs and collections are
-          recorded, and in which columns. Each visit downloads it as a .docx with its own visit, date, subject
-          initials and kits filled in; the readings themselves are handwritten.
+          The nursing record for every {template.name} visit: which vital signs and collections are recorded,
+          and in which columns. Every visit can already download the standard sheet; change it here to give{" "}
+          {template.name} visits their own. Each download has the visit, date, subject initials, kits and notes
+          filled in; the readings themselves are handwritten.
         </p>
       </div>
 

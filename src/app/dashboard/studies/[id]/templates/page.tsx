@@ -62,7 +62,7 @@ export default async function VisitTemplatesPage({
                     href={`/dashboard/studies/${study.id}/templates/${t.id}/nursing-sheet`}
                     className="ml-4 text-neutral-600 hover:underline dark:text-neutral-400"
                   >
-                    Nursing sheet{t.nursingSheet ? " ✓" : ""} →
+                    Nursing sheet{t.nursingSheet ? " (customised)" : ""} →
                   </Link>
                 </td>
                 <td className="px-4 py-2 text-right">

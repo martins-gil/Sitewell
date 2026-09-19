@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   NURSING_SHEET_PRESETS,
+  defaultNursingSheet,
   type NursingSheet,
   type NursingSheetRow,
   type NursingSheetSection,
@@ -23,12 +24,6 @@ const EMPTY_SECTION: NursingSheetSection = {
   rows: [{ label: "", readings: 1, note: "" }],
 };
 
-const EMPTY_SHEET: NursingSheet = {
-  subtitle: "",
-  visitLabel: "Week/Dia",
-  signature: false,
-  sections: [EMPTY_SECTION],
-};
 
 function moved<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list;
@@ -53,9 +48,10 @@ export function NursingSheetEditor({
   visitName: string;
   initial: NursingSheet | null;
 }) {
-  const [sheet, setSheet] = useState<NursingSheet>(initial ?? EMPTY_SHEET);
+  // Nothing customised yet: start from the standard sheet visits already use.
+  const [sheet, setSheet] = useState<NursingSheet>(initial ?? defaultNursingSheet());
   const [exists, setExists] = useState(initial !== null);
-  const [dirty, setDirty] = useState(initial === null);
+  const [dirty, setDirty] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -89,17 +85,17 @@ export function NursingSheetEditor({
   }
 
   function handleRemove() {
-    if (!window.confirm(`Remove the ${visitName} nursing sheet? Visits of this type will stop offering the download.`)) {
+    if (!window.confirm(`Go back to the standard nursing sheet for ${visitName} visits? Your changes to this one are lost.`)) {
       return;
     }
     setError(null);
     startTransition(async () => {
       try {
         await saveNursingSheet(studyId, templateId, null);
-        setSheet(EMPTY_SHEET);
+        setSheet(defaultNursingSheet());
         setExists(false);
         setDirty(true);
-        setNotice("Removed.");
+        setNotice("Back to the standard sheet.");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to remove.");
       }
@@ -359,7 +355,7 @@ export function NursingSheetEditor({
           disabled={pending || (exists && !dirty)}
           className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
         >
-          {pending ? "Saving…" : exists ? "Save changes" : "Save nursing sheet"}
+          {pending ? "Saving…" : exists ? "Save changes" : `Use this sheet for ${visitName} visits`}
         </button>
         {exists && (
           <button
@@ -368,7 +364,7 @@ export function NursingSheetEditor({
             disabled={pending}
             className="text-sm text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
           >
-            Remove nursing sheet
+            Go back to the standard sheet
           </button>
         )}
         {notice && <span className="text-sm text-green-700 dark:text-green-400">{notice}</span>}

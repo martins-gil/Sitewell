@@ -223,8 +223,11 @@ picks this repo up next.
   validated by `nursingSheetSchema` in `src/lib/nursing-sheet.ts` on every
   save AND every read — `parseNursingSheet` returns null for a stored value
   that no longer validates) rendered as a blank form; the nurse's readings
-  are handwritten and NOT stored. Clearing it writes `Prisma.DbNull`, not a
-  bare `null`. `prisma/seed.ts` imports the presets from `src/lib`
+  are handwritten and NOT stored. A visit type with no stored sheet (and every
+  custom visit) falls back to `defaultNursingSheet()` in
+  `getVisitChecklistHeader`, so the download always exists — `nursingSheet` on
+  the header is never null; `nursingSheetIsCustom` says which it is. Clearing
+  a custom sheet writes `Prisma.DbNull`, not a bare `null`. `prisma/seed.ts` imports the presets from `src/lib`
   by relative path (no `@/` alias there).
 - **Kits are inventory with an optional link to one visit, not a dispensing
   log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;

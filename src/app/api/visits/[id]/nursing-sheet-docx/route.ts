@@ -6,13 +6,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const header = await getVisitChecklistHeader(id);
 
-  if (!header.nursingSheet) {
-    return NextResponse.json(
-      { error: "This visit type has no nursing sheet yet — set one up under Studies → Visit schedule." },
-      { status: 404 },
-    );
-  }
-
   const buffer = await generateNursingSheetDocx(header, header.nursingSheet);
   const filename = `${header.subjectCode}-${header.visitType}-nursing-sheet.docx`
     .replace(/[\\/:*?"<>|]/g, "")

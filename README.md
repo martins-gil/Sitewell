@@ -146,9 +146,10 @@ to org A, and a cross-tenant insert is rejected).
   on the visit page gets a date-time field and a "Now" button (setting a time
   also ticks it). The visit's linked kits print under the checklist ("Kits:")
   and free-text visit notes ("Notas:", `Visit.notes`) print on both
-  documents. Each visit type can also define a standard **nursing sheet**
-  ("Documento fonte – Registos de enfermagem",
-  `/dashboard/studies/[id]/templates/[templateId]/nursing-sheet`): sections of
+  documents. Every visit has a **nursing sheet** to download
+  ("Documento fonte – Registos de enfermagem"): the standard one by default,
+  or the visit type's own once customised at
+  `/dashboard/studies/[id]/templates/[templateId]/nursing-sheet` — sections of
   rows (vital signs, collections…) with Result / Hora / Observações columns,
   starting from one of two presets modelled on the site's paper forms. The
   visit page downloads it as a .docx (`src/lib/nursing-sheet-docx.ts`) with

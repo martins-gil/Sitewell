@@ -103,47 +103,33 @@ export default async function VisitDetailPage({
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-neutral-500">Nursing sheet</h2>
-        <div className="rounded-lg border border-neutral-200 p-5 text-sm dark:border-neutral-800">
-          {docHeader.nursingSheet ? (
-            <>
-              <p className="text-neutral-600 dark:text-neutral-400">
-                The standard nursing record for a {visit.visitType} visit —{" "}
-                {docHeader.nursingSheet.sections.length} section
-                {docHeader.nursingSheet.sections.length === 1 ? "" : "s"},{" "}
-                {docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0)} rows. Downloads with this
-                visit&apos;s number, date, subject and initials filled in
-                {visit.kits.length > 0 ? ", plus its kits" : ""}; the readings are handwritten.
-              </p>
-              <a
-                href={`/api/visits/${visit.id}/nursing-sheet-docx`}
-                className="mt-3 inline-block font-medium hover:underline"
+        <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <p className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400">
+            {docHeader.nursingSheetIsCustom
+              ? `The nursing record set up for ${visit.visitType} visits`
+              : "The standard nursing record"}{" "}
+            — {docHeader.nursingSheet.sections.length} section
+            {docHeader.nursingSheet.sections.length === 1 ? "" : "s"},{" "}
+            {docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0)} rows. It downloads with this
+            visit&apos;s number, date, subject and initials filled in
+            {visit.kits.length > 0 ? ", plus its kits and notes" : " and its notes"}; the readings are handwritten.{" "}
+            {visit.templateId ? (
+              <Link
+                href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
+                className="underline"
               >
-                Download nursing sheet (.docx)
-              </a>
-            </>
-          ) : (
-            <p className="text-neutral-500">
-              This visit type has no nursing sheet yet.{" "}
-              {visit.templateId ? (
-                <Link
-                  href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
-                  className="underline"
-                >
-                  Set one up →
-                </Link>
-              ) : (
-                "Nursing sheets belong to a protocol visit type, and this is a custom visit."
-              )}
-            </p>
-          )}
-          {docHeader.nursingSheet && visit.templateId && (
-            <Link
-              href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
-              className="ml-4 text-xs text-neutral-500 hover:underline"
-            >
-              Edit the sheet
-            </Link>
-          )}
+                {docHeader.nursingSheetIsCustom ? "Edit the sheet" : `Customise it for ${visit.visitType} visits`} →
+              </Link>
+            ) : (
+              "(Custom visits always use the standard sheet.)"
+            )}
+          </p>
+          <a
+            href={`/api/visits/${visit.id}/nursing-sheet-docx`}
+            className="block border-t border-neutral-200 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          >
+            Download nursing sheet (.docx)
+          </a>
         </div>
       </div>
 

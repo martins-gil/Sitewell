@@ -56,6 +56,13 @@ export function parseNursingSheet(json: unknown): NursingSheet | null {
 
 const r = (label: string, readings = 1, note = ""): NursingSheetRow => ({ label, readings, note });
 
+/** What a visit prints when its visit type hasn't customised a sheet: nursing
+ * records are standard, so every visit can download one straight away. Defined
+ * below from the first preset. */
+export function defaultNursingSheet(): NursingSheet {
+  return structuredClone(NURSING_SHEET_PRESETS[0].sheet);
+}
+
 /** Starting points, modelled on the site's two paper nursing records. */
 export const NURSING_SHEET_PRESETS: { id: string; label: string; sheet: NursingSheet }[] = [
   {
