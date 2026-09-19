@@ -41,4 +41,15 @@ export const EXTRA_KEYS = [
   "Login And Security",
   "Patients",
   "Login & Security",
+  // Study colours (src/lib/study-colors.ts)
+  "Blue",
+  "Green",
+  "Orange",
+  "Purple",
+  "Teal",
+  "Pink",
+  "Yellow",
+  "Red",
+  "Indigo",
+  "Lime",
 ] as const;

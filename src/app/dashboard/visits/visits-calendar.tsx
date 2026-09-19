@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { humanizeEnum } from "@/lib/format";
+import { patientTone, patientWash, studyColor } from "@/lib/study-colors";
 import { useT } from "@/lib/i18n/client";
 
 export type CalendarVisit = {
@@ -51,9 +52,14 @@ const navButton =
 
 export function VisitsCalendar({
   visits,
+  studyColors,
+  studies,
   onAddOnDay,
 }: {
   visits: CalendarVisit[];
+  // Each study's colour (see src/lib/study-colors.ts) and the studies to list in the legend.
+  studyColors: Record<string, string>;
+  studies: { id: string; protocolId: string }[];
   onAddOnDay?: (dateKey: string) => void;
 }) {
   const t = useT();
@@ -136,8 +142,25 @@ export function VisitsCalendar({
     else setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
+  const colorOf = (v: CalendarVisit) => studyColors[v.studyId] ?? "blue";
+
   return (
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+      {studies.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-neutral-200 px-4 py-2 text-xs dark:border-neutral-800">
+          <span className="text-neutral-500">{t("Colour = study, tone = patient")}</span>
+          {studies.map((s) => (
+            <span key={s.id} className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block h-2.5 w-2.5 rounded-sm"
+                style={{ backgroundColor: studyColor(studyColors[s.id] ?? "blue") }}
+              />
+              {s.protocolId}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-sm font-medium">
@@ -178,7 +201,11 @@ export function VisitsCalendar({
               {dayVisits.map((v) => (
                 <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`} />
+                    <span
+                      aria-hidden
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: patientTone(colorOf(v), v.subjectCode) }}
+                    />
                     <Link href={`/dashboard/visits/${v.id}`} className="font-medium hover:underline">
                       {v.visitType}
                     </Link>
@@ -251,13 +278,19 @@ export function VisitsCalendar({
                       key={v.id}
                       onClick={() => router.push(`/dashboard/visits/${v.id}`)}
                       title={`${v.protocolId} ${v.subjectCode} — ${v.visitType} (${t(humanizeEnum(v.status))})`}
-                      className="flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      style={{
+                        borderLeft: `3px solid ${patientTone(colorOf(v), v.subjectCode)}`,
+                        backgroundColor: patientWash(colorOf(v), v.subjectCode),
+                      }}
+                      className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:brightness-95 dark:hover:brightness-125"
                     >
-                      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`} />
                       <span className="truncate">
                         <span className="font-mono">{v.subjectCode}</span>{" "}
                         <span className="text-neutral-500">{v.visitType}</span>
                       </span>
+                      <span
+                        className={`ml-auto h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`}
+                      />
                     </button>
                   ))}
                   {dayCellVisits.length > 3 && (

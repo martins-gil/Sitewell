@@ -3,6 +3,7 @@ import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
 import type { CalendarVisit } from "./visits-calendar";
 import { getT } from "@/lib/i18n/server";
+import { resolveStudyColors } from "@/lib/study-colors";
 
 export default async function VisitsPage() {
   const t = await getT();
@@ -38,6 +39,7 @@ export default async function VisitsPage() {
       <VisitsView
         tableVisits={visits}
         calendarVisits={calendarVisits}
+        studyColors={resolveStudyColors(studies)}
         studies={studies}
         schedulingSubjects={scheduling.subjects}
         schedulingTemplates={scheduling.templates}

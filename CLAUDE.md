@@ -252,6 +252,29 @@ picks this repo up next.
   Dark mode is the `.dark` class on `<html>` (`@custom-variant dark` in
   `globals.css`), set from the cookie on the server and, for "match my
   device", by a tiny inline script before first paint.
+- **Study colours, departments and custom document types.** `Study.color`
+  is a palette id (`src/lib/study-colors.ts`); null means "auto" — always go
+  through `resolveStudyColors(studies)` (oldest study first, first unused
+  palette colour) rather than reading the column, so colours stay stable and
+  never collide until there are more than ten studies. A patient's tone is
+  DERIVED from the number at the end of their code (`patientTone`), not
+  stored. `Department` is a tenant table (RLS + audit trigger were added in
+  the same migration, `20260923090000_…`); a study's `departmentId` is
+  nullable and `ON DELETE SET NULL`. New departments are created from the
+  study add/edit forms (`resolveDepartmentId` in `studies/actions.ts` reuses
+  a same-named one, case-insensitively) — there's no separate department
+  screen. "Enrolled this year" counts `Subject.enrolledAt` in the current
+  calendar year (UTC), "currently enrolled" counts status ENROLLED.
+  `Document.typeLabel` is the user's own name for an OTHER document's type;
+  it's part of the supersede match key and shown instead of "Other".
+- **"Coming up this week / next week"** (`getUpcomingWeeks`): weeks run
+  Monday to Sunday, counted in UTC, only SCHEDULED/RESCHEDULED visits. It
+  feeds both the blue banner in `dashboard/layout.tsx` (dismissible per day,
+  in `localStorage`, like the kit banner) and the Overview card.
+- **Clicking the sidebar link of the section you're on refreshes it**
+  (`sidebar-nav.tsx` → `router.refresh()`); a link to the current address
+  does nothing on its own. If the URL has a query string (filters) the click
+  navigates normally, which clears them. Settings tabs do the same.
 - **Team and Security live under Settings** (`/dashboard/settings/team`,
   `/dashboard/settings/security`); `/dashboard/team` just redirects. The
   patient list deliberately has no I/E criteria column — they're shown only

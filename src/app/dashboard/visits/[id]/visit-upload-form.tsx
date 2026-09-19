@@ -1,17 +1,17 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { humanizeEnum } from "@/lib/format";
 import { uploadDocument } from "../../documents/actions";
+import { DocumentTypeField } from "../../documents/document-type-field";
 import { useT } from "@/lib/i18n/client";
-
-const TYPES = ["PROTOCOL", "IB", "ICF", "DELEGATION_LOG", "TRAINING_RECORD", "OTHER"];
 
 export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId: string }) {
   const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Bumped after each add so the type picker goes back to its default.
+  const [formKey, setFormKey] = useState(0);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -19,6 +19,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
       try {
         await uploadDocument(formData);
         formRef.current?.reset();
+        setFormKey((k) => k + 1);
       } catch (e) {
         setError(e instanceof Error ? e.message : t("Failed to add the document."));
       }
@@ -34,21 +35,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
       <input type="hidden" name="studyId" value={studyId} />
       <input type="hidden" name="visitId" value={visitId} />
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs font-medium">{t("Type")}</label>
-          <select
-            name="type"
-            required
-            defaultValue="OTHER"
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
-          >
-            {TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(humanizeEnum(type))}
-              </option>
-            ))}
-          </select>
-        </div>
+        <DocumentTypeField key={formKey} defaultType="OTHER" />
         <div>
           <label className="block text-xs font-medium">{t("Version")}</label>
           <input

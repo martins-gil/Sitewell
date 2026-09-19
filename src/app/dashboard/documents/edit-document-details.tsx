@@ -7,11 +7,14 @@ import { useT } from "@/lib/i18n/client";
 export function EditDocumentDetails({
   documentId,
   version,
+  typeLabel,
   releaseDateInput,
   expiryDateInput,
 }: {
   documentId: string;
   version: string;
+  // The name of an "Other" document's type; null for every other type.
+  typeLabel: string | null;
   releaseDateInput: string;
   expiryDateInput: string;
 }) {
@@ -41,6 +44,18 @@ export function EditDocumentDetails({
 
   return (
     <form action={handleSave} className="flex flex-wrap items-end gap-2">
+      {typeLabel !== null && (
+        <div>
+          <label className="block text-[10px] font-medium text-neutral-500">{t("Name of this type (optional)")}</label>
+          <input
+            name="typeLabel"
+            maxLength={80}
+            defaultValue={typeLabel}
+            placeholder={t("e.g. Lab certificate")}
+            className="w-40 rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
+          />
+        </div>
+      )}
       <div>
         <label className="block text-[10px] font-medium text-neutral-500">{t("Version")}</label>
         <input

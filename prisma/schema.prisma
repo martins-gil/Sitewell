@@ -93,6 +93,7 @@ model Organization {
   checklistResults     VisitChecklistResult[]
   checklistTaskLibrary ChecklistTaskLibrary[]
   kits                 Kit[]
+  departments          Department[]
 
   @@map("organizations")
 }
@@ -142,10 +143,17 @@ model Study {
   // from the study's active PROTOCOL document (Document.version /
   // Document.releaseDate), see src/lib/protocol-document.ts.
   piName            String?   @map("pi_name")
+  // A palette id from src/lib/study-colors.ts (e.g. "blue"); null = one is
+  // picked automatically. The calendar shows the study in this colour and each
+  // of its patients in a different tone of it.
+  color             String?
+  // The department (e.g. Oncology) the study belongs to; null = none set.
+  departmentId      String?   @map("department_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   organization Organization            @relation(fields: [organizationId], references: [id])
+  department   Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   sites        Site[]
   subjects     Subject[]
   templates    VisitScheduleTemplate[]
@@ -156,7 +164,25 @@ model Study {
 
   @@unique([organizationId, protocolId])
   @@index([organizationId])
+  @@index([departmentId])
   @@map("studies")
+}
+
+// A department of the site (Oncology, Cardiology…) that studies are assigned
+// to, so the Studies page can count active studies and enrolments per
+// department. Tenant-scoped: has RLS + the audit trigger (see its migration).
+model Department {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  name           String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  studies      Study[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("departments")
 }
 
 model Site {
@@ -411,6 +437,9 @@ model Document {
   subjectId      String?        @map("subject_id")
   visitId        String?        @map("visit_id")
   type           DocumentType
+  // The user's own name for the type when `type` is OTHER (e.g. "Lab
+  // certificate"); null for the standard types.
+  typeLabel      String?        @map("type_label")
   title          String
   version        String
   // Null = the document is logged (title/type/version/dates) but no file has

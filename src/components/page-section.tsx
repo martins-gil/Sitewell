@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import type { SectionMode } from "@/lib/preferences";
 
 /**
- * One block of the visit page, shown / collapsed / hidden according to the
- * user's Settings. Collapsed and shown both render (so a collapsed one can be
+ * One block of a page (a visit's or a patient's), shown / collapsed / hidden
+ * according to the user's Settings. Collapsed and shown both render (so a collapsed one can be
  * opened with a click); hidden renders nothing.
  */
-export function VisitSection({
+export function PageSection({
   title,
   mode,
   children,

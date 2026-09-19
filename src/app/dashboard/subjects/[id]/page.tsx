@@ -10,6 +10,8 @@ import { VisitScheduler } from "./visit-scheduler";
 import { PatientVisitsTable } from "./patient-visits-table";
 import { canScheduleVisits, DAY_MS } from "@/lib/visit-scheduling";
 import { getT } from "@/lib/i18n/server";
+import { getSectionModes } from "@/lib/preferences-server";
+import { PageSection } from "@/components/page-section";
 
 export default async function SubjectDetailPage({
   params,
@@ -17,6 +19,7 @@ export default async function SubjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const t = await getT();
+  const modes = await getSectionModes();
   const { id } = await params;
   const subject = await getSubjectById(id);
   if (!subject) notFound();
@@ -40,20 +43,20 @@ export default async function SubjectDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="mb-3 text-sm font-medium text-neutral-500">{t("Funnel stage")}</h2>
-          <StatusControl subjectId={subject.id} currentStatus={subject.status} />
-          {subject.enrolledAt && (
-            <p className="mt-3 text-xs text-neutral-500">{t("Enrolled {0}", [formatDate(subject.enrolledAt, t.locale)])}</p>
-          )}
-        </div>
+      <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">{t("Funnel stage")}</h2>
+        <StatusControl subjectId={subject.id} currentStatus={subject.status} />
+        {subject.enrolledAt && (
+          <p className="mt-3 text-xs text-neutral-500">{t("Enrolled {0}", [formatDate(subject.enrolledAt, t.locale)])}</p>
+        )}
+      </div>
 
+      {/* The criteria list can be long, so it can be collapsed or hidden in Settings. */}
+      <PageSection mode={modes.criteria} title={t("I/E criteria")}>
         <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
-          <h2 className="mb-3 text-sm font-medium text-neutral-500">{t("I/E criteria")}</h2>
           <IeCriteriaEditor subjectId={subject.id} initialCriteria={criteria ?? []} />
         </div>
-      </div>
+      </PageSection>
 
       <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
         <div className="border-b border-neutral-200 px-5 py-3 dark:border-neutral-800">

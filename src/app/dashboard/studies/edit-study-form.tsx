@@ -3,13 +3,24 @@
 import { useState, useTransition } from "react";
 import { updateStudyCore } from "./actions";
 import { useT } from "@/lib/i18n/client";
+import { ColorField, DepartmentField } from "./study-fields";
 
 export function EditStudyForm({
   studyId,
   study,
+  departments,
 }: {
   studyId: string;
-  study: { protocolId: string; title: string; phase: string | null; sponsor: string | null; status: string };
+  study: {
+    protocolId: string;
+    title: string;
+    phase: string | null;
+    sponsor: string | null;
+    status: string;
+    departmentId: string | null;
+    color: string;
+  };
+  departments: { id: string; name: string }[];
 }) {
   const t = useT();
   const [pending, startTransition] = useTransition();
@@ -84,6 +95,8 @@ export function EditStudyForm({
             <option value="closed">{t("Closed")}</option>
           </select>
         </div>
+        <DepartmentField departments={departments} defaultId={study.departmentId} />
+        <ColorField defaultColor={study.color} />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       {saved && !error && <p className="text-sm text-green-700 dark:text-green-400">{t("Saved.")}</p>}

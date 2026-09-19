@@ -1,11 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { humanizeEnum } from "@/lib/format";
 import { uploadDocument } from "./actions";
+import { DocumentTypeField } from "./document-type-field";
 import { useT } from "@/lib/i18n/client";
-
-const TYPES = ["PROTOCOL", "IB", "ICF", "DELEGATION_LOG", "TRAINING_RECORD", "OTHER"];
 
 export function UploadDocumentForm({
   studies,
@@ -16,6 +14,8 @@ export function UploadDocumentForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Bumped after each add so the type picker goes back to its default.
+  const [formKey, setFormKey] = useState(0);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -23,6 +23,7 @@ export function UploadDocumentForm({
       try {
         await uploadDocument(formData);
         formRef.current?.reset();
+        setFormKey((k) => k + 1);
       } catch (e) {
         setError(e instanceof Error ? e.message : t("Failed to add the document."));
       }
@@ -51,20 +52,7 @@ export function UploadDocumentForm({
             ))}
           </select>
         </div>
-        <div>
-          <label className="block text-xs font-medium">{t("Type")}</label>
-          <select
-            name="type"
-            required
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
-          >
-            {TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(humanizeEnum(type))}
-              </option>
-            ))}
-          </select>
-        </div>
+        <DocumentTypeField key={formKey} />
         <div className="col-span-2">
           <label className="block text-xs font-medium">{t("Title")}</label>
           <input

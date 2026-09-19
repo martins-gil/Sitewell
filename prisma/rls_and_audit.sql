@@ -76,7 +76,8 @@ BEGIN
       ('checklist_template_items', 'organization_id'),
       ('visit_checklist_results', 'organization_id'),
       ('checklist_task_library', 'organization_id'),
-      ('kits', 'organization_id')
+      ('kits', 'organization_id'),
+      ('departments', 'organization_id')
     ) AS x(table_name, org_column)
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t.table_name);
@@ -181,7 +182,7 @@ BEGIN
     'organizations', 'users', 'studies', 'sites', 'study_assignments',
     'subjects', 'visit_schedule_templates', 'visits', 'documents',
     'feedback_submissions', 'checklist_template_items', 'visit_checklist_results',
-    'checklist_task_library', 'kits'
+    'checklist_task_library', 'kits', 'departments'
   ]
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS audit_trigger ON %I', tbl);

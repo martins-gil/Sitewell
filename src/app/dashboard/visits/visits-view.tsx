@@ -16,9 +16,11 @@ export function VisitsView({
   studies,
   schedulingSubjects,
   schedulingTemplates,
+  studyColors,
 }: {
   tableVisits: TableVisit[];
   calendarVisits: CalendarVisit[];
+  studyColors: Record<string, string>;
   studies: { id: string; protocolId: string; title: string }[];
   schedulingSubjects: SchedulingSubject[];
   schedulingTemplates: SchedulingTemplate[];
@@ -90,7 +92,12 @@ export function VisitsView({
       )}
 
       {view === "calendar" ? (
-        <VisitsCalendar visits={filteredCalendarVisits} onAddOnDay={(date) => setAdding({ date })} />
+        <VisitsCalendar
+          visits={filteredCalendarVisits}
+          studyColors={studyColors}
+          studies={studyId ? studies.filter((s) => s.id === studyId) : studies}
+          onAddOnDay={(date) => setAdding({ date })}
+        />
       ) : (
         <VisitsTable visits={filteredTableVisits} />
       )}

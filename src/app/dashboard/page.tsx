@@ -2,21 +2,27 @@ import Link from "next/link";
 import {
   getSubjectFunnelStats,
   getUpcomingVisits,
+  getUpcomingWeeks,
+  getStudies,
   getExpiringDocuments,
   getKitExpirySummary,
 } from "@/lib/queries";
-import { formatDate, humanizeEnum } from "@/lib/format";
+import { formatDayShort, humanizeEnum } from "@/lib/format";
+import { patientTone, resolveStudyColors } from "@/lib/study-colors";
 import { getT } from "@/lib/i18n/server";
 
 export default async function DashboardOverviewPage() {
   const t = await getT();
-  const [funnel, visitsNextWeek, upcomingVisits, expiringDocs, kitSummary] = await Promise.all([
+  const [funnel, visitsNextWeek, upcomingVisits, expiringDocs, kitSummary, weeks, studies] = await Promise.all([
     getSubjectFunnelStats(),
     getUpcomingVisits(7),
     getUpcomingVisits(14),
     getExpiringDocuments(60),
     getKitExpirySummary(),
+    getUpcomingWeeks(),
+    getStudies(),
   ]);
+  const colors = resolveStudyColors(studies);
 
   return (
     <div className="space-y-8">
@@ -68,20 +74,52 @@ export default async function DashboardOverviewPage() {
 
       <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
         <h2 className="mb-3 text-sm font-medium text-neutral-500">{t("Upcoming visits")}</h2>
-        {upcomingVisits.length === 0 ? (
-          <p className="text-sm text-neutral-500">{t("Nothing scheduled in the next two weeks.")}</p>
-        ) : (
-          <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {upcomingVisits.slice(0, 6).map((v) => (
-              <li key={v.id} className="flex items-center justify-between py-2 text-sm">
-                <span>
-                  {v.subject.subjectCode} · {v.visitType} · {v.study.protocolId}
-                </span>
-                <span className="text-neutral-500">{formatDate(v.targetDate, t.locale)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {[
+            {
+              key: "this",
+              heading: t("This week: {0} visit|This week: {0} visits", [weeks.thisWeek.length]),
+              empty: t("Nothing scheduled for the rest of this week."),
+              visits: weeks.thisWeek,
+            },
+            {
+              key: "next",
+              heading: t("Next week: {0} visit|Next week: {0} visits", [weeks.nextWeek.length]),
+              empty: t("Nothing scheduled next week."),
+              visits: weeks.nextWeek,
+            },
+          ].map((group) => (
+            <div key={group.key}>
+              <h3 className="mb-1 text-sm font-medium">{group.heading}</h3>
+              {group.visits.length === 0 ? (
+                <p className="text-sm text-neutral-500">{group.empty}</p>
+              ) : (
+                <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                  {group.visits.slice(0, 8).map((v) => (
+                    <li key={v.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                      <Link href={`/dashboard/visits/${v.id}`} className="flex items-center gap-2 hover:underline">
+                        <span
+                          aria-hidden
+                          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: patientTone(colors[v.studyId] ?? "blue", v.subject.subjectCode) }}
+                        />
+                        <span>
+                          {v.subject.subjectCode} · {v.visitType} · {v.study.protocolId}
+                        </span>
+                      </Link>
+                      <span className="shrink-0 text-neutral-500">{formatDayShort(v.targetDate, t.locale)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {group.visits.length > 8 && (
+                <Link href="/dashboard/visits" className="mt-1 inline-block text-sm underline">
+                  {t("+{0} more", [group.visits.length - 8])}
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

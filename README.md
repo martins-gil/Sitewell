@@ -212,6 +212,15 @@ to org A, and a cross-tenant insert is rejected).
   after adding or changing any user-facing text. The Word documents (.docx),
   the reminder emails and server-side error messages stay as they were
   (the .docx keep the site's Portuguese paper-form wording).
+- ✅ Study colours and departments: every study has a colour (picked when
+  adding/editing it) and the calendar shows its visits in that colour, each
+  patient in a different tone of it, with a legend. Studies can be assigned
+  to a department (or a new one added on the spot); the Studies page shows
+  active studies, patients enrolled this year and currently enrolled, in
+  total and per department. The blue "coming up" bar (and the Overview card)
+  lists the visits this week and next week. I/E criteria on a patient's
+  page can be shown, collapsed or hidden from Settings, and choosing "Other"
+  as a document type lets you name that type.
 - ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
   redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin

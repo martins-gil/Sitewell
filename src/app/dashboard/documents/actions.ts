@@ -37,7 +37,15 @@ function assertCanBeActive(status: DocumentDisplayStatus, expiryDate: Date | nul
 // so a draft amendment doesn't retire the version that's actually in force.
 async function supersedeOlderVersions(
   tx: Prisma.TransactionClient,
-  doc: { id: string; studyId: string; subjectId: string | null; visitId: string | null; type: DocumentType; title: string },
+  doc: {
+    id: string;
+    studyId: string;
+    subjectId: string | null;
+    visitId: string | null;
+    type: DocumentType;
+    typeLabel: string | null;
+    title: string;
+  },
 ) {
   await tx.document.updateMany({
     where: {
@@ -45,6 +53,8 @@ async function supersedeOlderVersions(
       subjectId: doc.subjectId,
       visitId: doc.visitId,
       type: doc.type,
+      // Two "Other" documents with different type names are different kinds of document.
+      typeLabel: doc.typeLabel,
       title: doc.title,
       status: "ACTIVE",
       id: { not: doc.id },
@@ -67,6 +77,8 @@ export async function uploadDocument(formData: FormData) {
   const subjectId = String(formData.get("subjectId") ?? "") || null;
   const visitId = String(formData.get("visitId") ?? "") || null;
   const type = String(formData.get("type") ?? "") as DocumentType;
+  // "Other" can be given a name of its own (e.g. "Lab certificate").
+  const typeLabel = type === "OTHER" ? String(formData.get("typeLabel") ?? "").trim().slice(0, 80) || null : null;
   const title = String(formData.get("title") ?? "").trim();
   const version = String(formData.get("version") ?? "").trim();
   const expiryDateRaw = String(formData.get("expiryDate") ?? "");
@@ -93,6 +105,7 @@ export async function uploadDocument(formData: FormData) {
         subjectId,
         visitId,
         type,
+        typeLabel,
         title,
         version,
         fileUrl: relativePath,
@@ -155,16 +168,21 @@ export async function updateDocumentDetails(documentId: string, formData: FormDa
   const expiryRaw = String(formData.get("expiryDate") ?? "");
   if (!version) throw new Error("Version is required.");
 
-  await withTenantContext(ctx, (tx) =>
-    tx.document.update({
+  await withTenantContext(ctx, async (tx) => {
+    const doc = await tx.document.findUniqueOrThrow({ where: { id: documentId }, select: { type: true } });
+    await tx.document.update({
       where: { id: documentId },
       data: {
         version,
         releaseDate: releaseRaw ? new Date(releaseRaw) : null,
         expiryDate: expiryRaw ? new Date(expiryRaw) : null,
+        // Only an "Other" document has a type name of its own to edit.
+        ...(doc.type === "OTHER" && formData.has("typeLabel")
+          ? { typeLabel: String(formData.get("typeLabel") ?? "").trim().slice(0, 80) || null }
+          : {}),
       },
-    }),
-  );
+    });
+  });
 
   refreshDocuments();
 }

@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { getStudyById, getStudyProtocolDocument, getSubjects } from "@/lib/queries";
+import { getDepartments, getStudies, getStudyById, getStudyProtocolDocument, getSubjects } from "@/lib/queries";
+import { resolveStudyColors, studyColor } from "@/lib/study-colors";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { EditStudyForm } from "@/app/dashboard/studies/edit-study-form";
@@ -15,13 +16,17 @@ export default async function StudyOverviewPage({
 }) {
   const t = await getT();
   const { id } = await params;
-  const [session, study, patients, protocol] = await Promise.all([
+  const [session, study, patients, protocol, departments, allStudies] = await Promise.all([
     auth(),
     getStudyById(id),
     getSubjects({ studyId: id }),
     getStudyProtocolDocument(id),
+    getDepartments(),
+    getStudies(),
   ]);
   if (!study) notFound();
+  const colorId = resolveStudyColors(allStudies)[study.id] ?? "blue";
+  const departmentName = departments.find((d) => d.id === study.departmentId)?.name ?? null;
   const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
   return (
@@ -30,13 +35,18 @@ export default async function StudyOverviewPage({
         <Link href="/dashboard/studies" className="text-sm text-neutral-500 hover:underline">
           {t("← Studies")}</Link>
         <div className="mt-1 flex items-center gap-3">
+          <span
+            aria-hidden
+            className="inline-block h-4 w-4 rounded-full"
+            style={{ backgroundColor: studyColor(colorId) }}
+          />
           <h1 className="text-2xl font-semibold tracking-tight">{study.protocolId}</h1>
           <Badge value={study.status} />
         </div>
         <p className="mt-1 text-sm text-neutral-500">{study.title}</p>
         <p className="mt-1 text-xs text-neutral-500">
           {study.phase && <>{study.phase} · </>}
-          {study.sponsor ?? t("Sponsor not set")}
+          {study.sponsor ?? t("Sponsor not set")} · {departmentName ?? t("No department")}
         </p>
         <Link
           href={`/dashboard/studies/${study.id}/templates`}
@@ -54,7 +64,10 @@ export default async function StudyOverviewPage({
             phase: study.phase,
             sponsor: study.sponsor,
             status: study.status,
+            departmentId: study.departmentId,
+            color: colorId,
           }}
+          departments={departments}
         />
       )}
 

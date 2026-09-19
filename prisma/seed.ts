@@ -85,7 +85,7 @@ async function wipeExistingData() {
       organizations, users, studies, sites, study_assignments, subjects,
       visit_schedule_templates, visits, documents, feedback_submissions,
       checklist_template_items, visit_checklist_results,
-      checklist_task_library, kits, audit_log
+      checklist_task_library, kits, departments, audit_log
     RESTART IDENTITY CASCADE;
   `);
 }
@@ -181,6 +181,8 @@ async function main() {
       sponsor: "Meridian Therapeutics",
       protocolVersion: "Amendment 3",
       protocolReleaseDate: new Date("2025-11-04"),
+      departmentName: "Oncology",
+      color: "blue",
     },
     {
       protocolId: "RCN-204",
@@ -189,13 +191,27 @@ async function main() {
       sponsor: "Northbridge Biosciences",
       protocolVersion: "Amendment 5",
       protocolReleaseDate: new Date("2026-01-20"),
+      departmentName: "Cardiology",
+      color: "orange",
     },
   ];
 
+  // Departments studies can be assigned to (more can be added from the Studies page).
+  const departmentIds: Record<string, string> = {};
+  for (const name of ["Oncology", "Cardiology", "Neurology"]) {
+    departmentIds[name] = (await prisma.department.create({ data: { organizationId: org.id, name } })).id;
+  }
+
   for (const def of studyDefs) {
-    const { protocolVersion, protocolReleaseDate, ...studyFields } = def;
+    const { protocolVersion, protocolReleaseDate, departmentName, ...studyFields } = def;
     const study = await prisma.study.create({
-      data: { organizationId: org.id, ...studyFields, status: "active", piName: pi.name },
+      data: {
+        organizationId: org.id,
+        ...studyFields,
+        departmentId: departmentIds[departmentName],
+        status: "active",
+        piName: pi.name,
+      },
     });
 
     await prisma.site.create({

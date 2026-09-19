@@ -8,6 +8,16 @@ export function formatDate(date: Date | string | null | undefined, locale: strin
   });
 }
 
+/** "Fri, Sep 25" — weekday and day, for the coming-up lists. Dates are read in UTC like everywhere else. */
+export function formatDayShort(date: Date, locale: string = "en"): string {
+  return date.toLocaleDateString(locale === "en" ? "en-US" : locale, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function isWithinDays(date: Date | null, days: number): boolean {
   if (!date) return false;
   return date.getTime() - Date.now() < days * 24 * 60 * 60 * 1000;

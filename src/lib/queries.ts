@@ -21,9 +21,88 @@ export async function getStudies() {
   return withTenantContext(ctx, (tx) =>
     tx.study.findMany({
       orderBy: { title: "asc" },
-      select: { id: true, title: true, protocolId: true, status: true },
+      select: { id: true, title: true, protocolId: true, status: true, color: true, createdAt: true },
     }),
   );
+}
+
+export async function getDepartments() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) => tx.department.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }));
+}
+
+/**
+ * The Studies page: every study with its department, and the counts behind the
+ * summary — patients enrolled this calendar year (by their enrolment date),
+ * patients enrolled right now, and, per department, how many studies are active.
+ */
+export async function getStudiesOverview() {
+  const ctx = await requireTenantContext();
+  const yearStart = new Date(Date.UTC(new Date().getUTCFullYear(), 0, 1));
+
+  return withTenantContext(ctx, async (tx) => {
+    const studies = await tx.study.findMany({
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        title: true,
+        protocolId: true,
+        status: true,
+        color: true,
+        createdAt: true,
+        departmentId: true,
+        department: { select: { name: true } },
+      },
+    });
+    const departments = await tx.department.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
+    const enrolledThisYear = await tx.subject.groupBy({
+      by: ["studyId"],
+      where: { enrolledAt: { gte: yearStart } },
+      _count: { _all: true },
+    });
+    const enrolledNow = await tx.subject.groupBy({
+      by: ["studyId"],
+      where: { status: "ENROLLED" },
+      _count: { _all: true },
+    });
+
+    const thisYear = new Map(enrolledThisYear.map((g) => [g.studyId, g._count._all]));
+    const now = new Map(enrolledNow.map((g) => [g.studyId, g._count._all]));
+    const rows = studies.map((s) => ({
+      ...s,
+      enrolledThisYear: thisYear.get(s.id) ?? 0,
+      enrolledNow: now.get(s.id) ?? 0,
+    }));
+
+    // One line per department, plus one for studies that have none.
+    const groups = [...departments.map((d) => ({ id: d.id as string | null, name: d.name })), { id: null, name: "" }];
+    const byDepartment = groups
+      .map((g) => {
+        const inGroup = rows.filter((r) => r.departmentId === g.id);
+        return {
+          id: g.id,
+          name: g.name,
+          studies: inGroup.length,
+          activeStudies: inGroup.filter((r) => r.status === "active").length,
+          enrolledThisYear: inGroup.reduce((n, r) => n + r.enrolledThisYear, 0),
+          enrolledNow: inGroup.reduce((n, r) => n + r.enrolledNow, 0),
+        };
+      })
+      .filter((g) => g.id !== null || g.studies > 0);
+
+    return {
+      year: yearStart.getUTCFullYear(),
+      rows,
+      departments,
+      byDepartment,
+      totals: {
+        studies: rows.length,
+        activeStudies: rows.filter((r) => r.status === "active").length,
+        enrolledThisYear: rows.reduce((n, r) => n + r.enrolledThisYear, 0),
+        enrolledNow: rows.reduce((n, r) => n + r.enrolledNow, 0),
+      },
+    };
+  });
 }
 
 export async function getSubjects(filters: { studyId?: string; status?: SubjectStatus }) {
@@ -425,6 +504,44 @@ export async function getUpcomingVisits(daysAhead = 30) {
       orderBy: { targetDate: "asc" },
     }),
   );
+}
+
+/**
+ * Visits still to happen this week (from today to Sunday) and next week
+ * (Monday to Sunday) — the "coming up" notification and the Overview card.
+ * Weeks run Monday to Sunday; days are counted in UTC, like the visit dates.
+ */
+export async function getUpcomingWeeks() {
+  const ctx = await requireTenantContext();
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const daysSinceMonday = (new Date(today).getUTCDay() + 6) % 7;
+  const nextWeekStart = today + (7 - daysSinceMonday) * DAY;
+  const nextWeekEnd = nextWeekStart + 7 * DAY;
+
+  const visits = await withTenantContext(ctx, (tx) =>
+    tx.visit.findMany({
+      where: {
+        status: { in: ["SCHEDULED", "RESCHEDULED"] },
+        targetDate: { gte: new Date(today), lt: new Date(nextWeekEnd) },
+      },
+      select: {
+        id: true,
+        visitType: true,
+        targetDate: true,
+        studyId: true,
+        subject: { select: { subjectCode: true } },
+        study: { select: { protocolId: true } },
+      },
+      orderBy: { targetDate: "asc" },
+    }),
+  );
+
+  return {
+    thisWeek: visits.filter((v) => v.targetDate.getTime() < nextWeekStart),
+    nextWeek: visits.filter((v) => v.targetDate.getTime() >= nextWeekStart),
+  };
 }
 
 export async function getAllVisits() {

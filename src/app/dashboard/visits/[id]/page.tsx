@@ -13,7 +13,7 @@ import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
 import { VisitNotes } from "./visit-notes";
-import { VisitSection } from "./visit-section";
+import { PageSection } from "@/components/page-section";
 import { DocumentStatusControl } from "@/app/dashboard/documents/document-status-control";
 import { VisitDocHeader } from "./visit-doc-header";
 import { EditVisitForm } from "./edit-visit-form";
@@ -76,7 +76,7 @@ export default async function VisitDetailPage({
         }}
       />
 
-      <VisitSection mode={modes.details} title={t("Document details (printed on the .docx)")}>
+      <PageSection mode={modes.details} title={t("Document details (printed on the .docx)")}>
         <VisitDocHeader
           visitId={visit.id}
           values={{
@@ -97,17 +97,17 @@ export default async function VisitDetailPage({
             checklistColumn: docHeader.checklistColumn,
           }}
         />
-      </VisitSection>
+      </PageSection>
 
-      <VisitSection mode={modes.checklist} title={t("Procedure checklist")}>
+      <PageSection mode={modes.checklist} title={t("Procedure checklist")}>
         <VisitChecklist
           visitId={visit.id}
           column={docHeader.checklistColumn}
           items={checklist.map((item) => ({ ...item, performedAt: toDateTimeInput(item.performedAt) }))}
         />
-      </VisitSection>
+      </PageSection>
 
-      <VisitSection mode={modes.nursing} title={t("Nursing sheet")}>
+      <PageSection mode={modes.nursing} title={t("Nursing sheet")}>
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
           <p className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400">
             {docHeader.nursingSheetIsCustom
@@ -138,13 +138,13 @@ export default async function VisitDetailPage({
             {t("Download nursing sheet (.docx)")}
           </a>
         </div>
-      </VisitSection>
+      </PageSection>
 
-      <VisitSection mode={modes.notes} title={t("Notes")}>
+      <PageSection mode={modes.notes} title={t("Notes")}>
         <VisitNotes visitId={visit.id} notes={visit.notes ?? ""} />
-      </VisitSection>
+      </PageSection>
 
-      <VisitSection mode={modes.kits} title={t("Kits for this visit")}>
+      <PageSection mode={modes.kits} title={t("Kits for this visit")}>
         <VisitKits
           visitId={visit.id}
           visitOccurred={visit.actualDate !== null}
@@ -159,9 +159,9 @@ export default async function VisitDetailPage({
             label: t("{0} · expires {1}", [k.name, formatDate(k.expiryDate, t.locale)]),
           }))}
         />
-      </VisitSection>
+      </PageSection>
 
-      <VisitSection
+      <PageSection
         mode={modes.documents}
         title={`${t("Documents for this visit")}${visit.documents.length > 0 ? ` (${visit.documents.length})` : ""}`}
       >
@@ -199,7 +199,7 @@ export default async function VisitDetailPage({
                         </>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{t(humanizeEnum(doc.type))}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{doc.typeLabel ?? t(humanizeEnum(doc.type))}</td>
                     <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
                     <td className="whitespace-nowrap px-4 py-2">
                       <DocumentStatusControl documentId={doc.id} status={getDocumentDisplayStatus(doc)} />
@@ -210,7 +210,7 @@ export default async function VisitDetailPage({
             </table>
           </div>
         )}
-      </VisitSection>
+      </PageSection>
 
       {visit.status !== "COMPLETED" && (
         <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">

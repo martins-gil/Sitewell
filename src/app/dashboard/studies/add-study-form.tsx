@@ -3,8 +3,16 @@
 import { useState, useTransition } from "react";
 import { addStudy } from "./actions";
 import { useT } from "@/lib/i18n/client";
+import { ColorField, DepartmentField } from "./study-fields";
 
-export function AddStudyForm() {
+export function AddStudyForm({
+  departments,
+  defaultColor,
+}: {
+  departments: { id: string; name: string }[];
+  // The first palette colour no other study uses.
+  defaultColor: string;
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -89,6 +97,8 @@ export function AddStudyForm() {
             <option value="closed">{t("Closed")}</option>
           </select>
         </div>
+        <DepartmentField departments={departments} defaultId={null} />
+        <ColorField defaultColor={defaultColor} />
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button

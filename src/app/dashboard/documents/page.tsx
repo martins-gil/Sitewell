@@ -90,7 +90,7 @@ export default async function DocumentsPage({
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {t(humanizeEnum(doc.type))}
+                    {doc.typeLabel ?? t(humanizeEnum(doc.type))}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.study.protocolId}</td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
@@ -116,6 +116,7 @@ export default async function DocumentsPage({
                         <EditDocumentDetails
                           documentId={doc.id}
                           version={doc.version}
+                          typeLabel={doc.type === "OTHER" ? (doc.typeLabel ?? "") : null}
                           releaseDateInput={doc.releaseDate ? doc.releaseDate.toISOString().slice(0, 10) : ""}
                           expiryDateInput={doc.expiryDate ? doc.expiryDate.toISOString().slice(0, 10) : ""}
                         />
