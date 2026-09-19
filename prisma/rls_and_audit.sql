@@ -138,6 +138,8 @@ AS $$
 DECLARE
   v_actor_id TEXT := NULLIF(current_setting('app.current_user_id', true), '');
   v_row JSONB;
+  v_before JSONB;
+  v_after JSONB;
   v_org_id TEXT;
   v_record_id TEXT;
 BEGIN
@@ -155,6 +157,15 @@ BEGIN
     v_org_id := v_row->>'organization_id';
   END IF;
 
+  v_before := CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) END;
+  v_after := CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) END;
+
+  -- Never copy credentials into the log (the change itself is still recorded).
+  IF TG_TABLE_NAME = 'users' THEN
+    v_before := v_before - 'password_hash' - 'mfa_secret';
+    v_after := v_after - 'password_hash' - 'mfa_secret';
+  END IF;
+
   INSERT INTO audit_log (id, organization_id, table_name, record_id, action, actor_id, before, after)
   VALUES (
     gen_random_uuid()::text,
@@ -163,8 +174,8 @@ BEGIN
     v_record_id,
     TG_OP::"AuditAction",
     v_actor_id,
-    CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) END,
-    CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) END
+    v_before,
+    v_after
   );
 
   IF TG_OP = 'DELETE' THEN

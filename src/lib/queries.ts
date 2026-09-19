@@ -16,6 +16,15 @@ export async function getCurrentUser() {
   );
 }
 
+/** Whether the signed-in user is still on a password somebody else set. False if the row is gone. */
+export async function getMustChangePassword() {
+  const ctx = await requireTenantContext();
+  const user = await withTenantContext(ctx, (tx) =>
+    tx.user.findUnique({ where: { id: ctx.userId }, select: { mustChangePassword: true } }),
+  );
+  return user?.mustChangePassword ?? false;
+}
+
 export async function getStudies() {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>

@@ -42,7 +42,9 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError(mfaRequired ? t("Invalid code.") : t("Invalid email or password."));
+        setError(
+          `${mfaRequired ? t("Invalid code.") : t("Invalid email or password.")} ${t("After 5 wrong attempts an account is locked for 15 minutes.")}`,
+        );
         setSubmitting(false);
         return;
       }

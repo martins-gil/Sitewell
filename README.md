@@ -221,6 +221,12 @@ to org A, and a cross-tenant insert is rejected).
   lists the visits this week and next week. I/E criteria on a patient's
   page can be shown, collapsed or hidden from Settings, and choosing "Other"
   as a document type lets you name that type.
+- ✅ Account security (first Phase 5 hardening step): everyone can change
+  their own password (Settings → Security; 12+ characters), 5 wrong
+  sign-in attempts lock an account for 15 minutes, sessions end after 8 hours,
+  and a password an admin set (new member, or "Reset password" on the Team
+  tab — also how to unlock someone) is marked temporary until the user
+  replaces it. The audit log no longer stores password hashes or 2FA secrets.
 - ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
   redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin

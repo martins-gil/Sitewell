@@ -8,7 +8,8 @@ import type { NextAuthConfig } from "next-auth";
  * which do run under Node.
  */
 export default {
-  session: { strategy: "jwt" },
+  // Signed out automatically after 8 hours, however active the session is.
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "/login" },
   providers: [],
   callbacks: {

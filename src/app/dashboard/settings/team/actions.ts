@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma, UserRole } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
-import { hashPassword } from "@/lib/password";
+import { checkNewPassword, hashPassword, type PasswordProblem } from "@/lib/password";
 
 // Platform Admin is a cross-org role, not something an org's own team page
 // should be able to grant — only roles that make sense within one org.
@@ -26,15 +26,18 @@ export async function addTeamMember(formData: FormData) {
   const role = String(formData.get("role") ?? "") as UserRole;
 
   if (!name || !email) throw new Error("Name and email are required.");
-  if (password.length < 8) throw new Error("Password must be at least 8 characters.");
   if (!ASSIGNABLE_ROLES.includes(role)) throw new Error("Invalid role.");
+  if (checkNewPassword(password, email)) {
+    throw new Error("The temporary password must be at least 12 characters and not contain the email address.");
+  }
 
   const passwordHash = await hashPassword(password);
 
   try {
     await withTenantContext(ctx, (tx) =>
       tx.user.create({
-        data: { organizationId: ctx.organizationId, email, name, role, passwordHash },
+        // A password an admin chose is temporary: the user is asked to replace it.
+        data: { organizationId: ctx.organizationId, email, name, role, passwordHash, mustChangePassword: true },
       }),
     );
   } catch (e) {
@@ -97,4 +100,32 @@ export async function deleteTeamMember(userId: string) {
   });
 
   revalidatePath("/dashboard/settings/team");
+}
+
+export type ResetPasswordResult = { ok: true } | { ok: false; problem: PasswordProblem | "SELF" };
+
+// For a member who forgot their password or is locked out (there's no
+// "forgot password" email yet): the admin sets a new temporary password, which
+// also lifts a sign-in lock. The member is asked to change it after signing in.
+export async function resetTeamMemberPassword(userId: string, temporaryPassword: string): Promise<ResetPasswordResult> {
+  const ctx = await requireTenantContext();
+  requireOrgAdmin(ctx);
+  if (userId === ctx.userId) return { ok: false, problem: "SELF" };
+
+  const member = await withTenantContext(ctx, (tx) =>
+    tx.user.findUniqueOrThrow({ where: { id: userId }, select: { email: true } }),
+  );
+  const problem = checkNewPassword(temporaryPassword, member.email);
+  if (problem) return { ok: false, problem };
+
+  const passwordHash = await hashPassword(temporaryPassword);
+  await withTenantContext(ctx, (tx) =>
+    tx.user.update({
+      where: { id: userId },
+      data: { passwordHash, mustChangePassword: true, passwordChangedAt: new Date(), failedLoginCount: 0, lockedUntil: null },
+    }),
+  );
+
+  revalidatePath("/dashboard/settings/team");
+  return { ok: true };
 }

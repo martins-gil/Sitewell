@@ -83,14 +83,14 @@ export function AddUserForm() {
             type="password"
             name="password"
             required
-            minLength={8}
-            placeholder={t("At least 8 characters")}
+            minLength={12}
+            placeholder={t("At least 12 characters")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
       </div>
       <p className="text-xs text-neutral-500">
-        {t("Share this password with them directly — there's no invite email or self-service password change yet, so this is the password they'll sign in with.")}</p>
+        {t("Share this password with them directly — there's no invite email yet. They'll be asked to change it after signing in.")}</p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"

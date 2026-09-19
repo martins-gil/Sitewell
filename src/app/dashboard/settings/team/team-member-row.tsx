@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { formatDate, humanizeEnum } from "@/lib/format";
 import { Badge } from "@/components/badge";
-import { updateTeamMember, deleteTeamMember } from "./actions";
+import { updateTeamMember, deleteTeamMember, resetTeamMemberPassword } from "./actions";
 import { useT } from "@/lib/i18n/client";
 
 const ROLES = ["CRC", "PI", "ORG_ADMIN"] as const;
@@ -20,8 +20,37 @@ type Member = {
 export function TeamMemberRow({ member, isSelf }: { member: Member; isSelf: boolean }) {
   const t = useT();
   const [editing, setEditing] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetDone, setResetDone] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const resetProblems: Record<string, string> = {
+    TOO_SHORT: t("The new password must be at least 12 characters."),
+    TOO_LONG: t("The new password can be at most 128 characters."),
+    CONTAINS_EMAIL: t("The new password can't contain your email address."),
+    REPEATED: t("The new password can't be a single repeated character."),
+  };
+
+  // For someone who forgot their password or got locked out: set a new
+  // temporary one (they're asked to change it when they sign in).
+  function handleReset(formData: FormData) {
+    setError(null);
+    setResetDone(false);
+    startTransition(async () => {
+      try {
+        const result = await resetTeamMemberPassword(member.id, String(formData.get("temporaryPassword") ?? ""));
+        if (result.ok) {
+          setResetting(false);
+          setResetDone(true);
+        } else {
+          setError(resetProblems[result.problem] ?? t("Something went wrong. Please try again."));
+        }
+      } catch {
+        setError(t("Something went wrong. Please try again."));
+      }
+    });
+  }
 
   function handleSave(formData: FormData) {
     setError(null);
@@ -120,23 +149,67 @@ export function TeamMemberRow({ member, isSelf }: { member: Member; isSelf: bool
       </td>
       <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(member.createdAt, t.locale)}</td>
       <td className="whitespace-nowrap px-4 py-2 text-right">
-        <div className="flex items-center justify-end gap-3">
-          <button
-            onClick={() => setEditing(true)}
-            disabled={pending}
-            className="text-xs text-neutral-600 hover:underline disabled:opacity-60 dark:text-neutral-400"
-          >
-            {t("Edit")}</button>
-          {!isSelf && (
+        {resetting ? (
+          <form action={handleReset} className="flex items-center justify-end gap-2">
+            <input
+              type="password"
+              name="temporaryPassword"
+              required
+              minLength={12}
+              autoFocus
+              autoComplete="new-password"
+              placeholder={t("At least 12 characters")}
+              aria-label={t("Temporary password")}
+              className="w-48 rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
+            />
             <button
-              onClick={handleDelete}
+              type="submit"
               disabled={pending}
-              className="text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
+              className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
             >
-              {t("Delete")}</button>
-          )}
-        </div>
-        {error && !editing && <p className="mt-1 text-xs text-red-600">{error}</p>}
+              {t("Reset")}
+            </button>
+            <button type="button" onClick={() => setResetting(false)} className="text-xs text-neutral-500 hover:underline">
+              {t("Cancel")}
+            </button>
+          </form>
+        ) : (
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={() => setEditing(true)}
+              disabled={pending}
+              className="text-xs text-neutral-600 hover:underline disabled:opacity-60 dark:text-neutral-400"
+            >
+              {t("Edit")}</button>
+            {!isSelf && (
+              <button
+                onClick={() => {
+                  setResetting(true);
+                  setResetDone(false);
+                  setError(null);
+                }}
+                disabled={pending}
+                className="text-xs text-neutral-600 hover:underline disabled:opacity-60 dark:text-neutral-400"
+              >
+                {t("Reset password")}
+              </button>
+            )}
+            {!isSelf && (
+              <button
+                onClick={handleDelete}
+                disabled={pending}
+                className="text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
+              >
+                {t("Delete")}</button>
+            )}
+          </div>
+        )}
+        {resetDone && (
+          <p className="mt-1 whitespace-normal text-xs text-green-700 dark:text-green-400">
+            {t("Password reset. They'll be asked to change it after signing in.")}
+          </p>
+        )}
+        {error && !editing && <p className="mt-1 whitespace-normal text-xs text-red-600">{error}</p>}
       </td>
     </tr>
   );

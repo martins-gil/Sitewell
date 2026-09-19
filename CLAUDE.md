@@ -275,6 +275,27 @@ picks this repo up next.
   (`sidebar-nav.tsx` → `router.refresh()`); a link to the current address
   does nothing on its own. If the URL has a query string (filters) the click
   navigates normally, which clears them. Settings tabs do the same.
+- **Account security** (migration `20260924090000_account_security`).
+  Sign-in throttling lives in `src/auth.ts`: 5 wrong passwords/codes in a row
+  lock the account for 15 minutes (`User.failedLoginCount`/`lockedUntil`);
+  every failure — wrong password, wrong code, unknown email, locked — looks
+  identical from outside (an unknown email still spends a bcrypt check, no
+  timing tell). Recording the attempts writes through `prisma-auth.ts`, which
+  is part of the login bootstrap, so it's the one allowed use beyond looking
+  the user up. Sessions last 8 hours (`auth.config.ts`). New passwords:
+  12+ characters, ≤128, not containing the email, not one repeated character
+  (`checkNewPassword`, `src/lib/password.ts`); the Security page has a
+  change-password form (`changePassword` RETURNS a result code — a thrown
+  server-action error is masked in production, so a form couldn't show it).
+  A password an admin sets (new team member, or `resetTeamMemberPassword` —
+  also the way to unlock someone, there's no "forgot password" email yet)
+  sets `mustChangePassword`, which shows an amber bar until they change it;
+  it's a nudge, not a forced redirect. Other sessions of the same user are
+  NOT ended when a password changes (JWT sessions).
+  **The audit trigger redacts `password_hash` and `mfa_secret` for `users`** —
+  before this it copied whole rows, so hashes and TOTP secrets sat in
+  `audit_log`; the migration scrubbed old rows. Keep that redaction if the
+  trigger is ever rewritten, and redact any new secret column the same way.
 - **Team and Security live under Settings** (`/dashboard/settings/team`,
   `/dashboard/settings/security`); `/dashboard/team` just redirects. The
   patient list deliberately has no I/E criteria column — they're shown only

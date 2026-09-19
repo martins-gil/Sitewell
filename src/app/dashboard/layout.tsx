@@ -1,6 +1,7 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
-import { getExpiringKitAlerts, getStudies, getUpcomingWeeks } from "@/lib/queries";
+import { getExpiringKitAlerts, getMustChangePassword, getStudies, getUpcomingWeeks } from "@/lib/queries";
 import { daysUntil, formatDate, formatDayShort } from "@/lib/format";
 import { resolveStudyColors } from "@/lib/study-colors";
 import { SignOutButton } from "./sign-out-button";
@@ -28,9 +29,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // A platform admin has no organization of their own, so there's no "their"
   // kits or visits to warn about.
   const hasOrg = Boolean(session?.user?.organizationId);
-  const [kitAlerts, weeks, studies] = hasOrg
-    ? await Promise.all([getExpiringKitAlerts(), getUpcomingWeeks(), getStudies()])
-    : [[], { thisWeek: [], nextWeek: [] }, []];
+  const [kitAlerts, weeks, studies, mustChangePassword] = hasOrg
+    ? await Promise.all([getExpiringKitAlerts(), getUpcomingWeeks(), getStudies(), getMustChangePassword()])
+    : [[], { thisWeek: [], nextWeek: [] }, [], false];
 
   const expiringKits = kitAlerts.map((k) => ({
     id: k.id,
@@ -51,6 +52,17 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
+      {mustChangePassword && (
+        <div
+          role="alert"
+          className="border-b border-amber-300 bg-amber-100 px-6 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+        >
+          {t("You're using a temporary password. Choose your own now to keep your account safe.")}{" "}
+          <Link href="/dashboard/settings/security" className="font-medium underline">
+            {t("Change password →")}
+          </Link>
+        </div>
+      )}
       <KitExpiryBanner kits={expiringKits} />
       <UpcomingVisitsBanner thisWeek={weeks.thisWeek.map(toWeekVisit)} nextWeek={weeks.nextWeek.map(toWeekVisit)} />
       <div className="flex flex-1">
