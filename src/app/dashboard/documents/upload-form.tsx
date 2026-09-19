@@ -84,6 +84,17 @@ export function UploadDocumentForm({
           />
         </div>
         <div>
+          <label className="block text-xs font-medium">Release date (optional)</label>
+          <input
+            type="date"
+            name="releaseDate"
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          />
+          <p className="mt-1 text-xs text-neutral-400">
+            For a protocol: the amendment&apos;s date — printed on the checklist documents.
+          </p>
+        </div>
+        <div>
           <label className="block text-xs font-medium">Expiry date (optional)</label>
           <input
             type="date"

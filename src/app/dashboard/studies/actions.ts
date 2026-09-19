@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
+import { setStudyPiAndSite } from "@/lib/study-details";
 
 function requireOrgAdmin(ctx: { role: string; isPlatformAdmin: boolean }) {
   if (ctx.role !== "ORG_ADMIN" && !ctx.isPlatformAdmin) {
@@ -44,9 +45,21 @@ export async function addStudy(formData: FormData) {
   revalidatePath("/dashboard/studies");
 }
 
-// Core study identity/status fields — kept separate from
-// updateStudyDocumentDetails in ./[id]/templates/actions.ts, which owns the
-// fields printed on the generated checklist .docx header.
+// The PI name and site number printed on the checklist documents. Not
+// admin-gated (unlike the core study fields below): coordinators are the ones
+// who notice a blank PI on a document they're about to print.
+export async function updateStudyPiAndSite(studyId: string, formData: FormData) {
+  const ctx = await requireTenantContext();
+  const piName = String(formData.get("piName") ?? "").trim() || null;
+  const siteNumber = String(formData.get("siteNumber") ?? "").trim() || null;
+
+  await withTenantContext(ctx, (tx) => setStudyPiAndSite(tx, studyId, piName, siteNumber));
+
+  revalidatePath(`/dashboard/studies/${studyId}`);
+  revalidatePath("/dashboard/visits/[id]", "page");
+}
+
+// Core study identity/status fields.
 export async function updateStudyCore(studyId: string, formData: FormData) {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);

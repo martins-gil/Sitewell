@@ -129,14 +129,19 @@ model Study {
   phase             String?
   status            String    @default("active")
   sponsor           String?
+  // DEPRECATED, unused: the protocol version/date now live on the study's
+  // PROTOCOL document (see below). Kept only so the previous deploy keeps
+  // working while the new one rolls out; drop in a follow-up migration once
+  // that's done.
   protocolAmendment String?   @map("protocol_amendment")
-  // Explicit document-header fields for the generated checklist .docx (see
-  // src/lib/checklist-docx.ts) — set directly on the study rather than
-  // derived from study_assignments/"today", since the printed PI name and
-  // protocol date are fixed facts about the protocol document itself, not
-  // whoever happens to be logged in or whenever someone downloads a copy.
-  piName            String?   @map("pi_name")
   protocolDate      DateTime? @map("protocol_date")
+  // Printed on the generated checklist .docx (see src/lib/checklist-docx.ts).
+  // Set directly on the study rather than derived from study_assignments —
+  // it's a fixed fact about the study, not whoever's logged in. The protocol
+  // VERSION and RELEASE DATE printed there are not stored here: they come
+  // from the study's active PROTOCOL document (Document.version /
+  // Document.releaseDate), see src/lib/protocol-document.ts.
+  piName            String?   @map("pi_name")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -222,6 +227,10 @@ model VisitScheduleTemplate {
   windowBeforeDays Int      @default(0) @map("window_before_days")
   windowAfterDays  Int      @default(0) @map("window_after_days")
   sortOrder        Int      @default(0) @map("sort_order")
+  // Printed on this visit type's checklist .docx: the "(V3)" after the
+  // heading, and the footnote under the table (e.g. "*hematologia, BQ, ...").
+  checklistVersion  String? @map("checklist_version")
+  checklistFootnote String? @map("checklist_footnote")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -390,6 +399,9 @@ model Document {
   title          String
   version        String
   fileUrl        String         @map("file_url")
+  // When this version of the document was released/issued (for a protocol:
+  // the amendment's date, printed in the checklist .docx footer).
+  releaseDate    DateTime?      @map("release_date")
   expiryDate     DateTime?      @map("expiry_date")
   status         DocumentStatus @default(ACTIVE)
   signedById     String?        @map("signed_by_id")

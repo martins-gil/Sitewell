@@ -4,6 +4,7 @@ import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { UploadDocumentForm } from "./upload-form";
 import { SignButton } from "./sign-button";
+import { EditDocumentDetails } from "./edit-document-details";
 
 export default async function DocumentsPage({
   searchParams,
@@ -57,6 +58,7 @@ export default async function DocumentsPage({
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Type</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Version</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">Released</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Expiry</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Status</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Signed</th>
@@ -82,6 +84,7 @@ export default async function DocumentsPage({
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.study.protocolId}</td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
+                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(doc.releaseDate)}</td>
                   <td
                     className={`whitespace-nowrap px-4 py-2 ${
                       expiringSoon ? "font-medium text-amber-600 dark:text-amber-400" : "text-neutral-500"
@@ -95,8 +98,17 @@ export default async function DocumentsPage({
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                     {doc.signedBy ? `${doc.signedBy.name} · ${formatDate(doc.signedAt)}` : "—"}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    {displayStatus === "PENDING" && <SignButton documentId={doc.id} />}
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-3">
+                      {displayStatus === "PENDING" && <SignButton documentId={doc.id} />}
+                      {displayStatus !== "SUPERSEDED" && (
+                        <EditDocumentDetails
+                          documentId={doc.id}
+                          version={doc.version}
+                          releaseDateInput={doc.releaseDate ? doc.releaseDate.toISOString().slice(0, 10) : ""}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { humanizeEnum } from "@/lib/format";
 
 export type CalendarVisit = {
   id: string;
@@ -26,6 +28,8 @@ const MONTH_NAMES = Array.from({ length: 12 }, (_, m) =>
   new Date(2000, m, 1).toLocaleDateString("en-US", { month: "long" }),
 );
 
+type Granularity = "month" | "year" | "day";
+
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -46,6 +50,9 @@ function monthGridCells(monthStart: Date, visitsByDay: Map<string, CalendarVisit
   });
 }
 
+const navButton =
+  "rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800";
+
 export function VisitsCalendar({
   visits,
   onAddOnDay,
@@ -54,11 +61,12 @@ export function VisitsCalendar({
   onAddOnDay?: (dateKey: string) => void;
 }) {
   const router = useRouter();
-  const [granularity, setGranularity] = useState<"month" | "year">("month");
+  const [granularity, setGranularity] = useState<Granularity>("month");
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [dayCursor, setDayCursor] = useState(() => new Date());
 
   const visitsByDay = useMemo(() => {
     const map = new Map<string, CalendarVisit[]>();
@@ -73,10 +81,54 @@ export function VisitsCalendar({
 
   const cells = useMemo(() => monthGridCells(monthCursor, visitsByDay), [monthCursor, visitsByDay]);
   const monthLabel = monthCursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const dayLabel = dayCursor.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const dayKey = toDateKey(dayCursor);
+  const dayVisits = useMemo(
+    () =>
+      [...(visitsByDay.get(dayKey) ?? [])].sort(
+        (a, b) => a.protocolId.localeCompare(b.protocolId) || a.subjectCode.localeCompare(b.subjectCode),
+      ),
+    [visitsByDay, dayKey],
+  );
 
   function goToMonth(year: number, month: number) {
     setMonthCursor(new Date(year, month, 1));
     setGranularity("month");
+  }
+
+  function goToDay(date: Date) {
+    setDayCursor(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
+    setMonthCursor(new Date(date.getFullYear(), date.getMonth(), 1));
+    setGranularity("day");
+  }
+
+  // Switching to Day from the toggle: today if it's in the month being
+  // looked at, otherwise that month's first day.
+  function openDayView() {
+    const now = new Date();
+    const inVisibleMonth = now.getFullYear() === monthCursor.getFullYear() && now.getMonth() === monthCursor.getMonth();
+    goToDay(inVisibleMonth ? now : monthCursor);
+  }
+
+  function step(direction: -1 | 1) {
+    if (granularity === "day") {
+      goToDay(new Date(dayCursor.getFullYear(), dayCursor.getMonth(), dayCursor.getDate() + direction));
+    } else if (granularity === "month") {
+      setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + direction, 1));
+    } else {
+      setMonthCursor(new Date(monthCursor.getFullYear() + direction, monthCursor.getMonth(), 1));
+    }
+  }
+
+  function goToToday() {
+    const now = new Date();
+    if (granularity === "day") goToDay(now);
+    else setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
   return (
@@ -84,13 +136,13 @@ export function VisitsCalendar({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-sm font-medium">
-            {granularity === "month" ? monthLabel : monthCursor.getFullYear()}
+            {granularity === "day" ? dayLabel : granularity === "month" ? monthLabel : monthCursor.getFullYear()}
           </h2>
           <div className="flex gap-1 text-sm">
-            {(["month", "year"] as const).map((g) => (
+            {(["day", "month", "year"] as const).map((g) => (
               <button
                 key={g}
-                onClick={() => setGranularity(g)}
+                onClick={() => (g === "day" ? openDayView() : setGranularity(g))}
                 className={`rounded-md px-2 py-1 capitalize ${
                   granularity === g
                     ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -103,43 +155,52 @@ export function VisitsCalendar({
           </div>
         </div>
         <div className="flex gap-2 text-sm">
-          <button
-            onClick={() =>
-              setMonthCursor(
-                granularity === "month"
-                  ? new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1)
-                  : new Date(monthCursor.getFullYear() - 1, monthCursor.getMonth(), 1),
-              )
-            }
-            className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-          >
+          <button onClick={() => step(-1)} className={navButton}>
             ← Prev
           </button>
-          <button
-            onClick={() => {
-              const now = new Date();
-              setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
-            }}
-            className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-          >
+          <button onClick={goToToday} className={navButton}>
             Today
           </button>
-          <button
-            onClick={() =>
-              setMonthCursor(
-                granularity === "month"
-                  ? new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1)
-                  : new Date(monthCursor.getFullYear() + 1, monthCursor.getMonth(), 1),
-              )
-            }
-            className="rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-          >
+          <button onClick={() => step(1)} className={navButton}>
             Next →
           </button>
         </div>
       </div>
 
-      {granularity === "month" ? (
+      {granularity === "day" ? (
+        <div className="p-4">
+          {dayVisits.length === 0 ? (
+            <p className="text-sm text-neutral-500">No visits on this day.</p>
+          ) : (
+            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              {dayVisits.map((v) => (
+                <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`} />
+                    <Link href={`/dashboard/visits/${v.id}`} className="font-medium hover:underline">
+                      {v.visitType}
+                    </Link>
+                    <Link href={`/dashboard/subjects/${v.subjectId}`} className="font-mono text-xs hover:underline">
+                      {v.subjectCode}
+                    </Link>
+                    <span className="text-xs text-neutral-500">{v.protocolId}</span>
+                  </div>
+                  <span className="text-xs text-neutral-500">{humanizeEnum(v.status)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {onAddOnDay && (
+            <button
+              type="button"
+              onClick={() => onAddOnDay(dayKey)}
+              className="mt-3 text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+            >
+              + Add a visit on this day
+            </button>
+          )}
+        </div>
+      ) : granularity === "month" ? (
         <>
           <div className="grid grid-cols-7 border-b border-neutral-200 text-center text-xs font-medium text-neutral-500 dark:border-neutral-800">
             {WEEKDAYS.map((d) => (
@@ -149,7 +210,7 @@ export function VisitsCalendar({
             ))}
           </div>
           <div className="grid grid-cols-7">
-            {cells.map(({ date, inCurrentMonth, isToday, visits: dayVisits }) => (
+            {cells.map(({ date, inCurrentMonth, isToday, visits: dayCellVisits }) => (
               <div
                 key={date.toISOString()}
                 className={`min-h-[6.5rem] border-b border-r border-neutral-100 p-1.5 dark:border-neutral-900 ${
@@ -157,8 +218,11 @@ export function VisitsCalendar({
                 }`}
               >
                 <div className="mb-1 flex items-center justify-between">
-                  <div
-                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                  <button
+                    type="button"
+                    onClick={() => goToDay(date)}
+                    title="See this day's visits"
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs hover:underline ${
                       isToday
                         ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                         : inCurrentMonth
@@ -167,7 +231,7 @@ export function VisitsCalendar({
                     }`}
                   >
                     {date.getDate()}
-                  </div>
+                  </button>
                   {onAddOnDay && (
                     <button
                       type="button"
@@ -181,7 +245,7 @@ export function VisitsCalendar({
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  {dayVisits.slice(0, 3).map((v) => (
+                  {dayCellVisits.slice(0, 3).map((v) => (
                     <button
                       key={v.id}
                       onClick={() => router.push(`/dashboard/visits/${v.id}`)}
@@ -195,8 +259,14 @@ export function VisitsCalendar({
                       </span>
                     </button>
                   ))}
-                  {dayVisits.length > 3 && (
-                    <div className="px-1 text-[11px] text-neutral-400">+{dayVisits.length - 3} more</div>
+                  {dayCellVisits.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => goToDay(date)}
+                      className="px-1 text-[11px] text-neutral-400 hover:underline"
+                    >
+                      +{dayCellVisits.length - 3} more
+                    </button>
                   )}
                 </div>
               </div>
@@ -223,8 +293,8 @@ export function VisitsCalendar({
                     <button
                       key={c.date.toISOString()}
                       disabled={c.visits.length === 0}
-                      onClick={() => goToMonth(monthCursor.getFullYear(), monthIndex)}
-                      title={c.visits.length > 0 ? `${c.visits.length} visit(s)` : undefined}
+                      onClick={() => goToDay(c.date)}
+                      title={c.visits.length > 0 ? `${c.visits.length} visit(s) — open this day` : undefined}
                       className={`flex h-5 w-5 items-center justify-center rounded-sm text-[9px] ${
                         c.visits.length > 0
                           ? "bg-blue-500 font-medium text-white"

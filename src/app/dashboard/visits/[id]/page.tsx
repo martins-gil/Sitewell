@@ -13,7 +13,10 @@ import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
 import { VisitDocHeader } from "./visit-doc-header";
+import { EditVisitForm } from "./edit-visit-form";
 import { DeleteVisitButton } from "./delete-visit-button";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default async function VisitDetailPage({
   params,
@@ -47,31 +50,41 @@ export default async function VisitDetailPage({
         </p>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 p-5 text-sm dark:border-neutral-800">
-        <dl className="grid grid-cols-2 gap-y-2">
-          <dt className="text-neutral-500">Target date</dt>
-          <dd>{formatDate(visit.targetDate)}</dd>
-          <dt className="text-neutral-500">Window</dt>
-          <dd>
-            {formatDate(visit.windowStart)} – {formatDate(visit.windowEnd)}
-          </dd>
-          <dt className="text-neutral-500">Actual date</dt>
-          <dd>{formatDate(visit.actualDate)}</dd>
-        </dl>
-      </div>
+      <EditVisitForm
+        visitId={visit.id}
+        values={{
+          visitType: visit.visitType,
+          isCustom: visit.templateId === null,
+          status: visit.status,
+          targetLabel: formatDate(visit.targetDate),
+          windowLabel: `${formatDate(visit.windowStart)} – ${formatDate(visit.windowEnd)}`,
+          actualLabel: formatDate(visit.actualDate),
+          targetInput: visit.targetDate.toISOString().slice(0, 10),
+          actualInput: visit.actualDate ? visit.actualDate.toISOString().slice(0, 10) : "",
+          windowBeforeDays: Math.round((visit.targetDate.getTime() - visit.windowStart.getTime()) / DAY_MS),
+          windowAfterDays: Math.round((visit.windowEnd.getTime() - visit.targetDate.getTime()) / DAY_MS),
+        }}
+      />
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-neutral-500">Document details (printed on the .docx)</h2>
         <VisitDocHeader
-          studyId={visit.studyId}
+          visitId={visit.id}
           values={{
-            protocolTitle: docHeader.protocolTitle,
-            protocolId: docHeader.protocolId,
+            studyId: docHeader.studyId,
+            hasTemplate: docHeader.hasTemplate,
             piName: docHeader.piName,
             siteNumber: docHeader.siteNumber,
-            protocolAmendment: docHeader.protocolAmendment,
-            protocolDateLabel: formatDate(docHeader.protocolDate),
-            protocolDateInput: docHeader.protocolDate ? docHeader.protocolDate.toISOString().slice(0, 10) : "",
+            protocolId: docHeader.protocolId,
+            hasProtocolDocument: docHeader.protocolDocumentTitle !== null,
+            protocolAwaitingSignature: docHeader.protocolAwaitingSignature,
+            protocolVersion: docHeader.protocolVersion,
+            protocolReleaseLabel: formatDate(docHeader.protocolReleaseDate),
+            protocolReleaseInput: docHeader.protocolReleaseDate
+              ? docHeader.protocolReleaseDate.toISOString().slice(0, 10)
+              : "",
+            checklistVersion: docHeader.checklistVersion,
+            checklistFootnote: docHeader.checklistFootnote,
           }}
         />
       </div>

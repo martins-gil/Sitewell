@@ -3,6 +3,7 @@ import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
 import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
+import { pickProtocolDocument } from "@/lib/protocol-document";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -40,7 +41,34 @@ export async function getSubjects(filters: { studyId?: string; status?: SubjectS
 
 export async function getStudyById(studyId: string) {
   const ctx = await requireTenantContext();
-  return withTenantContext(ctx, (tx) => tx.study.findUnique({ where: { id: studyId } }));
+  return withTenantContext(ctx, (tx) =>
+    tx.study.findUnique({
+      where: { id: studyId },
+      include: { sites: { orderBy: { createdAt: "asc" }, take: 1, select: { siteNumber: true } } },
+    }),
+  );
+}
+
+/** The protocol document whose version/release date the study's checklist
+ * documents print (see pickProtocolDocument), or null if it has none. */
+export async function getStudyProtocolDocument(studyId: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const docs = await tx.document.findMany({
+      where: { studyId, type: "PROTOCOL" },
+      select: {
+        id: true,
+        title: true,
+        version: true,
+        releaseDate: true,
+        status: true,
+        expiryDate: true,
+        signedAt: true,
+        createdAt: true,
+      },
+    });
+    return pickProtocolDocument(docs);
+  });
 }
 
 /** Candidates for the Add-Patient form's "Duplicate visits from" picker —
@@ -243,11 +271,12 @@ export async function getVisitChecklist(visitId: string) {
   });
 }
 
-/** Header fields for the generated checklist document: PI name, site
- * number, protocol/amendment/date. All explicit fields on Study/Site (see
- * the "Document header details" form on the study's visit schedule page) —
- * fixed facts about the protocol document, not derived from who's assigned
- * or when someone happens to download a copy. */
+/** Everything printed at the top, bottom and heading of a visit's checklist
+ * document. PI name and site number are fixed facts about the study; the
+ * protocol version and release date come from the study's protocol document
+ * (see pickProtocolDocument); the "(V3)" label and the footnote belong to the
+ * visit type's checklist. Nothing here is derived from who's logged in or
+ * when someone downloads a copy. */
 export async function getVisitChecklistHeader(visitId: string) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, async (tx) => {
@@ -256,18 +285,39 @@ export async function getVisitChecklistHeader(visitId: string) {
       include: {
         study: { include: { sites: { select: { siteNumber: true }, take: 1 } } },
         subject: { select: { subjectCode: true } },
+        template: { select: { checklistVersion: true, checklistFootnote: true } },
       },
     });
 
+    const protocolDocs = await tx.document.findMany({
+      where: { studyId: visit.studyId, type: "PROTOCOL" },
+      select: {
+        id: true,
+        title: true,
+        version: true,
+        releaseDate: true,
+        status: true,
+        expiryDate: true,
+        signedAt: true,
+        createdAt: true,
+      },
+    });
+    const protocol = pickProtocolDocument(protocolDocs);
+
     return {
       visitType: visit.visitType,
-      protocolId: visit.study.protocolId,
-      protocolTitle: visit.study.title,
-      protocolAmendment: visit.study.protocolAmendment,
-      protocolDate: visit.study.protocolDate,
       subjectCode: visit.subject.subjectCode,
+      hasTemplate: visit.templateId !== null,
+      studyId: visit.studyId,
+      protocolId: visit.study.protocolId,
       piName: visit.study.piName,
       siteNumber: visit.study.sites[0]?.siteNumber ?? null,
+      protocolVersion: protocol?.doc.version ?? null,
+      protocolReleaseDate: protocol?.doc.releaseDate ?? null,
+      protocolDocumentTitle: protocol?.doc.title ?? null,
+      protocolAwaitingSignature: protocol?.awaitingSignature ?? false,
+      checklistVersion: visit.template?.checklistVersion ?? null,
+      checklistFootnote: visit.template?.checklistFootnote ?? null,
     };
   });
 }

@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { getStudyById, getSubjects } from "@/lib/queries";
+import { getStudyById, getStudyProtocolDocument, getSubjects } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { EditStudyForm } from "@/app/dashboard/studies/edit-study-form";
+import { PiSiteForm } from "./pi-site-form";
 
 export default async function StudyOverviewPage({
   params,
@@ -12,10 +13,11 @@ export default async function StudyOverviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, study, patients] = await Promise.all([
+  const [session, study, patients, protocol] = await Promise.all([
     auth(),
     getStudyById(id),
     getSubjects({ studyId: id }),
+    getStudyProtocolDocument(id),
   ]);
   if (!study) notFound();
   const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
@@ -55,6 +57,21 @@ export default async function StudyOverviewPage({
           }}
         />
       )}
+
+      <PiSiteForm
+        studyId={study.id}
+        piName={study.piName}
+        siteNumber={study.sites[0]?.siteNumber ?? null}
+        protocol={
+          protocol
+            ? {
+                version: protocol.doc.version,
+                releaseLabel: formatDate(protocol.doc.releaseDate),
+                awaitingSignature: protocol.awaitingSignature,
+              }
+            : null
+        }
+      />
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">

@@ -72,7 +72,10 @@ to org A, and a cross-tenant insert is rejected).
   date. A visit added from a protocol visit type is linked to that type, so
   it gets the same checklist/profile as an auto-generated one. A visit added
   by mistake can be removed from its own page (not once completed, not while
-  documents are attached).
+  documents are attached), and any visit can be edited after the fact (date,
+  window, actual date, status, and the name of a custom one). The calendar
+  has Day, Month and Year views: click a day number (or a marked day in the
+  Year view) to see that day's visits.
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a
@@ -102,13 +105,16 @@ to org A, and a cross-tenant insert is rejected).
   subject's visit of that type gets its own fill-in-able copy on the visit
   detail page, and "Download filled checklist (.docx)"
   (`src/lib/checklist-docx.ts`, the `docx` npm package) generates a real
-  Word document reproducing that form's layout — title, PI/Site№/Protocol№
-  header, the ordered procedure table with a ✓ in Verificado for checked
-  items. Header fields (PI name, protocol version/amendment, protocol
-  version date, Site№) are explicit fields set via a "Document header
-  details" form on the study's visit-schedule page — fixed facts about the
-  protocol document, not derived from whoever's logged in or when the file
-  happens to be downloaded.
+  Word document reproducing that form's layout (the site's "V3" template —
+  small-caps title over a blue rule, PI / Site Nº / Protocol Nº line,
+  "Ordem de procedimentos <visit> (V3)", the three-column table with
+  alternating grey rows and a ✓ in Verificado for checked items, a footnote,
+  and "Protocol <Nº>, <version>, <release date>" in the page footer). Where
+  the values come from: PI name and Site Nº are set on the study; the
+  protocol version and release date come from the study's protocol document
+  (Documents — which now has a release date and an inline Edit for version/
+  release date); the "(V3)" label and footnote belong to the visit type's
+  checklist. All of them are also shown and editable on each visit's page.
 - ✅ Kits Inventory (`/dashboard/kits`): physical/lab kits — name, study,
   expiry date, optionally earmarked for a visit type, and optionally linked
   to one specific patient visit (from the inventory row, the add form, or
@@ -152,9 +158,8 @@ to org A, and a cross-tenant insert is rejected).
   (protocol ID, title, phase, sponsor, status) and a "Study details" edit
   form on the study's visit-schedule page for fixing typos after the fact —
   both org-admin-only (`ORG_ADMIN` role or platform admin), kept as a
-  separate action/form from the existing "Document header details" form,
-  which owns a different set of fields (PI name, protocol version, site
-  number) printed on the generated checklist .docx.
+  separate from the "Printed on the checklist documents" card on the same
+  page (PI name, site number — open to everyone, not just admins).
 - ✅ Team management (`/dashboard/team`, org-admin-only — hidden from the nav
   and blocked server-side for anyone else): add a coordinator/PI/org admin
   with a temporary password they sign in with directly (no invite email or

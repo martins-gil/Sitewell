@@ -48,7 +48,8 @@ const BASELINE_CHECKLIST = [
   { label: "Randomização (IWRS)", detail: null },
   { label: "Dispensa da medicação para tratamento local", detail: null },
   { label: "Peso e altura", detail: null },
-  { label: "Colheita de sangue e urina para análise central", detail: null },
+  // The asterisk points at the Baseline checklist's footnote (see checklistFootnote).
+  { label: "Colheita de sangue* e urina para análise central", detail: null },
 ];
 
 function weightedStatus(): SubjectStatus {
@@ -168,45 +169,59 @@ async function main() {
     },
   });
 
-  const site = await prisma.site.create({
-    data: {
-      organizationId: org.id,
-      name: "Riverside Main Site",
-      address: "400 Research Pkwy, Riverside",
-      siteNumber: "00001",
-    },
-  });
-
+  // protocolVersion / protocolReleaseDate aren't study columns — they go on
+  // the study's PROTOCOL document below, which is where the checklist
+  // documents read them from.
   const studyDefs = [
     {
       protocolId: "RCN-101",
       title: "A Phase II Study of Compound X in Adults with Condition A",
       phase: "Phase II",
       sponsor: "Meridian Therapeutics",
-      protocolAmendment: "Amendment 3",
-      protocolDate: new Date("2025-11-04"),
+      protocolVersion: "Amendment 3",
+      protocolReleaseDate: new Date("2025-11-04"),
     },
     {
       protocolId: "RCN-204",
       title: "A Phase III Study Evaluating Compound Y vs. Placebo",
       phase: "Phase III",
       sponsor: "Northbridge Biosciences",
-      protocolAmendment: "Amendment 5",
-      protocolDate: new Date("2026-01-20"),
+      protocolVersion: "Amendment 5",
+      protocolReleaseDate: new Date("2026-01-20"),
     },
   ];
 
   for (const def of studyDefs) {
+    const { protocolVersion, protocolReleaseDate, ...studyFields } = def;
     const study = await prisma.study.create({
-      data: { organizationId: org.id, ...def, status: "active", piName: pi.name },
+      data: { organizationId: org.id, ...studyFields, status: "active", piName: pi.name },
     });
 
-    await prisma.site.update({ where: { id: site.id }, data: { studyId: study.id } }).catch(() => {});
+    await prisma.site.create({
+      data: {
+        organizationId: org.id,
+        studyId: study.id,
+        name: "Riverside Main Site",
+        address: "400 Research Pkwy, Riverside",
+        siteNumber: "00001",
+      },
+    });
 
     const templates = await Promise.all(
       VISIT_TEMPLATE_DEFS.map((t) =>
         prisma.visitScheduleTemplate.create({
-          data: { organizationId: org.id, studyId: study.id, ...t },
+          data: {
+            organizationId: org.id,
+            studyId: study.id,
+            ...t,
+            // Demonstrates the "(V3)" label and the footnote under the table.
+            ...(t.name === "Baseline / Day 0"
+              ? {
+                  checklistVersion: "V3",
+                  checklistFootnote: "*hematologia, BQ, IgEt, amostra para imunogenicidade e PK ou outros biomarcadores exploratórios",
+                }
+              : {}),
+          },
         }),
       ),
     );
@@ -285,7 +300,8 @@ async function main() {
           studyId: study.id,
           type: DocumentType.PROTOCOL,
           title: `${def.protocolId} Protocol`,
-          version: "v3.0",
+          version: protocolVersion,
+          releaseDate: protocolReleaseDate,
           fileUrl: "https://example.com/placeholder/protocol.pdf",
           status: DocumentStatus.ACTIVE,
           signedById: pi.id,

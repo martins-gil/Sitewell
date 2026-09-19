@@ -16,6 +16,8 @@ export async function uploadDocument(formData: FormData) {
   const version = String(formData.get("version") ?? "").trim();
   const expiryDateRaw = String(formData.get("expiryDate") ?? "");
   const expiryDate = expiryDateRaw ? new Date(expiryDateRaw) : null;
+  const releaseDateRaw = String(formData.get("releaseDate") ?? "");
+  const releaseDate = releaseDateRaw ? new Date(releaseDateRaw) : null;
   const file = formData.get("file");
 
   if (!studyId || !type || !title || !version || !(file instanceof File) || file.size === 0) {
@@ -44,6 +46,7 @@ export async function uploadDocument(formData: FormData) {
         title,
         version,
         fileUrl: relativePath,
+        releaseDate,
         expiryDate,
         status: "ACTIVE",
       },
@@ -53,6 +56,28 @@ export async function uploadDocument(formData: FormData) {
   revalidatePath("/dashboard/documents");
   revalidatePath("/dashboard");
   if (visitId) revalidatePath(`/dashboard/visits/${visitId}`);
+}
+
+// Fix a document's version label or release date after the fact — the
+// protocol document's version and release date are what get printed on the
+// checklist documents, so a typo here shows up there. Every change is
+// recorded by the audit trigger like any other update.
+export async function updateDocumentDetails(documentId: string, formData: FormData) {
+  const ctx = await requireTenantContext();
+
+  const version = String(formData.get("version") ?? "").trim();
+  const releaseRaw = String(formData.get("releaseDate") ?? "");
+  if (!version) throw new Error("Version is required.");
+
+  await withTenantContext(ctx, (tx) =>
+    tx.document.update({
+      where: { id: documentId },
+      data: { version, releaseDate: releaseRaw ? new Date(releaseRaw) : null },
+    }),
+  );
+
+  revalidatePath("/dashboard/documents");
+  revalidatePath("/dashboard/visits/[id]", "page");
 }
 
 // Stands in for a real 21 CFR Part 11 e-signature (Phase 5) — records who

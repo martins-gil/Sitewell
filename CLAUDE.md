@@ -139,16 +139,24 @@ picks this repo up next.
   template-derived row, hard-deleting it would make `getVisitChecklist`'s
   lazy-creation pass see it as "missing" and silently recreate it the next
   time that visit's checklist is viewed.
-- **Checklist docx header fields are explicit, not derived** —
-  `Study.piName`, `Study.protocolAmendment`, `Study.protocolDate`, and
-  `Site.siteNumber` (edited via the "Document header details" form on
-  `/dashboard/studies/[id]/templates`). This used to be resolved from
-  `study_assignments`' first PI-role user and "today's date" — deliberately
-  replaced, since the printed PI name and protocol date are fixed facts
-  about the protocol document, not whoever's logged in or when a copy
-  happens to be downloaded. `getVisitChecklistHeader()` still falls back to
-  the org's first `Site` row (a study could have more than one; revisit if
-  that ever needs picking).
+- **Where each value on the checklist .docx comes from** (all in
+  `getVisitChecklistHeader()`; layout in `src/lib/checklist-docx.ts`, which
+  follows the site's "V3" template — checked by rendering it in Word and
+  comparing against the template, not just by inspecting the XML):
+  PI name = `Study.piName`; Site Nº = the study's first `Site.siteNumber`;
+  "Protocol Nº" = `Study.protocolId`; protocol version and release date =
+  the study's protocol DOCUMENT (`Document.version` / `Document.releaseDate`,
+  chosen by `pickProtocolDocument`: newest ACTIVE, else newest PENDING —
+  never expired/superseded); the "(V3)" after the heading and the footnote
+  under the table = `VisitScheduleTemplate.checklistVersion` /
+  `checklistFootnote` (per visit type). Nothing is derived from who's logged
+  in or from "today". The old `Study.protocolAmendment`/`protocolDate`
+  columns are DEPRECATED and unused — kept only because the migration that
+  moved their values onto the protocol document was made additive so the
+  previous deploy kept working; drop them in a follow-up migration. The
+  printed form has no subject line (the subject code is in the filename).
+  `updateStudyPiAndSite` (study page) and `updateVisitDocumentDetails`
+  (visit page) both write through `setStudyPiAndSite`.
 - **Checklist task library entries don't link back to templates.** Picking
   one from the "Add a checklist item" dropdown just copies its label/detail
   into a new `ChecklistTemplateItem` row — editing or deleting a
@@ -169,11 +177,16 @@ picks this repo up next.
   visit added from a protocol visit type keeps `templateId` (that's what
   links it to that type's checklist); a custom-named one has none and starts
   with an empty checklist (per-visit procedures can still be added).
-- **The checklist .docx header details are shown and editable on each
-  visit's page** (`visit-doc-header.tsx`), but they're study facts — saving
-  there goes through the same `updateStudyDocumentDetails` as the study's
-  visit-schedule page and changes every visit's document. The .docx also
-  prints the protocol name (study title), which is edited on the study.
+- **The document details are shown and editable on each visit's page**
+  (`visit-doc-header.tsx`) but they're not visit data: saving there
+  (`updateVisitDocumentDetails`) writes each field to its real home — study,
+  protocol document, visit-type checklist — so it changes every visit's
+  document. Fields that don't apply are omitted from the form (no protocol
+  document yet; a custom visit with no checklist) and skipped server-side by
+  `formData.has`, not blanked. Visits themselves are editable
+  (`updateVisit`): a visit made from a protocol visit type keeps its name
+  (that's what links it to the checklist); entering an actual date forces
+  Completed; a moved target date clears `reminderSentAt`.
 - **Kits are inventory with an optional link to one visit, not a dispensing
   log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;
   `Kit.visitId` (nullable, `ON DELETE SET NULL`) ties it to one specific
