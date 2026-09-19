@@ -2,12 +2,35 @@
 
 import { revalidatePath } from "next/cache";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
+import { parseDateTimeInput } from "@/lib/format";
 
 export async function toggleChecklistItem(visitId: string, resultId: string, verified: boolean) {
   const ctx = await requireTenantContext();
 
   await withTenantContext(ctx, (tx) =>
-    tx.visitChecklistResult.update({ where: { id: resultId }, data: { verified } }),
+    tx.visitChecklistResult.update({
+      where: { id: resultId },
+      // Un-ticking means it wasn't done, so its time goes too.
+      data: verified ? { verified } : { verified, performedAt: null },
+    }),
+  );
+
+  revalidatePath(`/dashboard/visits/${visitId}`);
+}
+
+/** Records when a procedure was done — a date and time, as typed
+ * ("YYYY-MM-DDTHH:mm", kept as a floating wall-clock value, see
+ * parseDateTimeInput). Entering a time also ticks the procedure as done;
+ * an empty value clears the time and leaves the tick as it was. */
+export async function setChecklistItemTime(visitId: string, resultId: string, value: string) {
+  const ctx = await requireTenantContext();
+  const performedAt = parseDateTimeInput(value);
+
+  await withTenantContext(ctx, (tx) =>
+    tx.visitChecklistResult.update({
+      where: { id: resultId },
+      data: performedAt ? { performedAt, verified: true } : { performedAt: null },
+    }),
   );
 
   revalidatePath(`/dashboard/visits/${visitId}`);

@@ -1,3 +1,5 @@
+import { formatDateTime } from "@/lib/format";
+import { kitsParagraphs, notesParagraphs, textLines } from "@/lib/docx-blocks";
 import {
   AlignmentType,
   BorderStyle,
@@ -19,6 +21,7 @@ export type ChecklistDocxItem = {
   label: string;
   detail: string | null;
   verified: boolean;
+  performedAt: Date | null;
 };
 
 export type ChecklistDocxHeader = {
@@ -30,6 +33,12 @@ export type ChecklistDocxHeader = {
   siteNumber: string | null;
   checklistVersion: string | null;
   checklistFootnote: string | null;
+  // Last column: a tick ("Verificado") or when it was done ("Data/hora").
+  checklistColumn: "VERIFIED" | "DATETIME";
+  // Kits linked to this visit, listed under the table.
+  kits: string[];
+  // The coordinator's free-text notes for this visit.
+  notes: string | null;
 };
 
 // A4 with 3 cm side margins, measured off the site's own template (the "V3"
@@ -39,6 +48,9 @@ const PAGE_HEIGHT = 16838;
 const SIDE_MARGIN = 1701;
 const TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN;
 const COLUMN_WIDTHS = [1701, 5570, TEXT_WIDTH - 1701 - 5570];
+// With a "Data/hora" last column the date needs room, like the site's
+// extension-visit form: a narrow number column, a wide date one.
+const DATETIME_COLUMN_WIDTHS = [1400, 5000, TEXT_WIDTH - 1400 - 5000];
 
 const GRID = { style: BorderStyle.SINGLE, size: 4, color: "BFBFBF" };
 const NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
@@ -85,6 +97,7 @@ export async function generateChecklistDocx(
   header: ChecklistDocxHeader,
   items: ChecklistDocxItem[],
 ): Promise<Buffer> {
+  const widths = header.checklistColumn === "DATETIME" ? DATETIME_COLUMN_WIDTHS : COLUMN_WIDTHS;
   const versionLabel = header.checklistVersion?.trim().replace(/^\((.*)\)$/, "$1");
   const protocolWithVersion = `${header.protocolId}${header.protocolVersion ? `, ${header.protocolVersion}` : ""}`;
   const footerText = `Protocol ${protocolWithVersion}${
@@ -177,15 +190,15 @@ export async function generateChecklistDocx(
 
           new Table({
             width: { size: TEXT_WIDTH, type: WidthType.DXA },
-            columnWidths: COLUMN_WIDTHS,
+            columnWidths: widths,
             layout: TableLayoutType.FIXED,
             rows: [
               new TableRow({
                 tableHeader: true,
                 children: [
-                  headerCell(COLUMN_WIDTHS[0], "Ordem das avaliações"),
-                  headerCell(COLUMN_WIDTHS[1], "Avaliações"),
-                  headerCell(COLUMN_WIDTHS[2], "Verificado"),
+                  headerCell(widths[0], "Ordem das avaliações"),
+                  headerCell(widths[1], "Avaliações"),
+                  headerCell(widths[2], header.checklistColumn === "DATETIME" ? "Data/hora" : "Verificado"),
                 ],
               }),
               ...items.map((item, i) => {
@@ -193,12 +206,12 @@ export async function generateChecklistDocx(
                 return new TableRow({
                   children: [
                     cell(
-                      COLUMN_WIDTHS[0],
+                      widths[0],
                       [new Paragraph({ children: [new TextRun({ text: String(i + 1), bold: true })] })],
                       shaded,
                     ),
                     cell(
-                      COLUMN_WIDTHS[1],
+                      widths[1],
                       [
                         new Paragraph({
                           alignment: AlignmentType.JUSTIFIED,
@@ -211,11 +224,15 @@ export async function generateChecklistDocx(
                       shaded,
                     ),
                     cell(
-                      COLUMN_WIDTHS[2],
+                      widths[2],
                       [
                         new Paragraph({
                           alignment: AlignmentType.CENTER,
-                          children: [new TextRun({ text: item.verified ? "✓" : "", bold: true })],
+                          children: [
+                            header.checklistColumn === "DATETIME"
+                              ? new TextRun({ text: formatDateTime(item.performedAt), size: 20 })
+                              : new TextRun({ text: item.verified ? "✓" : "", bold: true }),
+                          ],
                         }),
                       ],
                       shaded,
@@ -226,18 +243,11 @@ export async function generateChecklistDocx(
             ],
           }),
 
-          ...(header.checklistFootnote?.trim()
-            ? [
-                new Paragraph({
-                  alignment: AlignmentType.JUSTIFIED,
-                  spacing: { before: 480 },
-                  children: header.checklistFootnote
-                    .trim()
-                    .split(/\r?\n/)
-                    .map((line, i) => new TextRun({ text: line, break: i === 0 ? 0 : 1 })),
-                }),
-              ]
-            : []),
+          ...kitsParagraphs(header.kits),
+
+          ...(header.checklistFootnote?.trim() ? textLines(header.checklistFootnote, 480) : []),
+
+          ...notesParagraphs(header.notes),
         ],
       },
     ],

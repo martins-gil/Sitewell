@@ -17,6 +17,7 @@ export type DocHeaderValues = {
   protocolReleaseInput: string;
   checklistVersion: string | null;
   checklistFootnote: string | null;
+  checklistColumn: "VERIFIED" | "DATETIME";
 };
 
 const inputClass =
@@ -56,6 +57,12 @@ export function VisitDocHeader({ visitId, values }: { visitId: string; values: D
     ...(values.hasTemplate
       ? [
           { label: "Checklist version", value: values.checklistVersion, required: false, source: "visit checklist" },
+          {
+            label: "Last column",
+            value: values.checklistColumn === "DATETIME" ? "Date and time each was done" : "Verified (tick)",
+            required: false,
+            source: "visit checklist",
+          },
           {
             label: "Footnote",
             value: values.checklistFootnote ? values.checklistFootnote.replace(/\s+/g, " ").slice(0, 90) : null,
@@ -144,6 +151,13 @@ export function VisitDocHeader({ visitId, values }: { visitId: string; values: D
             <div className="col-span-2">
               <label className="block text-xs font-medium">Checklist version (printed as “(V3)” after the heading)</label>
               <input name="checklistVersion" defaultValue={values.checklistVersion ?? ""} placeholder="e.g. V3" className={inputClass} />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium">What the checklist records for each procedure</label>
+              <select name="checklistColumn" defaultValue={values.checklistColumn} className={inputClass}>
+                <option value="VERIFIED">Verified — a tick when it was done</option>
+                <option value="DATETIME">Date and time — when each procedure was done</option>
+              </select>
             </div>
             <div className="col-span-2">
               <label className="block text-xs font-medium">Footnote under the table (optional)</label>

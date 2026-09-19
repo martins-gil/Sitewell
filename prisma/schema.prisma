@@ -231,6 +231,14 @@ model VisitScheduleTemplate {
   // heading, and the footnote under the table (e.g. "*hematologia, BQ, ...").
   checklistVersion  String? @map("checklist_version")
   checklistFootnote String? @map("checklist_footnote")
+  // Which last column this visit type's checklist document has: "VERIFIED"
+  // (a tick) or "DATETIME" (the date and time each procedure was done). A
+  // plain string rather than an enum — two values, validated where it's set.
+  checklistColumn   String  @default("VERIFIED") @map("checklist_column")
+  // The standard nursing record ("Documento fonte - Registos de enfermagem")
+  // for this visit type: sections of rows to fill in by hand. Shape and
+  // validation live in src/lib/nursing-sheet.ts.
+  nursingSheet      Json?   @map("nursing_sheet")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -336,6 +344,9 @@ model Visit {
   windowStart    DateTime    @map("window_start")
   windowEnd      DateTime    @map("window_end")
   actualDate     DateTime?   @map("actual_date")
+  // Free-text notes the coordinator keeps on this visit; also printed at the
+  // end of the visit's documents.
+  notes          String?
   status         VisitStatus @default(SCHEDULED)
   reminderSentAt DateTime?   @map("reminder_sent_at")
   createdAt      DateTime    @default(now()) @map("created_at")
@@ -377,6 +388,10 @@ model VisitChecklistResult {
   detail         String?
   sortOrder      Int      @default(0) @map("sort_order")
   verified       Boolean  @default(false)
+  // When the procedure was done. A "floating" wall-clock value: the digits the
+  // coordinator entered, stored as if UTC and shown back the same way, so it
+  // reads identically on every device and on the printed document.
+  performedAt    DateTime? @map("performed_at")
   removed        Boolean  @default(false)
   updatedAt      DateTime @updatedAt @map("updated_at")
 

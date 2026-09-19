@@ -12,6 +12,28 @@ export function isWithinDays(date: Date | null, days: number): boolean {
   return date.getTime() - Date.now() < days * 24 * 60 * 60 * 1000;
 }
 
+// Times the coordinator types in ("when was this procedure done") are stored
+// as a "floating" wall-clock value: the digits entered, kept as if UTC, and
+// always read back in UTC — so 14:30 is 14:30 on every device and on the
+// printed document, whatever timezone the server or browser is in.
+export function toDateTimeInput(date: Date | null | undefined): string {
+  return date ? date.toISOString().slice(0, 16) : "";
+}
+
+export function parseDateTimeInput(value: string): Date | null {
+  if (!value) return null;
+  const date = new Date(`${value}:00Z`);
+  if (Number.isNaN(date.getTime())) throw new Error("Enter a valid date and time.");
+  return date;
+}
+
+/** "22/09/2026 14:30" — the floating wall-clock value above. */
+export function formatDateTime(date: Date | null | undefined): string {
+  if (!date) return "";
+  const iso = date.toISOString();
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} ${iso.slice(11, 16)}`;
+}
+
 /** Whole days from now until the date (negative once it's past). */
 export function daysUntil(date: Date): number {
   return Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000));

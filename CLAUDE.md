@@ -209,6 +209,23 @@ picks this repo up next.
   (`updateVisit`): a visit made from a protocol visit type keeps its name
   (that's what links it to the checklist); entering an actual date forces
   Completed; a moved target date clears `reminderSentAt`.
+- **Procedure date/time, visit notes and nursing sheets.**
+  `VisitScheduleTemplate.checklistColumn` (`VERIFIED` | `DATETIME`) is a
+  per-visit-TYPE choice of the checklist's last column — it lives on the
+  template, so custom visits (no template) are always `VERIFIED`.
+  `VisitChecklistResult.performedAt` is a "floating" wall-clock time stored as
+  if UTC (`parseDateTimeInput` appends `:00Z`; `toDateTimeInput`/
+  `formatDateTime` read it back with UTC slices) — never format it with
+  local-time APIs or it will shift by the server's offset. Setting a time
+  ticks the procedure; un-ticking clears it. `Visit.notes` is free text
+  printed as "Notas:" on both documents, along with the visit's linked kits.
+  The nursing sheet is a JSON *definition* (`VisitScheduleTemplate.nursingSheet`,
+  validated by `nursingSheetSchema` in `src/lib/nursing-sheet.ts` on every
+  save AND every read — `parseNursingSheet` returns null for a stored value
+  that no longer validates) rendered as a blank form; the nurse's readings
+  are handwritten and NOT stored. Clearing it writes `Prisma.DbNull`, not a
+  bare `null`. `prisma/seed.ts` imports the presets from `src/lib`
+  by relative path (no `@/` alias there).
 - **Kits are inventory with an optional link to one visit, not a dispensing
   log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;
   `Kit.visitId` (nullable, `ON DELETE SET NULL`) ties it to one specific

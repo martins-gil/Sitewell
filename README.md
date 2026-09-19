@@ -139,6 +139,23 @@ to org A, and a cross-tenant insert is rejected).
   (Documents — which now has a release date and an inline Edit for version/
   release date); the "(V3)" label and footnote belong to the visit type's
   checklist. All of them are also shown and editable on each visit's page.
+- ✅ Procedure date/time, visit notes, nursing sheets. Each visit type's
+  checklist records either a tick ("Verificado") or when each procedure was
+  done ("Data/hora") — pick which under "Edit document details" on a visit
+  (it applies to every visit of that type); with "Data/hora" each procedure
+  on the visit page gets a date-time field and a "Now" button (setting a time
+  also ticks it). The visit's linked kits print under the checklist ("Kits:")
+  and free-text visit notes ("Notas:", `Visit.notes`) print on both
+  documents. Each visit type can also define a standard **nursing sheet**
+  ("Documento fonte – Registos de enfermagem",
+  `/dashboard/studies/[id]/templates/[templateId]/nursing-sheet`): sections of
+  rows (vital signs, collections…) with Result / Hora / Observações columns,
+  starting from one of two presets modelled on the site's paper forms. The
+  visit page downloads it as a .docx (`src/lib/nursing-sheet-docx.ts`) with
+  the visit name, date, subject and initials and the linked kits filled in;
+  the readings themselves stay handwritten (not stored in the app). Not
+  reproduced from the paper forms: hierarchical numbering (1.1), alternate
+  title/footer wordings, the AVG cell.
 - ✅ Kits Inventory (`/dashboard/kits`): physical/lab kits — name, study,
   expiry date, optionally earmarked for a visit type, and optionally linked
   to one specific patient visit (from the inventory row, the add form, or

@@ -4,6 +4,7 @@ import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
 import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
 import { pickProtocolDocument } from "@/lib/protocol-document";
+import { parseNursingSheet } from "@/lib/nursing-sheet";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -318,6 +319,7 @@ export async function getVisitChecklist(visitId: string) {
       label: r.label,
       detail: r.detail,
       verified: r.verified,
+      performedAt: r.performedAt,
       isAdHoc: r.templateItemId === null,
     }));
   });
@@ -336,8 +338,16 @@ export async function getVisitChecklistHeader(visitId: string) {
       where: { id: visitId },
       include: {
         study: { include: { sites: { select: { siteNumber: true }, take: 1 } } },
-        subject: { select: { subjectCode: true } },
-        template: { select: { checklistVersion: true, checklistFootnote: true } },
+        subject: { select: { subjectCode: true, displayName: true } },
+        template: {
+          select: {
+            checklistVersion: true,
+            checklistFootnote: true,
+            checklistColumn: true,
+            nursingSheet: true,
+          },
+        },
+        kits: { select: { name: true }, orderBy: { name: "asc" } },
       },
     });
 
@@ -370,6 +380,16 @@ export async function getVisitChecklistHeader(visitId: string) {
       protocolAwaitingSignature: protocol?.awaitingSignature ?? false,
       checklistVersion: visit.template?.checklistVersion ?? null,
       checklistFootnote: visit.template?.checklistFootnote ?? null,
+      checklistColumn: (visit.template?.checklistColumn === "DATETIME" ? "DATETIME" : "VERIFIED") as
+        | "VERIFIED"
+        | "DATETIME",
+      nursingSheet: parseNursingSheet(visit.template?.nursingSheet),
+      // Kits linked to this visit — listed on both documents.
+      kits: visit.kits.map((k) => k.name),
+      notes: visit.notes,
+      // For the nursing record's identification box.
+      initials: visit.subject.displayName,
+      actualDate: visit.actualDate,
     };
   });
 }

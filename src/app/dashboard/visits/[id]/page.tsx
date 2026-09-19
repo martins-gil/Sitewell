@@ -6,12 +6,13 @@ import {
   getVisitChecklistHeader,
   getAssignableKitsForStudy,
 } from "@/lib/queries";
-import { formatDate, humanizeEnum } from "@/lib/format";
+import { formatDate, humanizeEnum, toDateTimeInput } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
+import { VisitNotes } from "./visit-notes";
 import { DocumentStatusControl } from "@/app/dashboard/documents/document-status-control";
 import { VisitDocHeader } from "./visit-doc-header";
 import { EditVisitForm } from "./edit-visit-form";
@@ -86,13 +87,69 @@ export default async function VisitDetailPage({
               : "",
             checklistVersion: docHeader.checklistVersion,
             checklistFootnote: docHeader.checklistFootnote,
+            checklistColumn: docHeader.checklistColumn,
           }}
         />
       </div>
 
       <div>
         <h2 className="mb-3 text-sm font-medium text-neutral-500">Procedure checklist</h2>
-        <VisitChecklist visitId={visit.id} items={checklist} />
+        <VisitChecklist
+          visitId={visit.id}
+          column={docHeader.checklistColumn}
+          items={checklist.map((item) => ({ ...item, performedAt: toDateTimeInput(item.performedAt) }))}
+        />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">Nursing sheet</h2>
+        <div className="rounded-lg border border-neutral-200 p-5 text-sm dark:border-neutral-800">
+          {docHeader.nursingSheet ? (
+            <>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                The standard nursing record for a {visit.visitType} visit —{" "}
+                {docHeader.nursingSheet.sections.length} section
+                {docHeader.nursingSheet.sections.length === 1 ? "" : "s"},{" "}
+                {docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0)} rows. Downloads with this
+                visit&apos;s number, date, subject and initials filled in
+                {visit.kits.length > 0 ? ", plus its kits" : ""}; the readings are handwritten.
+              </p>
+              <a
+                href={`/api/visits/${visit.id}/nursing-sheet-docx`}
+                className="mt-3 inline-block font-medium hover:underline"
+              >
+                Download nursing sheet (.docx)
+              </a>
+            </>
+          ) : (
+            <p className="text-neutral-500">
+              This visit type has no nursing sheet yet.{" "}
+              {visit.templateId ? (
+                <Link
+                  href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
+                  className="underline"
+                >
+                  Set one up →
+                </Link>
+              ) : (
+                "Nursing sheets belong to a protocol visit type, and this is a custom visit."
+              )}
+            </p>
+          )}
+          {docHeader.nursingSheet && visit.templateId && (
+            <Link
+              href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
+              className="ml-4 text-xs text-neutral-500 hover:underline"
+            >
+              Edit the sheet
+            </Link>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">Notes</h2>
+        <VisitNotes visitId={visit.id} notes={visit.notes ?? ""} />
       </div>
 
       <div>

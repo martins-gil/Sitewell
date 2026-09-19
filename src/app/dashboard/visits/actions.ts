@@ -160,6 +160,16 @@ export async function updateVisit(visitId: string, formData: FormData) {
   revalidatePath("/dashboard/kits");
 }
 
+/** The coordinator's free-text notes for a visit (also printed at the end of
+ * the visit's documents). */
+export async function saveVisitNotes(visitId: string, notes: string) {
+  const ctx = await requireTenantContext();
+  await withTenantContext(ctx, (tx) =>
+    tx.visit.update({ where: { id: visitId }, data: { notes: notes.trim() || null } }),
+  );
+  revalidatePath(`/dashboard/visits/${visitId}`);
+}
+
 /** Moves a visit to another day — postponed or brought forward — and can carry
  * the patient's LATER visits along by the same number of days, which is what
  * usually happens when one visit slips. Keeps each moved visit's window size
@@ -261,12 +271,18 @@ export async function updateVisitDocumentDetails(visitId: string, formData: Form
       });
     }
 
-    if (visit.templateId && (formData.has("checklistVersion") || formData.has("checklistFootnote"))) {
+    if (
+      visit.templateId &&
+      (formData.has("checklistVersion") || formData.has("checklistFootnote") || formData.has("checklistColumn"))
+    ) {
+      const column = text("checklistColumn");
+      if (column && column !== "VERIFIED" && column !== "DATETIME") throw new Error("Pick a valid checklist column.");
       await tx.visitScheduleTemplate.update({
         where: { id: visit.templateId },
         data: {
           checklistVersion: text("checklistVersion") || null,
           checklistFootnote: text("checklistFootnote") || null,
+          ...(column ? { checklistColumn: column } : {}),
         },
       });
     }

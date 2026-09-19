@@ -1,7 +1,12 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { toggleChecklistItem, addVisitChecklistItem, removeVisitChecklistItem } from "./checklist-actions";
+import {
+  toggleChecklistItem,
+  setChecklistItemTime,
+  addVisitChecklistItem,
+  removeVisitChecklistItem,
+} from "./checklist-actions";
 
 export type ChecklistItem = {
   id: string;
@@ -9,10 +14,29 @@ export type ChecklistItem = {
   label: string;
   detail: string | null;
   verified: boolean;
+  // "YYYY-MM-DDTHH:mm" as a datetime-local input wants it, or "" when unset.
+  performedAt: string;
   isAdHoc: boolean;
 };
 
-export function VisitChecklist({ visitId, items }: { visitId: string; items: ChecklistItem[] }) {
+// The browser's current wall-clock time in the same "floating" form the
+// times are stored in (see parseDateTimeInput).
+function nowInputValue(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function VisitChecklist({
+  visitId,
+  items,
+  column,
+}: {
+  visitId: string;
+  items: ChecklistItem[];
+  // What this visit type's printed checklist records per procedure: a tick, or when it was done.
+  column: "VERIFIED" | "DATETIME";
+}) {
   const [pending, startTransition] = useTransition();
   const [localItems, setLocalItems] = useState(items);
   const [adding, setAdding] = useState(false);
@@ -32,9 +56,20 @@ export function VisitChecklist({ visitId, items }: { visitId: string; items: Che
   }
 
   function handleToggle(resultId: string, next: boolean) {
-    setLocalItems((prev) => prev.map((i) => (i.id === resultId ? { ...i, verified: next } : i)));
+    setLocalItems((prev) =>
+      prev.map((i) => (i.id === resultId ? { ...i, verified: next, performedAt: next ? i.performedAt : "" } : i)),
+    );
     startTransition(async () => {
       await toggleChecklistItem(visitId, resultId, next);
+    });
+  }
+
+  function handleTime(resultId: string, value: string) {
+    setLocalItems((prev) =>
+      prev.map((i) => (i.id === resultId ? { ...i, performedAt: value, verified: value ? true : i.verified } : i)),
+    );
+    startTransition(async () => {
+      await setChecklistItemTime(visitId, resultId, value);
     });
   }
 
@@ -83,6 +118,26 @@ export function VisitChecklist({ visitId, items }: { visitId: string; items: Che
                   <span className="ml-2 text-xs text-neutral-400">(added to this visit only)</span>
                 )}
               </span>
+              {column === "DATETIME" && (
+                <span className="flex items-center gap-1.5">
+                  <input
+                    type="datetime-local"
+                    value={item.performedAt}
+                    disabled={pending}
+                    onChange={(e) => handleTime(item.id, e.target.value)}
+                    aria-label={`Date and time of ${item.label}`}
+                    className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleTime(item.id, nowInputValue())}
+                    disabled={pending}
+                    className="text-xs text-neutral-600 hover:underline disabled:opacity-60 dark:text-neutral-400"
+                  >
+                    Now
+                  </button>
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => handleRemove(item.id)}
@@ -145,7 +200,7 @@ export function VisitChecklist({ visitId, items }: { visitId: string; items: Che
         href={`/api/visits/${visitId}/checklist-docx`}
         className="block border-t border-neutral-200 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
       >
-        Download filled checklist (.docx)
+        Download {column === "DATETIME" ? "checklist with date and time" : "filled checklist"} (.docx)
       </a>
     </div>
   );

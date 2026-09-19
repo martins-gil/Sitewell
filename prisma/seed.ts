@@ -1,6 +1,7 @@
 import { PrismaClient, SubjectStatus, VisitStatus, DocumentType, DocumentStatus } from "@prisma/client";
 import { faker } from "@faker-js/faker";
 import bcrypt from "bcryptjs";
+import { NURSING_SHEET_PRESETS } from "../src/lib/nursing-sheet";
 
 // Seeding bypasses row-level security entirely (it's creating the very first
 // organization, before any tenant context exists to scope inserts to) — so,
@@ -219,8 +220,15 @@ async function main() {
               ? {
                   checklistVersion: "V3",
                   checklistFootnote: "*hematologia, BQ, IgEt, amostra para imunogenicidade e PK ou outros biomarcadores exploratórios",
+                  nursingSheet: NURSING_SHEET_PRESETS[0].sheet,
                 }
               : {}),
+            // Screening's checklist records when each procedure was done (the
+            // "Data/hora" column); Week 4 uses the other nursing-sheet layout.
+            ...(t.name === "Screening"
+              ? { checklistColumn: "DATETIME", nursingSheet: NURSING_SHEET_PRESETS[0].sheet }
+              : {}),
+            ...(t.name === "Week 4" ? { nursingSheet: NURSING_SHEET_PRESETS[1].sheet } : {}),
           },
         }),
       ),
