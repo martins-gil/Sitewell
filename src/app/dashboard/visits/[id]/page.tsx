@@ -1,12 +1,19 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getVisitById, getVisitChecklist, getAssignableKitsForStudy } from "@/lib/queries";
+import {
+  getVisitById,
+  getVisitChecklist,
+  getVisitChecklistHeader,
+  getAssignableKitsForStudy,
+} from "@/lib/queries";
 import { formatDate, humanizeEnum } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
+import { VisitDocHeader } from "./visit-doc-header";
+import { DeleteVisitButton } from "./delete-visit-button";
 
 export default async function VisitDetailPage({
   params,
@@ -14,7 +21,11 @@ export default async function VisitDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [visit, checklist] = await Promise.all([getVisitById(id), getVisitChecklist(id)]);
+  const [visit, checklist, docHeader] = await Promise.all([
+    getVisitById(id),
+    getVisitChecklist(id),
+    getVisitChecklistHeader(id),
+  ]);
   if (!visit) notFound();
   const availableKits = await getAssignableKitsForStudy(visit.studyId);
 
@@ -47,6 +58,22 @@ export default async function VisitDetailPage({
           <dt className="text-neutral-500">Actual date</dt>
           <dd>{formatDate(visit.actualDate)}</dd>
         </dl>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">Document details (printed on the .docx)</h2>
+        <VisitDocHeader
+          studyId={visit.studyId}
+          values={{
+            protocolTitle: docHeader.protocolTitle,
+            protocolId: docHeader.protocolId,
+            piName: docHeader.piName,
+            siteNumber: docHeader.siteNumber,
+            protocolAmendment: docHeader.protocolAmendment,
+            protocolDateLabel: formatDate(docHeader.protocolDate),
+            protocolDateInput: docHeader.protocolDate ? docHeader.protocolDate.toISOString().slice(0, 10) : "",
+          }}
+        />
       </div>
 
       <div>
@@ -116,6 +143,12 @@ export default async function VisitDetailPage({
           </div>
         )}
       </div>
+
+      {visit.status !== "COMPLETED" && (
+        <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+          <DeleteVisitButton visitId={visit.id} label={`${visit.visitType} for ${visit.subject.subjectCode}`} />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { SubjectStatus } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
+import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -93,11 +94,66 @@ export async function getSubjectById(id: string) {
     tx.subject.findUnique({
       where: { id },
       include: {
-        study: { select: { id: true, title: true, protocolId: true } },
+        study: {
+          select: {
+            id: true,
+            title: true,
+            protocolId: true,
+            templates: {
+              orderBy: { sortOrder: "asc" },
+              select: {
+                id: true,
+                studyId: true,
+                name: true,
+                windowBeforeDays: true,
+                windowAfterDays: true,
+              },
+            },
+          },
+        },
         visits: { orderBy: { targetDate: "asc" } },
       },
     }),
   );
+}
+
+/** Everything the calendar's "Add a visit" form needs: the protocol visit
+ * types per study, and the patients whose status allows scheduling, each
+ * with which visit types they already have (so those aren't offered twice). */
+export async function getVisitSchedulingData() {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const [templates, subjects] = await Promise.all([
+      tx.visitScheduleTemplate.findMany({
+        orderBy: [{ studyId: "asc" }, { sortOrder: "asc" }],
+        select: { id: true, studyId: true, name: true, windowBeforeDays: true, windowAfterDays: true },
+      }),
+      tx.subject.findMany({
+        where: { status: { in: SCHEDULABLE_STATUSES } },
+        orderBy: { subjectCode: "asc" },
+        select: {
+          id: true,
+          studyId: true,
+          subjectCode: true,
+          displayName: true,
+          status: true,
+          visits: { select: { templateId: true } },
+        },
+      }),
+    ]);
+
+    return {
+      templates,
+      subjects: subjects.map((s) => ({
+        id: s.id,
+        studyId: s.studyId,
+        subjectCode: s.subjectCode,
+        displayName: s.displayName,
+        status: s.status as string,
+        scheduledTemplateIds: s.visits.flatMap((v) => (v.templateId ? [v.templateId] : [])),
+      })),
+    };
+  });
 }
 
 export async function getVisitById(id: string) {
@@ -206,6 +262,7 @@ export async function getVisitChecklistHeader(visitId: string) {
     return {
       visitType: visit.visitType,
       protocolId: visit.study.protocolId,
+      protocolTitle: visit.study.title,
       protocolAmendment: visit.study.protocolAmendment,
       protocolDate: visit.study.protocolDate,
       subjectCode: visit.subject.subjectCode,

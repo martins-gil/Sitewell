@@ -1,10 +1,14 @@
-import { getAllVisits, getStudies } from "@/lib/queries";
+import { getAllVisits, getStudies, getVisitSchedulingData } from "@/lib/queries";
 import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
 import type { CalendarVisit } from "./visits-calendar";
 
 export default async function VisitsPage() {
-  const [visits, studies] = await Promise.all([getAllVisits(), getStudies()]);
+  const [visits, studies, scheduling] = await Promise.all([
+    getAllVisits(),
+    getStudies(),
+    getVisitSchedulingData(),
+  ]);
 
   const calendarVisits: CalendarVisit[] = visits.map((v) => ({
     id: v.id,
@@ -29,7 +33,13 @@ export default async function VisitsPage() {
         <SendRemindersButton />
       </div>
 
-      <VisitsView tableVisits={visits} calendarVisits={calendarVisits} studies={studies} />
+      <VisitsView
+        tableVisits={visits}
+        calendarVisits={calendarVisits}
+        studies={studies}
+        schedulingSubjects={scheduling.subjects}
+        schedulingTemplates={scheduling.templates}
+      />
     </div>
   );
 }

@@ -22,6 +22,7 @@ export type ChecklistDocxItem = {
 export type ChecklistDocxHeader = {
   visitType: string;
   protocolId: string;
+  protocolTitle: string;
   protocolAmendment: string | null;
   protocolDate: Date | null;
   subjectCode: string;
@@ -67,6 +68,7 @@ export async function generateChecklistDocx(
               new TextRun({ text: `PI: ${header.piName ?? "____________"}    ` }),
               new TextRun({ text: `Site Nº: ${header.siteNumber ?? "_____"}   ` }),
               new TextRun({ text: `Protocol Nº: ${header.protocolId}${amendmentSuffix}` }),
+              new TextRun({ text: `Protocol: ${header.protocolTitle}`, break: 1 }),
             ],
           }),
           new Paragraph({

@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  AddVisitForm,
+  type SchedulingSubject,
+  type SchedulingTemplate,
+} from "@/components/add-visit-form";
 import { VisitsCalendar, type CalendarVisit } from "./visits-calendar";
 import { VisitsTable, type TableVisit } from "./visits-table";
 
@@ -8,13 +13,20 @@ export function VisitsView({
   tableVisits,
   calendarVisits,
   studies,
+  schedulingSubjects,
+  schedulingTemplates,
 }: {
   tableVisits: TableVisit[];
   calendarVisits: CalendarVisit[];
   studies: { id: string; protocolId: string; title: string }[];
+  schedulingSubjects: SchedulingSubject[];
+  schedulingTemplates: SchedulingTemplate[];
 }) {
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [studyId, setStudyId] = useState("");
+  // `date` is what the calendar's per-day "+" pre-fills; null date = opened
+  // from the button, with the date left blank.
+  const [adding, setAdding] = useState<{ date: string | null } | null>(null);
 
   const filteredTableVisits = useMemo(
     () => (studyId ? tableVisits.filter((v) => v.studyId === studyId) : tableVisits),
@@ -55,10 +67,29 @@ export function VisitsView({
             </option>
           ))}
         </select>
+        <button
+          onClick={() => setAdding({ date: null })}
+          className="ml-auto rounded-md bg-neutral-900 px-3 py-1 font-medium text-white dark:bg-white dark:text-neutral-900"
+        >
+          + Add visit
+        </button>
       </div>
 
+      {adding && (
+        <AddVisitForm
+          // Remount when the pre-filled day changes so the date input picks it up.
+          key={adding.date ?? "blank"}
+          studies={studies}
+          subjects={schedulingSubjects}
+          templates={schedulingTemplates}
+          initialStudyId={studyId || undefined}
+          initialDate={adding.date ?? undefined}
+          onClose={() => setAdding(null)}
+        />
+      )}
+
       {view === "calendar" ? (
-        <VisitsCalendar visits={filteredCalendarVisits} />
+        <VisitsCalendar visits={filteredCalendarVisits} onAddOnDay={(date) => setAdding({ date })} />
       ) : (
         <VisitsTable visits={filteredTableVisits} />
       )}

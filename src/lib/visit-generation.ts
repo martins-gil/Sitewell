@@ -46,3 +46,47 @@ export async function generateVisitsForSubject(
 
   return templates.length;
 }
+
+/**
+ * Adds the protocol visits a subject doesn't have yet, dated as offsets from
+ * `anchorDate` (the Day 0 / Baseline date). Unlike generateVisitsForSubject,
+ * this doesn't bail out when the subject already has some visits — it only
+ * fills in the visit types that are missing, so a coordinator who scheduled
+ * Screening by hand can still add the rest of the protocol in one step
+ * without duplicating what's there.
+ */
+export async function generateMissingVisitsForSubject(
+  tx: Prisma.TransactionClient,
+  params: { subjectId: string; studyId: string; organizationId: string; anchorDate: Date },
+): Promise<number> {
+  const [templates, existing] = await Promise.all([
+    tx.visitScheduleTemplate.findMany({
+      where: { studyId: params.studyId },
+      orderBy: { sortOrder: "asc" },
+    }),
+    tx.visit.findMany({ where: { subjectId: params.subjectId }, select: { templateId: true } }),
+  ]);
+
+  const alreadyScheduled = new Set(existing.map((v) => v.templateId));
+  const missing = templates.filter((t) => !alreadyScheduled.has(t.id));
+  if (missing.length === 0) return 0;
+
+  await tx.visit.createMany({
+    data: missing.map((template) => {
+      const targetDate = addDays(params.anchorDate, template.targetDayOffset);
+      return {
+        organizationId: params.organizationId,
+        subjectId: params.subjectId,
+        studyId: params.studyId,
+        templateId: template.id,
+        visitType: template.name,
+        targetDate,
+        windowStart: addDays(targetDate, -template.windowBeforeDays),
+        windowEnd: addDays(targetDate, template.windowAfterDays),
+        status: "SCHEDULED" as const,
+      };
+    }),
+  });
+
+  return missing.length;
+}

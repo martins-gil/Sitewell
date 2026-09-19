@@ -6,6 +6,8 @@ import { Badge } from "@/components/badge";
 import { StatusControl } from "./status-control";
 import { IeCriteriaEditor } from "./ie-criteria";
 import { EditDisplayName } from "./edit-display-name";
+import { VisitScheduler } from "./visit-scheduler";
+import { canScheduleVisits } from "@/lib/visit-scheduling";
 
 export default async function SubjectDetailPage({
   params,
@@ -57,9 +59,30 @@ export default async function SubjectDetailPage({
             Visits {subject.visits.length > 0 && `(${subject.visits.length})`}
           </h2>
         </div>
+        <div className="border-b border-neutral-200 px-5 py-3 dark:border-neutral-800">
+          {canScheduleVisits(subject.status) ? (
+            <VisitScheduler
+              subject={{
+                id: subject.id,
+                studyId: subject.studyId,
+                subjectCode: subject.subjectCode,
+                displayName: subject.displayName,
+                status: subject.status,
+                scheduledTemplateIds: subject.visits.flatMap((v) => (v.templateId ? [v.templateId] : [])),
+              }}
+              templates={subject.study.templates}
+            />
+          ) : (
+            <p className="text-xs text-neutral-500">
+              Visits can be added once the patient is pre-screened, screened, consented or enrolled.
+            </p>
+          )}
+        </div>
         {subject.visits.length === 0 ? (
           <p className="px-5 py-4 text-sm text-neutral-500">
-            No visits yet — generated automatically when the subject is marked Enrolled.
+            {canScheduleVisits(subject.status)
+              ? "No visits yet. Add them above to build this patient's program — or, if none are added, the study's protocol schedule is generated automatically when the patient is marked Enrolled."
+              : "No visits yet."}
           </p>
         ) : (
           <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">

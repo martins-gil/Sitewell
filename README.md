@@ -60,6 +60,19 @@ to org A, and a cross-tenant insert is rejected).
   "test data only" warning), patient detail page, an interactively-editable
   I/E criteria list (free-text criterion + met/not-met, not just the seeded
   snapshot)
+- ✅ Building a patient's visit program: once a patient is pre-screened,
+  screened, consented or enrolled, their page has "+ Add a visit" (pick one
+  of the study's protocol visit types — or a custom-named one-off — plus a
+  date; the window defaults from the protocol) and "Add all protocol visits
+  from a date" (fills in only the visit types they don't have yet, dated
+  from a Day 0 baseline date using the protocol offsets). The Visits
+  Schedule page has "+ Add visit" too, plus a "+" on every calendar day that
+  pre-fills the date: pick study → patient (only eligible ones, with
+  initials and stage) → visit type (only ones that patient doesn't have) →
+  date. A visit added from a protocol visit type is linked to that type, so
+  it gets the same checklist/profile as an auto-generated one. A visit added
+  by mistake can be removed from its own page (not once completed, not while
+  documents are attached).
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a

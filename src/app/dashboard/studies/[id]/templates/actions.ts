@@ -82,4 +82,6 @@ export async function updateStudyDocumentDetails(studyId: string, formData: Form
   });
 
   revalidatePath(`/dashboard/studies/${studyId}/templates`);
+  // Also editable from each visit's page, where the same details are shown.
+  revalidatePath("/dashboard/visits/[id]", "page");
 }

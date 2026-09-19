@@ -156,6 +156,24 @@ picks this repo up next.
   used it. `addChecklistTemplateItem` upserts into the library on every add
   (by `[organizationId, label]`), so the library only ever grows from real
   usage; nothing prunes it.
+- **Visits can be added by hand, not only auto-generated on enrollment.**
+  `addVisit` / `generateProtocolSchedule` / `deleteVisit` in
+  `dashboard/visits/actions.ts`; eligible patient statuses live in
+  `src/lib/visit-scheduling.ts`. Two behaviors to keep in mind:
+  `generateVisitsForSubject` (the on-Enrolled auto-generation) still bails
+  out if the patient has ANY visit, so a hand-built program isn't padded
+  with protocol visits nobody chose — `generateMissingVisitsForSubject` is
+  the "fill in the rest" path and skips visit types already present. And
+  hand-entered dates are stored at noon UTC (`parseDateOnly`), not midnight,
+  so a date-only value doesn't slip to the previous day west of UTC. A
+  visit added from a protocol visit type keeps `templateId` (that's what
+  links it to that type's checklist); a custom-named one has none and starts
+  with an empty checklist (per-visit procedures can still be added).
+- **The checklist .docx header details are shown and editable on each
+  visit's page** (`visit-doc-header.tsx`), but they're study facts — saving
+  there goes through the same `updateStudyDocumentDetails` as the study's
+  visit-schedule page and changes every visit's document. The .docx also
+  prints the protocol name (study title), which is edited on the study.
 - **Kits are inventory with an optional link to one visit, not a dispensing
   log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;
   `Kit.visitId` (nullable, `ON DELETE SET NULL`) ties it to one specific

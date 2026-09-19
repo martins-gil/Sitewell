@@ -46,7 +46,13 @@ function monthGridCells(monthStart: Date, visitsByDay: Map<string, CalendarVisit
   });
 }
 
-export function VisitsCalendar({ visits }: { visits: CalendarVisit[] }) {
+export function VisitsCalendar({
+  visits,
+  onAddOnDay,
+}: {
+  visits: CalendarVisit[];
+  onAddOnDay?: (dateKey: string) => void;
+}) {
   const router = useRouter();
   const [granularity, setGranularity] = useState<"month" | "year">("month");
   const [monthCursor, setMonthCursor] = useState(() => {
@@ -150,16 +156,29 @@ export function VisitsCalendar({ visits }: { visits: CalendarVisit[] }) {
                   inCurrentMonth ? "" : "bg-neutral-50 dark:bg-neutral-950"
                 }`}
               >
-                <div
-                  className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                    isToday
-                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                      : inCurrentMonth
-                        ? "text-neutral-700 dark:text-neutral-300"
-                        : "text-neutral-400"
-                  }`}
-                >
-                  {date.getDate()}
+                <div className="mb-1 flex items-center justify-between">
+                  <div
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${
+                      isToday
+                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                        : inCurrentMonth
+                          ? "text-neutral-700 dark:text-neutral-300"
+                          : "text-neutral-400"
+                    }`}
+                  >
+                    {date.getDate()}
+                  </div>
+                  {onAddOnDay && (
+                    <button
+                      type="button"
+                      onClick={() => onAddOnDay(toDateKey(date))}
+                      title={`Add a visit on ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                      aria-label={`Add a visit on ${toDateKey(date)}`}
+                      className="flex h-5 w-5 items-center justify-center rounded text-sm leading-none text-neutral-300 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                    >
+                      +
+                    </button>
+                  )}
                 </div>
                 <div className="space-y-0.5">
                   {dayVisits.slice(0, 3).map((v) => (
@@ -170,7 +189,10 @@ export function VisitsCalendar({ visits }: { visits: CalendarVisit[] }) {
                       className="flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     >
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`} />
-                      <span className="truncate font-mono">{v.subjectCode}</span>
+                      <span className="truncate">
+                        <span className="font-mono">{v.subjectCode}</span>{" "}
+                        <span className="text-neutral-500">{v.visitType}</span>
+                      </span>
                     </button>
                   ))}
                   {dayVisits.length > 3 && (
