@@ -398,7 +398,9 @@ model Document {
   type           DocumentType
   title          String
   version        String
-  fileUrl        String         @map("file_url")
+  // Null = the document is logged (title/type/version/dates) but no file has
+  // been attached — attaching one is optional, and can happen later.
+  fileUrl        String?        @map("file_url")
   // When this version of the document was released/issued (for a protocol:
   // the amendment's date, printed in the checklist .docx footer).
   releaseDate    DateTime?      @map("release_date")

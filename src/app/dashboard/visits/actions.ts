@@ -5,28 +5,13 @@ import { redirect } from "next/navigation";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import type { VisitStatus } from "@prisma/client";
 import { generateMissingVisitsForSubject } from "@/lib/visit-generation";
-import { canScheduleVisits } from "@/lib/visit-scheduling";
+import { canScheduleVisits, DAY_MS, parseDateOnly, wholeDays } from "@/lib/visit-scheduling";
 import { setStudyPiAndSite } from "@/lib/study-details";
 import { pickProtocolDocument } from "@/lib/protocol-document";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 function refresh() {
   revalidatePath("/dashboard/visits");
   revalidatePath("/dashboard");
-}
-
-// Noon UTC, not midnight: a date-only value stays on the same calendar day
-// for anyone within ±12 hours of UTC, instead of slipping to the day before
-// west of Greenwich.
-function parseDateOnly(raw: string): Date {
-  const date = new Date(`${raw}T12:00:00Z`);
-  if (!raw || Number.isNaN(date.getTime())) throw new Error("Enter a valid date.");
-  return date;
-}
-
-function wholeDays(raw: FormDataEntryValue | null): number {
-  return Math.max(0, Math.trunc(Number(raw) || 0));
 }
 
 const NOT_SCHEDULABLE_MESSAGE =

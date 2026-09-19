@@ -177,6 +177,19 @@ picks this repo up next.
   visit added from a protocol visit type keeps `templateId` (that's what
   links it to that type's checklist); a custom-named one has none and starts
   with an empty checklist (per-visit procedures can still be added).
+- **Documents don't need a file, and copied eligibility criteria aren't
+  "met".** `Document.fileUrl` is nullable (null = logged, nothing attached;
+  every reader checks for it, including `/api/documents/[id]/file`, which
+  404s). `saveOptionalFile` turns a storage failure (the read-only Vercel
+  filesystem) into a message telling the user to leave the file empty, rather
+  than a raw error. On the patient side, `Subject.ieCriteriaSnapshot` entries
+  are `{criterion, met: true | false | null}`; `null` = not assessed, which is
+  what `addSubject` writes when it clones a source patient's criteria — it
+  copies the TEXT only, never the source's answers, so a new patient is never
+  recorded as meeting a criterion nobody assessed. `addSubject` also takes the
+  visit list the form sent (`visitPlan`, zod-validated): rows the coordinator
+  edited/left out, with `templateId` checked against the study and the visit
+  name taken from the template, not the client.
 - **The document details are shown and editable on each visit's page**
   (`visit-doc-header.tsx`) but they're not visit data: saving there
   (`updateVisitDocumentDetails`) writes each field to its real home — study,

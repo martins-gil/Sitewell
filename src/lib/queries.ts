@@ -71,16 +71,68 @@ export async function getStudyProtocolDocument(studyId: string) {
   });
 }
 
-/** Candidates for the Add-Patient form's "Duplicate visits from" picker —
- * only subjects that already have a visit list worth copying. */
-export async function getSubjectsWithVisitCounts() {
+export type DuplicationSource = {
+  id: string;
+  subjectCode: string;
+  displayName: string | null;
+  studyId: string;
+  criteria: string[];
+  visits: {
+    id: string;
+    visitType: string;
+    templateId: string | null;
+    targetDate: string; // YYYY-MM-DD
+    windowBeforeDays: number;
+    windowAfterDays: number;
+  }[];
+};
+
+/** What the Add-Patient form can copy from an existing patient: their visit
+ * schedule (type, target date, window) and the list of eligibility criteria
+ * text. Whether they met each criterion is deliberately not part of this —
+ * that's an assessment of that patient, not something to carry over. */
+export async function getDuplicationSources(): Promise<DuplicationSource[]> {
   const ctx = await requireTenantContext();
-  return withTenantContext(ctx, (tx) =>
+  const subjects = await withTenantContext(ctx, (tx) =>
     tx.subject.findMany({
-      select: { id: true, subjectCode: true, studyId: true, _count: { select: { visits: true } } },
+      select: {
+        id: true,
+        subjectCode: true,
+        displayName: true,
+        studyId: true,
+        ieCriteriaSnapshot: true,
+        visits: {
+          orderBy: { targetDate: "asc" },
+          select: {
+            id: true,
+            visitType: true,
+            templateId: true,
+            targetDate: true,
+            windowStart: true,
+            windowEnd: true,
+          },
+        },
+      },
       orderBy: { subjectCode: "asc" },
     }),
   );
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  return subjects.map((s) => ({
+    id: s.id,
+    subjectCode: s.subjectCode,
+    displayName: s.displayName,
+    studyId: s.studyId,
+    criteria: ((s.ieCriteriaSnapshot as { criterion: string }[] | null) ?? []).map((c) => c.criterion),
+    visits: s.visits.map((v) => ({
+      id: v.id,
+      visitType: v.visitType,
+      templateId: v.templateId,
+      targetDate: v.targetDate.toISOString().slice(0, 10),
+      windowBeforeDays: Math.round((v.targetDate.getTime() - v.windowStart.getTime()) / dayMs),
+      windowAfterDays: Math.round((v.windowEnd.getTime() - v.targetDate.getTime()) / dayMs),
+    })),
+  }));
 }
 
 export async function getStudyWithTemplates(studyId: string) {

@@ -17,7 +17,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
         await uploadDocument(formData);
         formRef.current?.reset();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Upload failed.");
+        setError(e instanceof Error ? e.message : "Failed to add the document.");
       }
     });
   }
@@ -65,8 +65,8 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">File</label>
-          <input type="file" name="file" required className="mt-1 w-full text-sm" />
+          <label className="block text-xs font-medium">File (optional)</label>
+          <input type="file" name="file" className="mt-1 w-full text-sm" />
         </div>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -75,7 +75,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Uploading…" : "Upload to this visit"}
+        {pending ? "Adding…" : "Add to this visit"}
       </button>
     </form>
   );

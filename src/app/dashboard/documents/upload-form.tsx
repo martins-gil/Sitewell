@@ -21,7 +21,7 @@ export function UploadDocumentForm({
         await uploadDocument(formData);
         formRef.current?.reset();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Upload failed.");
+        setError(e instanceof Error ? e.message : "Failed to add the document.");
       }
     });
   }
@@ -32,7 +32,7 @@ export function UploadDocumentForm({
       action={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
-      <h2 className="text-sm font-medium text-neutral-500">Upload a document</h2>
+      <h2 className="text-sm font-medium text-neutral-500">Add a document</h2>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium">Study</label>
@@ -103,13 +103,11 @@ export function UploadDocumentForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">File</label>
-          <input
-            type="file"
-            name="file"
-            required
-            className="mt-1 w-full text-sm"
-          />
+          <label className="block text-xs font-medium">File (optional)</label>
+          <input type="file" name="file" className="mt-1 w-full text-sm" />
+          <p className="mt-1 text-xs text-neutral-400">
+            Leave it empty to just log the document — you can attach a file to it later.
+          </p>
         </div>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -118,7 +116,7 @@ export function UploadDocumentForm({
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Uploading…" : "Upload"}
+        {pending ? "Adding…" : "Add document"}
       </button>
     </form>
   );

@@ -60,6 +60,16 @@ to org A, and a cross-tenant insert is rejected).
   "test data only" warning), patient detail page, an interactively-editable
   I/E criteria list (free-text criterion + met/not-met, not just the seeded
   snapshot)
+- ✅ Adding a patient by copying another (Patients → "+ Add patient" → "Copy
+  from an existing patient"): the source's visit schedule appears as an
+  editable list — set this patient's dates and windows per visit (or "Shift
+  all dates" to start the whole schedule on a given day, keeping the gaps),
+  leave visits out — and the source's eligibility criteria can be copied
+  too. The criteria come across as a list only: each starts as ○ "not
+  assessed" (met / not met / not assessed are all settable on the patient's
+  page, and a criterion can be removed) — the source patient's ✓/✗ answers
+  are deliberately not inherited. The new patient's visits show on the
+  calendar straight away.
 - ✅ Building a patient's visit program: once a patient is pre-screened,
   screened, consented or enrolled, their page has "+ Add a visit" (pick one
   of the study's protocol visit types — or a custom-named one-off — plus a
@@ -89,7 +99,11 @@ to org A, and a cross-tenant insert is rejected).
   logging to the console when `RESEND_API_KEY` isn't set (true in this
   environment; only the console path has actually been exercised — see
   CLAUDE.md).
-- 🟡 Module 3 (Documents): upload with automatic version supersede
+- 🟡 Module 3 (Documents): a document is a log line first (study, type,
+  title, version, optional release/expiry dates) — **attaching a file is
+  optional**, at creation or later via "Attach file" on the row, so the
+  register is usable even where file storage isn't (the deployed site).
+  Adding a document with a version supersedes the current one
   (study+visit+type+title as the matching key), local-disk storage
   (`src/lib/storage.ts` — prototype only, doesn't work on Vercel, see
   CLAUDE.md), documents can now be scoped to a specific visit as well as a

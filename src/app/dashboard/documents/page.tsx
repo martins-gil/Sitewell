@@ -5,6 +5,7 @@ import { Badge } from "@/components/badge";
 import { UploadDocumentForm } from "./upload-form";
 import { SignButton } from "./sign-button";
 import { EditDocumentDetails } from "./edit-document-details";
+import { AttachDocumentFile } from "./attach-document-file";
 
 export default async function DocumentsPage({
   searchParams,
@@ -69,15 +70,23 @@ export default async function DocumentsPage({
             {documents.map((doc) => {
               const expiringSoon = isWithinDays(doc.expiryDate, 60);
               const displayStatus = getDocumentDisplayStatus(doc);
-              const downloadHref = doc.fileUrl.startsWith("http")
-                ? doc.fileUrl
-                : `/api/documents/${doc.id}/file`;
+              const downloadHref = !doc.fileUrl
+                ? null
+                : doc.fileUrl.startsWith("http")
+                  ? doc.fileUrl
+                  : `/api/documents/${doc.id}/file`;
               return (
                 <tr key={doc.id}>
                   <td className="whitespace-nowrap px-4 py-2">
-                    <a href={downloadHref} className="hover:underline" target="_blank" rel="noreferrer">
-                      {doc.title}
-                    </a>
+                    {downloadHref ? (
+                      <a href={downloadHref} className="hover:underline" target="_blank" rel="noreferrer">
+                        {doc.title}
+                      </a>
+                    ) : (
+                      <>
+                        {doc.title} <span className="ml-1 text-xs text-neutral-400">(no file attached)</span>
+                      </>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                     {humanizeEnum(doc.type)}
@@ -101,6 +110,7 @@ export default async function DocumentsPage({
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-3">
                       {displayStatus === "PENDING" && <SignButton documentId={doc.id} />}
+                      {!doc.fileUrl && displayStatus !== "SUPERSEDED" && <AttachDocumentFile documentId={doc.id} />}
                       {displayStatus !== "SUPERSEDED" && (
                         <EditDocumentDetails
                           documentId={doc.id}

@@ -44,9 +44,42 @@ export async function updateSubjectDisplayName(subjectId: string, displayName: s
   revalidatePath("/dashboard/subjects");
 }
 
-type IeCriterion = { criterion: string; met: boolean };
+// met: true = meets it, false = doesn't, null = not assessed yet (e.g. a
+// criterion cloned from another patient's list — see addSubject).
+type IeCriterion = { criterion: string; met: boolean | null };
 
-export async function addIeCriterion(subjectId: string, criterion: string, met: boolean) {
+async function updateCriteria(subjectId: string, change: (list: IeCriterion[]) => IeCriterion[]) {
+  const ctx = await requireTenantContext();
+  await withTenantContext(ctx, async (tx) => {
+    const subject = await tx.subject.findUniqueOrThrow({
+      where: { id: subjectId },
+      select: { ieCriteriaSnapshot: true },
+    });
+    const existing = (subject.ieCriteriaSnapshot as IeCriterion[] | null) ?? [];
+    await tx.subject.update({
+      where: { id: subjectId },
+      data: { ieCriteriaSnapshot: change(existing) },
+    });
+  });
+  revalidatePath(`/dashboard/subjects/${subjectId}`);
+  revalidatePath("/dashboard/subjects");
+}
+
+export async function setIeCriterionStatus(subjectId: string, index: number, met: boolean | null) {
+  await updateCriteria(subjectId, (list) => {
+    if (!list[index]) throw new Error("That criterion no longer exists — reload the page.");
+    return list.map((c, i) => (i === index ? { ...c, met } : c));
+  });
+}
+
+export async function removeIeCriterion(subjectId: string, index: number) {
+  await updateCriteria(subjectId, (list) => {
+    if (!list[index]) throw new Error("That criterion no longer exists — reload the page.");
+    return list.filter((_, i) => i !== index);
+  });
+}
+
+export async function addIeCriterion(subjectId: string, criterion: string, met: boolean | null) {
   const ctx = await requireTenantContext();
   const trimmed = criterion.trim();
   if (!trimmed) throw new Error("Criterion text is required.");

@@ -1,6 +1,6 @@
 import type { SubjectStatus } from "@prisma/client";
 import Link from "next/link";
-import { getSubjects, getStudies, getSubjectsWithVisitCounts } from "@/lib/queries";
+import { getSubjects, getStudies, getDuplicationSources } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { AddPatientForm } from "./add-patient-form";
@@ -25,17 +25,11 @@ export default async function SubjectsPage({
     ? (params.status as SubjectStatus)
     : undefined;
 
-  const [subjects, studies, subjectsWithVisitCounts] = await Promise.all([
+  const [subjects, studies, duplicationSources] = await Promise.all([
     getSubjects({ studyId: params.studyId, status }),
     getStudies(),
-    getSubjectsWithVisitCounts(),
+    getDuplicationSources(),
   ]);
-  const duplicateCandidates = subjectsWithVisitCounts.map((s) => ({
-    id: s.id,
-    subjectCode: s.subjectCode,
-    studyId: s.studyId,
-    visitCount: s._count.visits,
-  }));
 
   return (
     <div className="space-y-6">
@@ -46,7 +40,7 @@ export default async function SubjectsPage({
             {subjects.length} subject{subjects.length === 1 ? "" : "s"} matching current filters
           </p>
         </div>
-        <AddPatientForm studies={studies} duplicateCandidates={duplicateCandidates} />
+        <AddPatientForm studies={studies} sources={duplicationSources} />
       </div>
 
       <form className="flex flex-wrap gap-3" method="get">
@@ -97,7 +91,7 @@ export default async function SubjectsPage({
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {subjects.map((subject) => {
               const criteria = subject.ieCriteriaSnapshot as
-                | { criterion: string; met: boolean }[]
+                | { criterion: string; met: boolean | null }[]
                 | null;
               return (
                 <tr key={subject.id}>
@@ -115,8 +109,17 @@ export default async function SubjectsPage({
                     {criteria && criteria.length > 0 ? (
                       <ul className="space-y-0.5">
                         {criteria.map((c, i) => (
-                          <li key={i} className={c.met ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
-                            {c.met ? "✓" : "✗"} {c.criterion}
+                          <li
+                            key={i}
+                            className={
+                              c.met === true
+                                ? "text-green-700 dark:text-green-400"
+                                : c.met === false
+                                  ? "text-red-700 dark:text-red-400"
+                                  : "text-neutral-500"
+                            }
+                          >
+                            {c.met === true ? "✓" : c.met === false ? "✗" : "○"} {c.criterion}
                           </li>
                         ))}
                       </ul>

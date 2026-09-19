@@ -18,7 +18,7 @@ export default async function SubjectDetailPage({
   const subject = await getSubjectById(id);
   if (!subject) notFound();
 
-  const criteria = subject.ieCriteriaSnapshot as { criterion: string; met: boolean }[] | null;
+  const criteria = subject.ieCriteriaSnapshot as { criterion: string; met: boolean | null }[] | null;
 
   return (
     <div className="max-w-3xl space-y-6">

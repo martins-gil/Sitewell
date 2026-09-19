@@ -5,6 +5,21 @@ import type { DocumentType } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { saveUploadedFile } from "@/lib/storage";
 
+const STORAGE_UNAVAILABLE =
+  "The file couldn't be saved — file storage isn't set up on this site yet. Leave the file empty to log the document without one.";
+
+// A file is optional: a document can be logged (title, type, version, dates)
+// with nothing attached and get a file later (attachDocumentFile). Returns null
+// when no file was chosen.
+async function saveOptionalFile(organizationId: string, file: FormDataEntryValue | null) {
+  if (!(file instanceof File) || file.size === 0) return null;
+  try {
+    return (await saveUploadedFile(organizationId, file)).relativePath;
+  } catch {
+    throw new Error(STORAGE_UNAVAILABLE);
+  }
+}
+
 export async function uploadDocument(formData: FormData) {
   const ctx = await requireTenantContext();
 
@@ -20,13 +35,13 @@ export async function uploadDocument(formData: FormData) {
   const releaseDate = releaseDateRaw ? new Date(releaseDateRaw) : null;
   const file = formData.get("file");
 
-  if (!studyId || !type || !title || !version || !(file instanceof File) || file.size === 0) {
-    throw new Error("Study, type, title, version, and a file are all required.");
+  if (!studyId || !type || !title || !version) {
+    throw new Error("Study, type, title and version are required.");
   }
 
   await withTenantContext(ctx, async (tx) => {
     const study = await tx.study.findUniqueOrThrow({ where: { id: studyId } });
-    const { relativePath } = await saveUploadedFile(study.organizationId, file);
+    const relativePath = await saveOptionalFile(study.organizationId, file);
 
     // Versioning: uploading a document with the same study/subject/visit/type/
     // title as an existing ACTIVE one supersedes it rather than creating an
@@ -56,6 +71,22 @@ export async function uploadDocument(formData: FormData) {
   revalidatePath("/dashboard/documents");
   revalidatePath("/dashboard");
   if (visitId) revalidatePath(`/dashboard/visits/${visitId}`);
+}
+
+// Attach (or replace) the file on a document that was logged without one.
+export async function attachDocumentFile(documentId: string, formData: FormData) {
+  const ctx = await requireTenantContext();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) throw new Error("Choose a file to attach.");
+
+  await withTenantContext(ctx, async (tx) => {
+    const document = await tx.document.findUniqueOrThrow({ where: { id: documentId } });
+    const relativePath = await saveOptionalFile(document.organizationId, file);
+    await tx.document.update({ where: { id: documentId }, data: { fileUrl: relativePath } });
+  });
+
+  revalidatePath("/dashboard/documents");
+  revalidatePath("/dashboard/visits/[id]", "page");
 }
 
 // Fix a document's version label or release date after the fact — the

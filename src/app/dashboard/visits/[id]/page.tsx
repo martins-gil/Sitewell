@@ -135,14 +135,20 @@ export default async function VisitDetailPage({
                 {visit.documents.map((doc) => (
                   <tr key={doc.id}>
                     <td className="whitespace-nowrap px-4 py-2">
-                      <a
-                        href={doc.fileUrl.startsWith("http") ? doc.fileUrl : `/api/documents/${doc.id}/file`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="hover:underline"
-                      >
-                        {doc.title}
-                      </a>
+                      {doc.fileUrl ? (
+                        <a
+                          href={doc.fileUrl.startsWith("http") ? doc.fileUrl : `/api/documents/${doc.id}/file`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:underline"
+                        >
+                          {doc.title}
+                        </a>
+                      ) : (
+                        <>
+                          {doc.title} <span className="ml-1 text-xs text-neutral-400">(no file attached)</span>
+                        </>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{humanizeEnum(doc.type)}</td>
                     <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>

@@ -17,6 +17,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!document) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+  if (!document.fileUrl) {
+    return NextResponse.json({ error: "No file has been attached to this document." }, { status: 404 });
+  }
 
   let bytes: Buffer;
   try {
