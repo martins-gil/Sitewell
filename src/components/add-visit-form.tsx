@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { addVisit } from "@/app/dashboard/visits/actions";
 import { humanizeEnum } from "@/lib/format";
+import { useT } from "@/lib/i18n/client";
 
 export type SchedulingStudy = { id: string; protocolId: string; title: string };
 export type SchedulingTemplate = {
@@ -53,6 +54,7 @@ export function AddVisitForm({
   initialDate?: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const fixedSubject = fixedSubjectId ? subjects.find((s) => s.id === fixedSubjectId) : undefined;
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +70,13 @@ export function AddVisitForm({
     (subjectsForStudy.find((s) => s.id === pickedSubjectId) ?? subjectsForStudy[0]);
 
   const availableTemplates = templates.filter(
-    (t) => t.studyId === studyId && !subject?.scheduledTemplateIds.includes(t.id),
+    (tpl) => tpl.studyId === studyId && !subject?.scheduledTemplateIds.includes(tpl.id),
   );
   const choice =
-    pickedChoice === CUSTOM || availableTemplates.some((t) => t.id === pickedChoice)
+    pickedChoice === CUSTOM || availableTemplates.some((tpl) => tpl.id === pickedChoice)
       ? pickedChoice
       : (availableTemplates[0]?.id ?? CUSTOM);
-  const chosenTemplate = availableTemplates.find((t) => t.id === choice);
+  const chosenTemplate = availableTemplates.find((tpl) => tpl.id === choice);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -85,7 +87,7 @@ export function AddVisitForm({
         const label = choice === CUSTOM ? String(formData.get("customName") ?? "Visit") : (chosenTemplate?.name ?? "Visit");
         setAdded({ id: result.id, label: `${subject?.subjectCode ?? ""} · ${label}` });
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add the visit.");
+        setError(e instanceof Error ? e.message : t("Failed to add the visit."));
       }
     });
   }
@@ -97,18 +99,17 @@ export function AddVisitForm({
     >
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-neutral-500">
-          {fixedSubject ? `Add a visit for ${fixedSubject.subjectCode}` : "Add a visit to the schedule"}
+          {fixedSubject ? t("Add a visit for {0}", [fixedSubject.subjectCode]) : t("Add a visit to the schedule")}
         </h2>
         <button type="button" onClick={onClose} className="text-xs text-neutral-500 hover:underline">
-          Close
-        </button>
+          {t("Close")}</button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         {!fixedSubject && (
           <>
             <div>
-              <label className="block text-xs font-medium">Study</label>
+              <label className="block text-xs font-medium">{t("Study")}</label>
               <select
                 value={studyId}
                 onChange={(e) => {
@@ -126,7 +127,7 @@ export function AddVisitForm({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium">Patient</label>
+              <label className="block text-xs font-medium">{t("Patient")}</label>
               <select
                 value={subject?.id ?? ""}
                 onChange={(e) => {
@@ -136,11 +137,11 @@ export function AddVisitForm({
                 disabled={subjectsForStudy.length === 0}
                 className={inputClass}
               >
-                {subjectsForStudy.length === 0 && <option value="">No eligible patients</option>}
+                {subjectsForStudy.length === 0 && <option value="">{t("No eligible patients")}</option>}
                 {subjectsForStudy.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.subjectCode}
-                    {s.displayName ? ` (${s.displayName})` : ""} · {humanizeEnum(s.status)}
+                    {s.displayName ? ` (${s.displayName})` : ""} · {t(humanizeEnum(s.status))}
                   </option>
                 ))}
               </select>
@@ -152,18 +153,18 @@ export function AddVisitForm({
         <input type="hidden" name="templateId" value={choice === CUSTOM ? "" : choice} />
 
         <div>
-          <label className="block text-xs font-medium">Visit</label>
+          <label className="block text-xs font-medium">{t("Visit")}</label>
           <select value={choice} onChange={(e) => setPickedChoice(e.target.value)} className={inputClass}>
-            {availableTemplates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            {availableTemplates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name}
               </option>
             ))}
-            <option value={CUSTOM}>Other — name it myself</option>
+            <option value={CUSTOM}>{t("Other — name it myself")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium">Visit date</label>
+          <label className="block text-xs font-medium">{t("Visit date")}</label>
           <input
             key={initialDate ?? "no-date"}
             type="date"
@@ -176,14 +177,14 @@ export function AddVisitForm({
 
         {choice === CUSTOM && (
           <div className="col-span-2">
-            <label className="block text-xs font-medium">Visit name</label>
-            <input name="customName" required placeholder="e.g. Unscheduled visit" className={inputClass} />
+            <label className="block text-xs font-medium">{t("Visit name")}</label>
+            <input name="customName" required placeholder={t("e.g. Unscheduled visit")} className={inputClass} />
           </div>
         )}
 
         <div key={choice} className="col-span-2 grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium">Window before (days)</label>
+            <label className="block text-xs font-medium">{t("Window before (days)")}</label>
             <input
               type="number"
               name="windowBeforeDays"
@@ -193,7 +194,7 @@ export function AddVisitForm({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium">Window after (days)</label>
+            <label className="block text-xs font-medium">{t("Window after (days)")}</label>
             <input
               type="number"
               name="windowAfterDays"
@@ -207,16 +208,14 @@ export function AddVisitForm({
 
       {subjectsForStudy.length === 0 && !fixedSubject && (
         <p className="text-xs text-neutral-500">
-          No patients in this study are pre-screened, screened, consented or enrolled yet.
-        </p>
+          {t("No patients in this study are pre-screened, screened, consented or enrolled yet.")}</p>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
       {added && (
         <p className="text-sm text-green-700 dark:text-green-400">
-          Added {added.label}.{" "}
+          {t("Added {0}.", [added.label])}{" "}
           <Link href={`/dashboard/visits/${added.id}`} className="underline">
-            Open visit →
-          </Link>
+            {t("Open visit →")}</Link>
         </p>
       )}
       <button
@@ -224,7 +223,7 @@ export function AddVisitForm({
         disabled={pending || !subject}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add visit"}
+        {pending ? t("Adding…") : t("Add visit")}
       </button>
     </form>
   );

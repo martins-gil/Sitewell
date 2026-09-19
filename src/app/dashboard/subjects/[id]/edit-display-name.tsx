@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { updateSubjectDisplayName } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 export function EditDisplayName({ subjectId, initial }: { subjectId: string; initial: string | null }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export function EditDisplayName({ subjectId, initial }: { subjectId: string; ini
         await updateSubjectDisplayName(subjectId, String(formData.get("displayName") ?? ""));
         setEditing(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save.");
+        setError(e instanceof Error ? e.message : t("Failed to save."));
       }
     });
   }
@@ -23,10 +25,9 @@ export function EditDisplayName({ subjectId, initial }: { subjectId: string; ini
   if (!editing) {
     return (
       <p className="text-sm text-neutral-500">
-        Initials / name: <span className="text-neutral-800 dark:text-neutral-200">{initial ?? "—"}</span>{" "}
+        {t("Initials / name:")} <span className="text-neutral-800 dark:text-neutral-200">{initial ?? "—"}</span>{" "}
         <button type="button" onClick={() => setEditing(true)} className="text-xs hover:underline">
-          Edit
-        </button>
+          {t("Edit")}</button>
       </p>
     );
   }
@@ -36,7 +37,7 @@ export function EditDisplayName({ subjectId, initial }: { subjectId: string; ini
       <input
         name="displayName"
         defaultValue={initial ?? ""}
-        placeholder="e.g. M.C."
+        placeholder={t("e.g. M.C.")}
         className="rounded-md border border-neutral-300 px-3 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
       />
       <button
@@ -44,11 +45,10 @@ export function EditDisplayName({ subjectId, initial }: { subjectId: string; ini
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Saving…" : "Save"}
+        {pending ? t("Saving…") : t("Save")}
       </button>
       <button type="button" onClick={() => setEditing(false)} className="text-xs text-neutral-500 hover:underline">
-        Cancel
-      </button>
+        {t("Cancel")}</button>
       {error && <span className="text-sm text-red-600">{error}</span>}
     </form>
   );

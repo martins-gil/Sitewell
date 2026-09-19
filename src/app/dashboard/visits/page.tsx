@@ -2,8 +2,10 @@ import { getAllVisits, getStudies, getVisitSchedulingData } from "@/lib/queries"
 import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
 import type { CalendarVisit } from "./visits-calendar";
+import { getT } from "@/lib/i18n/server";
 
 export default async function VisitsPage() {
+  const t = await getT();
   const [visits, studies, scheduling] = await Promise.all([
     getAllVisits(),
     getStudies(),
@@ -25,9 +27,9 @@ export default async function VisitsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Visits Schedule</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("Visits Schedule")}</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {visits.length} visit{visits.length === 1 ? "" : "s"} across all studies.
+            {t("{0} visit across all studies.|{0} visits across all studies.", [visits.length])}
           </p>
         </div>
         <SendRemindersButton />

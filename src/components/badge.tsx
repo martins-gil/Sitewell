@@ -1,4 +1,7 @@
+"use client";
+
 import { humanizeEnum } from "@/lib/format";
+import { useT } from "@/lib/i18n/client";
 
 const COLORS: Record<string, string> = {
   // Subject funnel
@@ -25,11 +28,14 @@ export function badgeColorClass(value: string): string {
   return COLORS[value] ?? "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
 }
 
+// A client component so it can be used from both server and client trees and
+// translate the label (its texts, e.g. "Pre Screened", are in the catalog).
 export function Badge({ value }: { value: string }) {
+  const t = useT();
   const color = badgeColorClass(value);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
-      {humanizeEnum(value)}
+      {t(humanizeEnum(value))}
     </span>
   );
 }

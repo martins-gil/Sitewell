@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { markVisitCompleted, markVisitMissed, rescheduleVisit } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 export function VisitRowActions({ visitId, status }: { visitId: string; status: string }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [rescheduling, setRescheduling] = useState(false);
   const [newDate, setNewDate] = useState("");
@@ -26,14 +28,12 @@ export function VisitRowActions({ visitId, status }: { visitId: string; status: 
           onClick={() => startTransition(() => rescheduleVisit(visitId, newDate))}
           className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
         >
-          Save
-        </button>
+          {t("Save")}</button>
         <button
           onClick={() => setRescheduling(false)}
           className="text-xs text-neutral-500 hover:underline"
         >
-          Cancel
-        </button>
+          {t("Cancel")}</button>
       </div>
     );
   }
@@ -45,22 +45,19 @@ export function VisitRowActions({ visitId, status }: { visitId: string; status: 
         onClick={() => startTransition(() => markVisitCompleted(visitId))}
         className="text-green-700 hover:underline disabled:opacity-60 dark:text-green-400"
       >
-        Complete
-      </button>
+        {t("Complete")}</button>
       <button
         disabled={pending}
         onClick={() => startTransition(() => markVisitMissed(visitId))}
         className="text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
       >
-        Missed
-      </button>
+        {t("Missed")}</button>
       <button
         disabled={pending}
         onClick={() => setRescheduling(true)}
         className="text-neutral-500 hover:underline disabled:opacity-60"
       >
-        Reschedule
-      </button>
+        {t("Reschedule")}</button>
     </div>
   );
 }

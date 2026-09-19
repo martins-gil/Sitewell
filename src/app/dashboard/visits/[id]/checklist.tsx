@@ -7,6 +7,7 @@ import {
   addVisitChecklistItem,
   removeVisitChecklistItem,
 } from "./checklist-actions";
+import { useT } from "@/lib/i18n/client";
 
 export type ChecklistItem = {
   id: string;
@@ -37,6 +38,7 @@ export function VisitChecklist({
   // What this visit type's printed checklist records per procedure: a tick, or when it was done.
   column: "VERIFIED" | "DATETIME";
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [localItems, setLocalItems] = useState(items);
   const [adding, setAdding] = useState(false);
@@ -88,7 +90,7 @@ export function VisitChecklist({
         formRef.current?.reset();
         setAdding(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add procedure.");
+        setError(e instanceof Error ? e.message : t("Failed to add procedure."));
       }
     });
   }
@@ -97,9 +99,7 @@ export function VisitChecklist({
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
       {localItems.length === 0 ? (
         <p className="px-4 py-3 text-sm text-neutral-400">
-          No procedures on this visit yet — add one below, or add one to the study&apos;s visit
-          schedule template so it applies to every subject&apos;s visit of this type.
-        </p>
+          {t("No procedures on this visit yet — add one below, or add one to the study's visit schedule template so it applies to every subject's visit of this type.")}</p>
       ) : (
         <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {localItems.map((item, i) => (
@@ -115,7 +115,7 @@ export function VisitChecklist({
                 <span className="text-neutral-400">{i + 1}.</span> <span className="font-medium">{item.label}</span>
                 {item.detail && <span className="text-neutral-500"> ({item.detail})</span>}
                 {item.isAdHoc && (
-                  <span className="ml-2 text-xs text-neutral-400">(added to this visit only)</span>
+                  <span className="ml-2 text-xs text-neutral-400">{t("(added to this visit only)")}</span>
                 )}
               </span>
               {column === "DATETIME" && (
@@ -125,7 +125,7 @@ export function VisitChecklist({
                     value={item.performedAt}
                     disabled={pending}
                     onChange={(e) => handleTime(item.id, e.target.value)}
-                    aria-label={`Date and time of ${item.label}`}
+                    aria-label={t("Date and time of {0}", [item.label])}
                     className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
                   />
                   <button
@@ -134,8 +134,7 @@ export function VisitChecklist({
                     disabled={pending}
                     className="text-xs text-neutral-600 hover:underline disabled:opacity-60 dark:text-neutral-400"
                   >
-                    Now
-                  </button>
+                    {t("Now")}</button>
                 </span>
               )}
               <button
@@ -144,8 +143,7 @@ export function VisitChecklist({
                 disabled={pending}
                 className="text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
               >
-                Remove
-              </button>
+                {t("Remove")}</button>
             </li>
           ))}
         </ul>
@@ -158,12 +156,12 @@ export function VisitChecklist({
               <input
                 name="label"
                 required
-                placeholder="Procedure name"
+                placeholder={t("Procedure name")}
                 className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
               />
               <input
                 name="detail"
-                placeholder="Detail (optional)"
+                placeholder={t("Detail (optional)")}
                 className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
               />
             </div>
@@ -174,15 +172,13 @@ export function VisitChecklist({
                 disabled={pending}
                 className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
               >
-                Add to this visit
-              </button>
+                {t("Add to this visit")}</button>
               <button
                 type="button"
                 onClick={() => setAdding(false)}
                 className="text-xs text-neutral-500 hover:underline"
               >
-                Cancel
-              </button>
+                {t("Cancel")}</button>
             </div>
           </form>
         ) : (
@@ -191,8 +187,7 @@ export function VisitChecklist({
             onClick={() => setAdding(true)}
             className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
           >
-            + Add a procedure to this visit
-          </button>
+            {t("+ Add a procedure to this visit")}</button>
         )}
       </div>
 
@@ -200,7 +195,7 @@ export function VisitChecklist({
         href={`/api/visits/${visitId}/checklist-docx`}
         className="block border-t border-neutral-200 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
       >
-        Download {column === "DATETIME" ? "checklist with date and time" : "filled checklist"} (.docx)
+        {column === "DATETIME" ? t("Download checklist with date and time (.docx)") : t("Download filled checklist (.docx)")}
       </a>
     </div>
   );

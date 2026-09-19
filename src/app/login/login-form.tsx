@@ -3,8 +3,10 @@
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 export function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,7 +42,7 @@ export function LoginForm() {
       });
 
       if (result?.error) {
-        setError(mfaRequired ? "Invalid code." : "Invalid email or password.");
+        setError(mfaRequired ? t("Invalid code.") : t("Invalid email or password."));
         setSubmitting(false);
         return;
       }
@@ -48,7 +50,7 @@ export function LoginForm() {
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError(t("Something went wrong. Please try again."));
       setSubmitting(false);
     }
   }
@@ -57,8 +59,7 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       <div>
         <label htmlFor="email" className="block text-sm font-medium">
-          Email
-        </label>
+          {t("Email")}</label>
         <input
           id="email"
           type="email"
@@ -71,8 +72,7 @@ export function LoginForm() {
       </div>
       <div>
         <label htmlFor="password" className="block text-sm font-medium">
-          Password
-        </label>
+          {t("Password")}</label>
         <input
           id="password"
           type="password"
@@ -86,8 +86,7 @@ export function LoginForm() {
       {mfaRequired && (
         <div>
           <label htmlFor="mfaCode" className="block text-sm font-medium">
-            Authenticator code
-          </label>
+            {t("Authenticator code")}</label>
           <input
             id="mfaCode"
             type="text"
@@ -106,7 +105,7 @@ export function LoginForm() {
         disabled={submitting}
         className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {mfaRequired ? "Verify" : "Sign in"}
+        {mfaRequired ? t("Verify") : t("Sign in")}
       </button>
     </form>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { humanizeEnum } from "@/lib/format";
 import { uploadDocument } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 const TYPES = ["PROTOCOL", "IB", "ICF", "DELEGATION_LOG", "TRAINING_RECORD", "OTHER"];
 
@@ -10,6 +12,7 @@ export function UploadDocumentForm({
 }: {
   studies: { id: string; protocolId: string; title: string }[];
 }) {
+  const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +24,7 @@ export function UploadDocumentForm({
         await uploadDocument(formData);
         formRef.current?.reset();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add the document.");
+        setError(e instanceof Error ? e.message : t("Failed to add the document."));
       }
     });
   }
@@ -32,10 +35,10 @@ export function UploadDocumentForm({
       action={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
-      <h2 className="text-sm font-medium text-neutral-500">Add a document</h2>
+      <h2 className="text-sm font-medium text-neutral-500">{t("Add a document")}</h2>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">Study</label>
+          <label className="block text-xs font-medium">{t("Study")}</label>
           <select
             name="studyId"
             required
@@ -49,67 +52,64 @@ export function UploadDocumentForm({
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium">Type</label>
+          <label className="block text-xs font-medium">{t("Type")}</label>
           <select
             name="type"
             required
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t.replaceAll("_", " ")}
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(humanizeEnum(type))}
               </option>
             ))}
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Title</label>
+          <label className="block text-xs font-medium">{t("Title")}</label>
           <input
             name="title"
             required
-            placeholder="e.g. RCN-101 Protocol"
+            placeholder={t("e.g. RCN-101 Protocol")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium">Version</label>
+          <label className="block text-xs font-medium">{t("Version")}</label>
           <input
             name="version"
             required
-            placeholder="v1.0"
+            placeholder={t("v1.0")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Status</label>
+          <label className="block text-xs font-medium">{t("Status")}</label>
           <select
             name="status"
             defaultValue="ACTIVE"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            <option value="ACTIVE">Active — in force</option>
-            <option value="PENDING">Pending — awaiting sign-off</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="SUPERSEDED">Superseded — replaced by a newer version</option>
+            <option value="ACTIVE">{t("Active — in force")}</option>
+            <option value="PENDING">{t("Pending — awaiting sign-off")}</option>
+            <option value="EXPIRED">{t("Expired")}</option>
+            <option value="SUPERSEDED">{t("Superseded — replaced by a newer version")}</option>
           </select>
           <p className="mt-1 text-xs text-neutral-400">
-            You can change it later from the Status column. Adding an Active document supersedes the older
-            Active one with the same study, type and title.
-          </p>
+            {t("You can change it later from the Status column. Adding an Active document supersedes the older Active one with the same study, type and title.")}</p>
         </div>
         <div>
-          <label className="block text-xs font-medium">Release date (optional)</label>
+          <label className="block text-xs font-medium">{t("Release date (optional)")}</label>
           <input
             type="date"
             name="releaseDate"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
           <p className="mt-1 text-xs text-neutral-400">
-            For a protocol: the amendment&apos;s date — printed on the checklist documents.
-          </p>
+            {t("For a protocol: the amendment's date — printed on the checklist documents.")}</p>
         </div>
         <div>
-          <label className="block text-xs font-medium">Expiry date (optional)</label>
+          <label className="block text-xs font-medium">{t("Expiry date (optional)")}</label>
           <input
             type="date"
             name="expiryDate"
@@ -117,11 +117,10 @@ export function UploadDocumentForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">File (optional)</label>
+          <label className="block text-xs font-medium">{t("File (optional)")}</label>
           <input type="file" name="file" className="mt-1 w-full text-sm" />
           <p className="mt-1 text-xs text-neutral-400">
-            Leave it empty to just log the document — you can attach a file to it later.
-          </p>
+            {t("Leave it empty to just log the document — you can attach a file to it later.")}</p>
         </div>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -130,7 +129,7 @@ export function UploadDocumentForm({
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add document"}
+        {pending ? t("Adding…") : t("Add document")}
       </button>
     </form>
   );

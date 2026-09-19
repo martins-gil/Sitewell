@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { attachDocumentFile } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 /** For a document logged without a file: pick one and attach it. */
 export function AttachDocumentFile({ documentId }: { documentId: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,7 @@ export function AttachDocumentFile({ documentId }: { documentId: string }) {
         await attachDocumentFile(documentId, formData);
         setOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to attach the file.");
+        setError(e instanceof Error ? e.message : t("Failed to attach the file."));
       }
     });
   }
@@ -24,8 +26,7 @@ export function AttachDocumentFile({ documentId }: { documentId: string }) {
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="text-xs hover:underline">
-        Attach file
-      </button>
+        {t("Attach file")}</button>
     );
   }
 
@@ -37,11 +38,10 @@ export function AttachDocumentFile({ documentId }: { documentId: string }) {
         disabled={pending}
         className="rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Attaching…" : "Attach"}
+        {pending ? t("Attaching…") : t("Attach")}
       </button>
       <button type="button" onClick={() => setOpen(false)} className="text-xs text-neutral-500 hover:underline">
-        Cancel
-      </button>
+        {t("Cancel")}</button>
       {error && <span className="w-full max-w-xs text-xs text-red-600">{error}</span>}
     </form>
   );

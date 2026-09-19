@@ -1,18 +1,21 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { getStudies } from "@/lib/queries";
+import { humanizeEnum } from "@/lib/format";
 import { AddStudyForm } from "./add-study-form";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudiesPage() {
+  const t = await getT();
   const [session, studies] = await Promise.all([auth(), getStudies()]);
   const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Studies</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("Studies")}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {studies.length} stud{studies.length === 1 ? "y" : "ies"}.
+          {t("{0} study.|{0} studies.", [studies.length])}
         </p>
       </div>
 
@@ -22,9 +25,9 @@ export default async function StudiesPage() {
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Protocol</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Title</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Status</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Protocol")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Title")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Status")}</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500"></th>
             </tr>
           </thead>
@@ -41,14 +44,13 @@ export default async function StudiesPage() {
                     {s.title}
                   </Link>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{s.status}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{t(humanizeEnum(s.status))}</td>
                 <td className="whitespace-nowrap px-4 py-2">
                   <Link
                     href={`/dashboard/studies/${s.id}/templates`}
                     className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
                   >
-                    Visit schedule →
-                  </Link>
+                    {t("Visit schedule →")}</Link>
                 </td>
               </tr>
             ))}

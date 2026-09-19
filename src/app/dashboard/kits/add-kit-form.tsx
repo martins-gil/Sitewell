@@ -2,11 +2,13 @@
 
 import { useRef, useState, useTransition } from "react";
 import { addKit } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 type Study = { id: string; protocolId: string; templates: { id: string; name: string }[] };
 type VisitOption = { id: string; studyId: string; label: string };
 
 export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitOptions: VisitOption[] }) {
+  const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
         formRef.current?.reset();
         setStudyId(studies[0]?.id ?? "");
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add kit.");
+        setError(e instanceof Error ? e.message : t("Failed to add kit."));
       }
     });
   }
@@ -33,10 +35,10 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
       action={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
-      <h2 className="text-sm font-medium text-neutral-500">Add a kit to inventory</h2>
+      <h2 className="text-sm font-medium text-neutral-500">{t("Add a kit to inventory")}</h2>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">Study</label>
+          <label className="block text-xs font-medium">{t("Study")}</label>
           <select
             name="studyId"
             required
@@ -52,29 +54,29 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium">Assigned visit (optional)</label>
+          <label className="block text-xs font-medium">{t("Assigned visit (optional)")}</label>
           <select
             name="visitScheduleTemplateId"
             defaultValue=""
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            <option value="">Not visit-specific</option>
-            {selectedStudy?.templates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            <option value="">{t("Not visit-specific")}</option>
+            {selectedStudy?.templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name}
               </option>
             ))}
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Link to a specific patient visit (optional)</label>
+          <label className="block text-xs font-medium">{t("Link to a specific patient visit (optional)")}</label>
           <select
             key={studyId}
             name="visitId"
             defaultValue=""
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            <option value="">Not linked to a visit yet</option>
+            <option value="">{t("Not linked to a visit yet")}</option>
             {visitOptions
               .filter((v) => v.studyId === studyId)
               .map((v) => (
@@ -85,16 +87,16 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Kit name</label>
+          <label className="block text-xs font-medium">{t("Kit name")}</label>
           <input
             name="name"
             required
-            placeholder="e.g. Baseline blood draw kits, Lot #4521"
+            placeholder={t("e.g. Baseline blood draw kits, Lot #4521")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium">Expiry date</label>
+          <label className="block text-xs font-medium">{t("Expiry date")}</label>
           <input
             type="date"
             name="expiryDate"
@@ -108,7 +110,7 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
         disabled={pending || !studyId}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add kit"}
+        {pending ? t("Adding…") : t("Add kit")}
       </button>
     </form>
   );

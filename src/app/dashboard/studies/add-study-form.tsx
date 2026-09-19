@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { addStudy } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 export function AddStudyForm() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export function AddStudyForm() {
         await addStudy(formData);
         setOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add study.");
+        setError(e instanceof Error ? e.message : t("Failed to add study."));
       }
     });
   }
@@ -26,8 +28,7 @@ export function AddStudyForm() {
         onClick={() => setOpen(true)}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
       >
-        + Add study
-      </button>
+        {t("+ Add study")}</button>
     );
   }
 
@@ -37,56 +38,55 @@ export function AddStudyForm() {
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-neutral-500">Add a study</h2>
+        <h2 className="text-sm font-medium text-neutral-500">{t("Add a study")}</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-neutral-500 hover:underline">
-          Cancel
-        </button>
+          {t("Cancel")}</button>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">Protocol ID</label>
+          <label className="block text-xs font-medium">{t("Protocol ID")}</label>
           <input
             name="protocolId"
             required
-            placeholder="e.g. RCN-305"
+            placeholder={t("e.g. RCN-305")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium">Phase (optional)</label>
+          <label className="block text-xs font-medium">{t("Phase (optional)")}</label>
           <input
             name="phase"
-            placeholder="e.g. Phase III"
+            placeholder={t("e.g. Phase III")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Title</label>
+          <label className="block text-xs font-medium">{t("Title")}</label>
           <input
             name="title"
             required
-            placeholder="e.g. A Phase III Study Evaluating Compound Z vs. Placebo"
+            placeholder={t("e.g. A Phase III Study Evaluating Compound Z vs. Placebo")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium">Sponsor (optional)</label>
+          <label className="block text-xs font-medium">{t("Sponsor (optional)")}</label>
           <input
             name="sponsor"
-            placeholder="e.g. Meridian Therapeutics"
+            placeholder={t("e.g. Meridian Therapeutics")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium">Status</label>
+          <label className="block text-xs font-medium">{t("Status")}</label>
           <select
             name="status"
             defaultValue="active"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            <option value="active">Active</option>
-            <option value="paused">Paused</option>
-            <option value="closed">Closed</option>
+            <option value="active">{t("Active")}</option>
+            <option value="paused">{t("Paused")}</option>
+            <option value="closed">{t("Closed")}</option>
           </select>
         </div>
       </div>
@@ -96,7 +96,7 @@ export function AddStudyForm() {
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add study"}
+        {pending ? t("Adding…") : t("Add study")}
       </button>
     </form>
   );

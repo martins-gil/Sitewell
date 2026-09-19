@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { DuplicationSource } from "@/lib/queries";
 import { addSubject } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 type Study = { id: string; protocolId: string; title: string };
 
@@ -31,6 +32,7 @@ const cellInput =
   "w-full rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950";
 
 export function AddPatientForm({ studies, sources }: { studies: Study[]; sources: DuplicationSource[] }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
         await addSubject(formData);
       } catch (e) {
         // redirect() throws internally on success — only real errors land here.
-        setError(e instanceof Error ? e.message : "Failed to add patient.");
+        setError(e instanceof Error ? e.message : t("Failed to add patient."));
       }
     });
   }
@@ -106,8 +108,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
         onClick={() => setOpen(true)}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
       >
-        + Add patient
-      </button>
+        {t("+ Add patient")}</button>
     );
   }
 
@@ -117,18 +118,15 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-neutral-500">Add a patient</h2>
+        <h2 className="text-sm font-medium text-neutral-500">{t("Add a patient")}</h2>
         <button type="button" onClick={() => setOpen(false)} className="text-xs text-neutral-500 hover:underline">
-          Cancel
-        </button>
+          {t("Cancel")}</button>
       </div>
       <p className="text-xs text-neutral-500">
-        Synthetic/test data only — every patient created here is flagged as test data, per
-        PROJECT_SPEC.md&apos;s Phase 5 gate on real subject data.
-      </p>
+        {t("Synthetic/test data only — every patient created here is flagged as test data, per PROJECT_SPEC.md's Phase 5 gate on real subject data.")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">Study</label>
+          <label className="block text-xs font-medium">{t("Study")}</label>
           <select
             name="studyId"
             required
@@ -147,28 +145,25 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium">Subject code (optional)</label>
-          <input name="subjectCode" placeholder="Auto-generated if left blank" className={inputClass} />
+          <label className="block text-xs font-medium">{t("Subject code (optional)")}</label>
+          <input name="subjectCode" placeholder={t("Auto-generated if left blank")} className={inputClass} />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Initials / name (optional)</label>
-          <input name="displayName" placeholder="e.g. M.C." className={inputClass} />
+          <label className="block text-xs font-medium">{t("Initials / name (optional)")}</label>
+          <input name="displayName" placeholder={t("e.g. M.C.")} className={inputClass} />
           <p className="mt-1 text-xs text-neutral-500">
-            Test data only for now — don&apos;t enter a real patient&apos;s name or initials until the
-            Phase 5 compliance work is done.
-          </p>
+            {t("Test data only for now — don't enter a real patient's name or initials until the Phase 5 compliance work is done.")}</p>
         </div>
 
         <div className="col-span-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
-          <label className="block text-xs font-medium">Copy from an existing patient (optional)</label>
+          <label className="block text-xs font-medium">{t("Copy from an existing patient (optional)")}</label>
           <select value={sourceId} onChange={(e) => chooseSource(e.target.value)} className={inputClass}>
-            <option value="">Start empty — don&apos;t copy anything</option>
+            <option value="">{t("Start empty — don't copy anything")}</option>
             {sourcesForStudy.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.subjectCode}
-                {s.displayName ? ` (${s.displayName})` : ""} — {s.visits.length} visit
-                {s.visits.length === 1 ? "" : "s"}, {s.criteria.length} eligibility criteri
-                {s.criteria.length === 1 ? "on" : "a"}
+                {s.displayName ? ` (${s.displayName})` : ""} — {t("{0} visit|{0} visits", [s.visits.length])},{" "}
+                {t("{0} eligibility criterion|{0} eligibility criteria", [s.criteria.length])}
               </option>
             ))}
           </select>
@@ -189,22 +184,20 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
                   className="mt-0.5"
                 />
                 <span>
-                  Copy the eligibility criteria ({source.criteria.length})
+                  {t("Copy the eligibility criteria ({0})", [source.criteria.length])}
                   <span className="block text-xs text-neutral-500">
-                    Only the list is copied — each one starts as ○ not assessed for the new patient, to be marked
-                    met / not met.
-                  </span>
+                    {t("Only the list is copied — each one starts as ○ not assessed for the new patient, to be marked met / not met.")}</span>
                 </span>
               </label>
             )}
 
             {rows.length > 0 && (
               <div className="col-span-2 space-y-2">
-                <p className="text-xs font-medium">Visits to copy — set this patient&apos;s dates and windows</p>
+                <p className="text-xs font-medium">{t("Visits to copy — set this patient's dates and windows")}</p>
 
                 <div className="flex flex-wrap items-end gap-2">
                   <div>
-                    <label className="block text-xs text-neutral-500">Start the schedule on</label>
+                    <label className="block text-xs text-neutral-500">{t("Start the schedule on")}</label>
                     <input
                       type="date"
                       value={shiftTo}
@@ -218,22 +211,20 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
                     disabled={!shiftTo}
                     className="rounded-md border border-neutral-300 px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                   >
-                    Shift all dates
-                  </button>
+                    {t("Shift all dates")}</button>
                   <span className="text-xs text-neutral-500">
-                    The earliest visit moves there; the others keep the same gaps. You can still adjust each one.
-                  </span>
+                    {t("The earliest visit moves there; the others keep the same gaps. You can still adjust each one.")}</span>
                 </div>
 
                 <div className="overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800">
                   <table className="min-w-full text-sm">
                     <thead className="bg-neutral-50 text-left text-xs text-neutral-500 dark:bg-neutral-900">
                       <tr>
-                        <th className="px-2 py-1.5 font-medium">Include</th>
-                        <th className="px-2 py-1.5 font-medium">Visit</th>
-                        <th className="px-2 py-1.5 font-medium">Date</th>
-                        <th className="px-2 py-1.5 font-medium">Window before (days)</th>
-                        <th className="px-2 py-1.5 font-medium">Window after (days)</th>
+                        <th className="px-2 py-1.5 font-medium">{t("Include")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("Visit")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("Date")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("Window before (days)")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("Window after (days)")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -244,7 +235,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
                               type="checkbox"
                               checked={r.include}
                               onChange={(e) => updateRow(r.key, { include: e.target.checked })}
-                              aria-label={`Include ${r.visitType}`}
+                              aria-label={t("Include {0}", [r.visitType])}
                             />
                           </td>
                           <td className="whitespace-nowrap px-2 py-1.5">{r.visitType}</td>
@@ -284,9 +275,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
                   </table>
                 </div>
                 <p className="text-xs text-neutral-500">
-                  These become the new patient&apos;s scheduled visits, so they show up on the calendar. Status,
-                  actual dates, checklists and documents from the source patient are not copied.
-                </p>
+                  {t("These become the new patient's scheduled visits, so they show up on the calendar. Status, actual dates, checklists and documents from the source patient are not copied.")}</p>
               </div>
             )}
           </>
@@ -298,7 +287,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add patient"}
+        {pending ? t("Adding…") : t("Add patient")}
       </button>
     </form>
   );

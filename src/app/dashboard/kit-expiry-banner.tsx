@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { markKitOrdered } from "./kits/actions";
+import { useT } from "@/lib/i18n/client";
 
 export type ExpiringKit = {
   id: string;
@@ -43,6 +44,7 @@ function getDismissedToday() {
  * marking the kit as ordered actually clears it for good.
  */
 export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [dismissedHere, setDismissedHere] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
       try {
         await markKitOrdered(kitId);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Couldn't mark that kit as ordered.");
+        setError(e instanceof Error ? e.message : t("Couldn't mark that kit as ordered."));
       }
     });
   }
@@ -82,8 +84,7 @@ export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold">
-            {kits.length} kit{kits.length === 1 ? "" : "s"} expiring within 4 weeks (or already
-            expired) — order replacements:
+            {t("{0} kit expiring within 4 weeks (or already expired) — order replacements:|{0} kits expiring within 4 weeks (or already expired) — order replacements:", [kits.length])}
           </p>
           <ul className="mt-1 space-y-1">
             {kits.map((kit) => (
@@ -91,10 +92,10 @@ export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
                 <span>
                   {kit.name} <span className="opacity-70">[{kit.protocolId}]</span> —{" "}
                   {kit.daysLeft < 0
-                    ? `expired ${kit.expiryLabel}`
+                    ? t("expired {0}", [kit.expiryLabel])
                     : kit.daysLeft === 0
-                      ? `expires today (${kit.expiryLabel})`
-                      : `expires ${kit.expiryLabel} (in ${kit.daysLeft} day${kit.daysLeft === 1 ? "" : "s"})`}
+                      ? t("expires today ({0})", [kit.expiryLabel])
+                      : t("expires in {0} day ({1})|expires in {0} days ({1})", [kit.daysLeft, kit.expiryLabel])}
                 </span>
                 <button
                   type="button"
@@ -102,8 +103,7 @@ export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
                   onClick={() => order(kit.id)}
                   className="rounded-md border border-orange-500 bg-white px-2 py-0.5 text-xs font-medium text-orange-900 hover:bg-orange-50 disabled:opacity-60 dark:bg-orange-900 dark:text-orange-50 dark:hover:bg-orange-800"
                 >
-                  Mark as ordered
-                </button>
+                  {t("Mark as ordered")}</button>
               </li>
             ))}
           </ul>
@@ -111,11 +111,9 @@ export function KitExpiryBanner({ kits }: { kits: ExpiringKit[] }) {
         </div>
         <div className="flex shrink-0 items-center gap-4">
           <Link href="/dashboard/kits" className="font-medium underline">
-            Open Kits Inventory
-          </Link>
+            {t("Open Kits Inventory")}</Link>
           <button type="button" onClick={dismiss} className="hover:underline">
-            Dismiss for today
-          </button>
+            {t("Dismiss for today")}</button>
         </div>
       </div>
     </div>

@@ -2,10 +2,12 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 type Step = "idle" | "setup" | "verifying";
 
 export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
+  const t = useT();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [step, setStep] = useState<Step>("idle");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error ?? "Something went wrong.");
+      setError(data.error ?? t("Something went wrong."));
       setBusy(false);
       return;
     }
@@ -51,9 +53,9 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
     <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-medium">Two-factor authentication</h2>
+          <h2 className="text-sm font-medium">{t("Two-factor authentication")}</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            {enabled ? "Enabled" : "Not enabled"} — via an authenticator app (TOTP).
+            {enabled ? t("Enabled — via an authenticator app (TOTP).") : t("Not enabled — via an authenticator app (TOTP).")}
           </p>
         </div>
         {step === "idle" && !enabled && (
@@ -62,27 +64,24 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
             disabled={busy}
             className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
           >
-            Enable
-          </button>
+            {t("Enable")}</button>
         )}
         {step === "idle" && enabled && (
           <button
             onClick={() => setStep("verifying")}
             className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
           >
-            Disable
-          </button>
+            {t("Disable")}</button>
         )}
       </div>
 
       {step === "setup" && qrCodeDataUrl && (
         <div className="mt-4 space-y-3 border-t border-neutral-200 pt-4 dark:border-neutral-800">
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Scan with an authenticator app, then enter the 6-digit code to confirm.
-          </p>
-          <Image src={qrCodeDataUrl} alt="MFA QR code" width={180} height={180} unoptimized />
+            {t("Scan with an authenticator app, then enter the 6-digit code to confirm.")}</p>
+          <Image src={qrCodeDataUrl} alt={t("MFA QR code")} width={180} height={180} unoptimized />
           {secret && (
-            <p className="font-mono text-xs text-neutral-500">Manual entry key: {secret}</p>
+            <p className="font-mono text-xs text-neutral-500">{t("Manual entry key: {0}", [secret])}</p>
           )}
           <div className="flex gap-2">
             <input
@@ -97,8 +96,7 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
               disabled={busy || code.length !== 6}
               className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
             >
-              Confirm
-            </button>
+              {t("Confirm")}</button>
           </div>
         </div>
       )}
@@ -106,8 +104,7 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
       {step === "verifying" && (
         <div className="mt-4 space-y-3 border-t border-neutral-200 pt-4 dark:border-neutral-800">
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Enter a current code to disable two-factor authentication.
-          </p>
+            {t("Enter a current code to disable two-factor authentication.")}</p>
           <div className="flex gap-2">
             <input
               value={code}
@@ -121,8 +118,7 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
               disabled={busy || code.length !== 6}
               className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
             >
-              Disable
-            </button>
+              {t("Disable")}</button>
           </div>
         </div>
       )}

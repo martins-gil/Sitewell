@@ -1,6 +1,7 @@
-export function formatDate(date: Date | string | null | undefined): string {
+/** A short date in the given app language ("22 Sept 2026", "22 sept. 2026", …). */
+export function formatDate(date: Date | string | null | undefined, locale: string = "en"): string {
   if (!date) return "—";
-  return new Date(date).toLocaleDateString("en-US", {
+  return new Date(date).toLocaleDateString(locale === "en" ? "en-US" : locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -44,10 +45,14 @@ export function isPast(date: Date | null): boolean {
   return date.getTime() < Date.now();
 }
 
+const ACRONYMS = new Set(["ib", "icf", "crc", "pi"]);
+
+// "PRE_SCREENED" -> "Pre Screened". Acronyms (IB, ICF, CRC, PI) stay upper-case.
+// The result is also the key the text is translated by.
 export function humanizeEnum(value: string): string {
   return value
     .toLowerCase()
     .split("_")
-    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .map((word) => (ACRONYMS.has(word) ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1)))
     .join(" ");
 }

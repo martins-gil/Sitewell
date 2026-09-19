@@ -8,6 +8,7 @@ import {
 } from "@/components/add-visit-form";
 import { VisitsCalendar, type CalendarVisit } from "./visits-calendar";
 import { VisitsTable, type TableVisit } from "./visits-table";
+import { useT } from "@/lib/i18n/client";
 
 export function VisitsView({
   tableVisits,
@@ -22,6 +23,7 @@ export function VisitsView({
   schedulingSubjects: SchedulingSubject[];
   schedulingTemplates: SchedulingTemplate[];
 }) {
+  const t = useT();
   const [view, setView] = useState<"calendar" | "list">("calendar");
   const [studyId, setStudyId] = useState("");
   // `date` is what the calendar's per-day "+" pre-fills; null date = opened
@@ -51,7 +53,7 @@ export function VisitsView({
                   : "border border-neutral-300 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
               }`}
             >
-              {v}
+              {v === "calendar" ? t("Calendar") : t("List")}
             </button>
           ))}
         </div>
@@ -60,7 +62,7 @@ export function VisitsView({
           onChange={(e) => setStudyId(e.target.value)}
           className="rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
-          <option value="">All studies</option>
+          <option value="">{t("All studies")}</option>
           {studies.map((s) => (
             <option key={s.id} value={s.id}>
               {s.protocolId} — {s.title}
@@ -71,8 +73,7 @@ export function VisitsView({
           onClick={() => setAdding({ date: null })}
           className="ml-auto rounded-md bg-neutral-900 px-3 py-1 font-medium text-white dark:bg-white dark:text-neutral-900"
         >
-          + Add visit
-        </button>
+          {t("+ Add visit")}</button>
       </div>
 
       {adding && (

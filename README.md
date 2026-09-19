@@ -202,7 +202,18 @@ to org A, and a cross-tenant insert is rejected).
   both org-admin-only (`ORG_ADMIN` role or platform admin), kept as a
   separate from the "Printed on the checklist documents" card on the same
   page (PI name, site number — open to everyone, not just admins).
-- ✅ Team management (`/dashboard/team`, org-admin-only — hidden from the nav
+- ✅ Settings (`/dashboard/settings`, in the sidebar): **Preferences** —
+  language (English, Français, Deutsch, Italiano, Español, Português), colour
+  theme (light / dark / match my device) and, for a visit's page, whether each
+  section (document details, procedure checklist, nursing sheet, notes, kits,
+  documents) is shown, collapsed or hidden; **Team**; **Security**. Preferences
+  are cookies (per browser, also on the sign-in page). The app's texts are
+  translated through `src/lib/i18n/catalog.json` — run `npm run i18n:check`
+  after adding or changing any user-facing text. The Word documents (.docx),
+  the reminder emails and server-side error messages stay as they were
+  (the .docx keep the site's Portuguese paper-form wording).
+- ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
+  redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin
   with a temporary password they sign in with directly (no invite email or
   self-service password change yet), edit a member's name/email/role, or

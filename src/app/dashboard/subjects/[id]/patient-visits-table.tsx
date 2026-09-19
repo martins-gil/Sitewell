@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/badge";
 import { moveVisit } from "@/app/dashboard/visits/actions";
+import { useT } from "@/lib/i18n/client";
 
 export type PatientVisit = {
   id: string;
@@ -22,6 +23,7 @@ const inputClass =
   "mt-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950";
 
 function VisitRow({ visit }: { visit: PatientVisit }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
         await moveVisit(visit.id, formData);
         setEditing(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Couldn't move the visit.");
+        setError(e instanceof Error ? e.message : t("Couldn't move the visit."));
       }
     });
   }
@@ -53,7 +55,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
             <p className="text-sm font-medium">{visit.visitType}</p>
             <div className="flex flex-wrap items-end gap-3">
               <div>
-                <label className="block text-xs text-neutral-500">New date</label>
+                <label className="block text-xs text-neutral-500">{t("New date")}</label>
                 <input
                   type="date"
                   name="targetDate"
@@ -64,7 +66,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-500">Window before (days)</label>
+                <label className="block text-xs text-neutral-500">{t("Window before (days)")}</label>
                 <input
                   type="number"
                   name="windowBeforeDays"
@@ -74,7 +76,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
                 />
               </div>
               <div>
-                <label className="block text-xs text-neutral-500">Window after (days)</label>
+                <label className="block text-xs text-neutral-500">{t("Window after (days)")}</label>
                 <input
                   type="number"
                   name="windowAfterDays"
@@ -88,7 +90,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
                 disabled={pending}
                 className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
               >
-                {pending ? "Saving…" : "Save"}
+                {pending ? t("Saving…") : t("Save")}
               </button>
               <button
                 type="button"
@@ -98,17 +100,18 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
                 }}
                 className="text-xs text-neutral-500 hover:underline"
               >
-                Cancel
-              </button>
+                {t("Cancel")}</button>
             </div>
             <label className="flex items-start gap-2 text-xs text-neutral-600 dark:text-neutral-400">
               <input type="checkbox" name="moveLater" className="mt-0.5" />
               <span>
-                Also move this patient&apos;s later visits by the same number of days
+                {t("Also move this patient's later visits by the same number of days")}
                 {deltaDays !== 0 && (
                   <span className="font-medium">
                     {" "}
-                    ({Math.abs(deltaDays)} day{Math.abs(deltaDays) === 1 ? "" : "s"} {deltaDays > 0 ? "later" : "earlier"})
+                    {deltaDays > 0
+                      ? t("({0} day later)|({0} days later)", [Math.abs(deltaDays)])
+                      : t("({0} day earlier)|({0} days earlier)", [Math.abs(deltaDays)])}
                   </span>
                 )}
               </span>
@@ -121,10 +124,14 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
   }
 
   return (
-    <tr>
+    <tr className="hover:bg-neutral-50 dark:hover:bg-neutral-900">
       <td className="px-5 py-2">
-        <Link href={`/dashboard/visits/${visit.id}`} className="hover:underline">
-          {visit.visitType}
+        <Link
+          href={`/dashboard/visits/${visit.id}`}
+          title={t("Open this visit")}
+          className="font-medium text-blue-700 hover:underline dark:text-blue-400"
+        >
+          {visit.visitType} →
         </Link>
       </td>
       <td className="px-5 py-2">{visit.targetLabel}</td>
@@ -135,8 +142,7 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
       <td className="whitespace-nowrap px-5 py-2 text-right">
         {canMove ? (
           <button type="button" onClick={() => setEditing(true)} className="text-xs hover:underline">
-            Edit dates
-          </button>
+            {t("Edit dates")}</button>
         ) : (
           <span className="text-xs text-neutral-400">—</span>
         )}
@@ -146,14 +152,15 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
 }
 
 export function PatientVisitsTable({ visits }: { visits: PatientVisit[] }) {
+  const t = useT();
   return (
     <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
       <thead className="bg-neutral-50 dark:bg-neutral-900">
         <tr>
-          <th className="px-5 py-2 text-left font-medium text-neutral-500">Visit</th>
-          <th className="px-5 py-2 text-left font-medium text-neutral-500">Target date</th>
-          <th className="px-5 py-2 text-left font-medium text-neutral-500">Window</th>
-          <th className="px-5 py-2 text-left font-medium text-neutral-500">Status</th>
+          <th className="px-5 py-2 text-left font-medium text-neutral-500">{t("Visit")}</th>
+          <th className="px-5 py-2 text-left font-medium text-neutral-500">{t("Target date")}</th>
+          <th className="px-5 py-2 text-left font-medium text-neutral-500">{t("Window")}</th>
+          <th className="px-5 py-2 text-left font-medium text-neutral-500">{t("Status")}</th>
           <th className="px-5 py-2"></th>
         </tr>
       </thead>

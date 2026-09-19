@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { addIeCriterion, removeIeCriterion, setIeCriterionStatus } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 // met: true / false / null (not assessed yet — e.g. cloned from another patient)
 type IeCriterion = { criterion: string; met: boolean | null };
@@ -19,6 +20,7 @@ export function IeCriteriaEditor({
   subjectId: string;
   initialCriteria: IeCriterion[];
 }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -29,14 +31,14 @@ export function IeCriteriaEditor({
       try {
         await fn();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong.");
+        setError(e instanceof Error ? e.message : t("Something went wrong."));
       }
     });
   }
 
   function handleAdd(met: boolean | null) {
     if (!text.trim()) {
-      setError("Enter the criterion text first.");
+      setError(t("Enter the criterion text first."));
       return;
     }
     run(async () => {
@@ -69,22 +71,20 @@ export function IeCriteriaEditor({
                 onClick={() => run(() => setIeCriterionStatus(subjectId, i, true))}
                 className={statusButton(c.met === true)}
               >
-                Met
-              </button>
+                {t("Met")}</button>
               <button
                 type="button"
                 disabled={pending}
                 onClick={() => run(() => setIeCriterionStatus(subjectId, i, false))}
                 className={statusButton(c.met === false)}
               >
-                Not met
-              </button>
+                {t("Not met")}</button>
               <button
                 type="button"
                 disabled={pending}
                 onClick={() => run(() => setIeCriterionStatus(subjectId, i, null))}
                 className={statusButton(c.met === null)}
-                title="Not assessed yet"
+                title={t("Not assessed yet")}
               >
                 ?
               </button>
@@ -93,21 +93,20 @@ export function IeCriteriaEditor({
                 disabled={pending}
                 onClick={() => run(() => removeIeCriterion(subjectId, i))}
                 className="px-1 text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
-                aria-label={`Remove ${c.criterion}`}
+                aria-label={t("Remove {0}", [c.criterion])}
               >
-                ×
-              </button>
+                {t("×")}</button>
             </span>
           </li>
         ))}
-        {initialCriteria.length === 0 && <li className="text-neutral-400">No criteria recorded.</li>}
+        {initialCriteria.length === 0 && <li className="text-neutral-400">{t("No criteria recorded.")}</li>}
       </ul>
 
       <div className="mt-3 flex gap-2">
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. No prior investigational treatment"
+          placeholder={t("e.g. No prior investigational treatment")}
           disabled={pending}
           className="flex-1 rounded-md border border-neutral-300 px-2 py-1 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
         />
@@ -117,25 +116,22 @@ export function IeCriteriaEditor({
           onClick={() => handleAdd(true)}
           className="rounded-md bg-green-100 px-2 py-1 text-sm font-medium text-green-800 disabled:opacity-60 dark:bg-green-950 dark:text-green-300"
         >
-          + Met
-        </button>
+          {t("+ Met")}</button>
         <button
           type="button"
           disabled={pending}
           onClick={() => handleAdd(false)}
           className="rounded-md bg-red-100 px-2 py-1 text-sm font-medium text-red-800 disabled:opacity-60 dark:bg-red-950 dark:text-red-300"
         >
-          + Not met
-        </button>
+          {t("+ Not met")}</button>
         <button
           type="button"
           disabled={pending}
           onClick={() => handleAdd(null)}
           className="rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-600 disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-400"
-          title="Add without deciding yet"
+          title={t("Add without deciding yet")}
         >
-          + Not assessed
-        </button>
+          {t("+ Not assessed")}</button>
       </div>
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>

@@ -1,11 +1,14 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { humanizeEnum } from "@/lib/format";
 import { uploadDocument } from "../../documents/actions";
+import { useT } from "@/lib/i18n/client";
 
 const TYPES = ["PROTOCOL", "IB", "ICF", "DELEGATION_LOG", "TRAINING_RECORD", "OTHER"];
 
 export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId: string }) {
+  const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +20,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
         await uploadDocument(formData);
         formRef.current?.reset();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to add the document.");
+        setError(e instanceof Error ? e.message : t("Failed to add the document."));
       }
     });
   }
@@ -32,22 +35,22 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
       <input type="hidden" name="visitId" value={visitId} />
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">Type</label>
+          <label className="block text-xs font-medium">{t("Type")}</label>
           <select
             name="type"
             required
             defaultValue="OTHER"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t.replaceAll("_", " ")}
+            {TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t(humanizeEnum(type))}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium">Version</label>
+          <label className="block text-xs font-medium">{t("Version")}</label>
           <input
             name="version"
             required
@@ -56,29 +59,29 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Status</label>
+          <label className="block text-xs font-medium">{t("Status")}</label>
           <select
             name="status"
             defaultValue="ACTIVE"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
-            <option value="ACTIVE">Active</option>
-            <option value="PENDING">Pending</option>
-            <option value="EXPIRED">Expired</option>
-            <option value="SUPERSEDED">Superseded</option>
+            <option value="ACTIVE">{t("Active")}</option>
+            <option value="PENDING">{t("Pending")}</option>
+            <option value="EXPIRED">{t("Expired")}</option>
+            <option value="SUPERSEDED">{t("Superseded")}</option>
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Title</label>
+          <label className="block text-xs font-medium">{t("Title")}</label>
           <input
             name="title"
             required
-            placeholder="e.g. Source note, lab report"
+            placeholder={t("e.g. Source note, lab report")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">File (optional)</label>
+          <label className="block text-xs font-medium">{t("File (optional)")}</label>
           <input type="file" name="file" className="mt-1 w-full text-sm" />
         </div>
       </div>
@@ -88,7 +91,7 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
         disabled={pending}
         className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
-        {pending ? "Adding…" : "Add to this visit"}
+        {pending ? t("Adding…") : t("Add to this visit")}
       </button>
     </form>
   );

@@ -229,6 +229,33 @@ picks this repo up next.
   the header is never null; `nursingSheetIsCustom` says which it is. Clearing
   a custom sheet writes `Prisma.DbNull`, not a bare `null`. `prisma/seed.ts` imports the presets from `src/lib`
   by relative path (no `@/` alias there).
+- **Translations are gettext-style: the English text IS the key.** Write
+  `t("Save")` / `t("{0} kit|{0} kits", [n])` (positional `{0}` placeholders;
+  `a|b` = singular|plural by the first argument, via `Intl.PluralRules`) —
+  server components `const t = await getT()` (`src/lib/i18n/server.ts`), client
+  components `const t = useT()`. Every text needs a row in
+  `src/lib/i18n/catalog.json` (`[fr, de, it, es, pt]`, European Portuguese);
+  a missing row silently falls back to English on screen, so run
+  `npm run i18n:check` (it also verifies placeholders and plural bars match).
+  Texts that reach `t()` dynamically — `t(humanizeEnum(status))`, option
+  lists — can't be seen by the check, so list them in
+  `src/lib/i18n/extra-keys.ts` too. `humanizeEnum` output IS the key
+  ("PRE_SCREENED" -> "Pre Screened"; only IB/ICF/CRC/PI stay upper-case).
+  Never name a local variable `t` in a component (it shadows the translator).
+  Dates: `formatDate(date, t.locale)` — pass the locale, or you get English.
+  `Badge` is a client component for this reason (it's used from both trees).
+  Deliberately NOT translated: server-action error messages, the .docx files
+  (they follow the site's Portuguese paper forms), emails. Language, theme and
+  the visit-page section modes (`show` / `collapsed` / `hidden`) are COOKIES
+  (`sw_locale`, `sw_theme`, `sw_sections` — `src/app/preferences-actions.ts`),
+  not database fields, so they work on the login page and need no migration.
+  Dark mode is the `.dark` class on `<html>` (`@custom-variant dark` in
+  `globals.css`), set from the cookie on the server and, for "match my
+  device", by a tiny inline script before first paint.
+- **Team and Security live under Settings** (`/dashboard/settings/team`,
+  `/dashboard/settings/security`); `/dashboard/team` just redirects. The
+  patient list deliberately has no I/E criteria column — they're shown only
+  inside a patient's file.
 - **Kits are inventory with an optional link to one visit, not a dispensing
   log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;
   `Kit.visitId` (nullable, `ON DELETE SET NULL`) ties it to one specific
@@ -261,11 +288,11 @@ picks this repo up next.
   `20260919090000_kits_inventory_and_patient_name` at the user's request.
   Still synthetic-only data until Phase 5; the form says so.
 - **Study and Team management (`/dashboard/studies` add/edit,
-  `/dashboard/team`) are gated to `ORG_ADMIN`/platform admin**, checked both
-  in the page (hides the UI, and `/dashboard/team` refuses to even query
-  member data for anyone else) and again in every server action in
+  `/dashboard/settings/team`) are gated to `ORG_ADMIN`/platform admin**,
+  checked both in the page (hides the UI, and the team page refuses to even
+  query member data for anyone else) and again in every server action in
   `src/app/dashboard/studies/actions.ts` and
-  `src/app/dashboard/team/actions.ts` — the action-level check is the real
+  `src/app/dashboard/settings/team/actions.ts` — the action-level check is the real
   gate, since a server action is a callable endpoint regardless of what the
   UI hides. Deleting a user (`deleteTeamMember`) can't just `user.delete` —
   `StudyAssignment.userId`, `Document.signedById`, and
@@ -279,8 +306,8 @@ picks this repo up next.
 
 ## Before calling a change done
 
-Run, in order: `npm run lint`, `npx tsc --noEmit`, `npm run build`. All three
-are clean as of this writing — keep them that way.
+Run, in order: `npm run lint`, `npx tsc --noEmit`, `npm run i18n:check`,
+`npm run build`. All four are clean as of this writing — keep them that way.
 
 ## Environment
 

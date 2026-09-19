@@ -6,12 +6,14 @@ import { SignButton } from "./sign-button";
 import { EditDocumentDetails } from "./edit-document-details";
 import { DocumentStatusControl } from "./document-status-control";
 import { AttachDocumentFile } from "./attach-document-file";
+import { getT } from "@/lib/i18n/server";
 
 export default async function DocumentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ studyId?: string }>;
 }) {
+  const t = await getT();
   const params = await searchParams;
   const [documents, studies] = await Promise.all([
     getDocuments({ studyId: params.studyId }),
@@ -21,10 +23,10 @@ export default async function DocumentsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">eISF / Regulatory Documents</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("eISF / Regulatory Documents")}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {documents.length} document{documents.length === 1 ? "" : "s"}. &quot;Signed by / date&quot;
-          here is an audit-trail placeholder, not a real 21 CFR Part 11 e-signature (Phase 5).
+          {t("{0} document.|{0} documents.", [documents.length])}{" "}
+          {t("\"Signed by / date\" here is an audit-trail placeholder, not a real 21 CFR Part 11 e-signature (Phase 5).")}
         </p>
       </div>
 
@@ -36,7 +38,7 @@ export default async function DocumentsPage({
           defaultValue={params.studyId ?? ""}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
-          <option value="">All studies</option>
+          <option value="">{t("All studies")}</option>
           {studies.map((s) => (
             <option key={s.id} value={s.id}>
               {s.protocolId} — {s.title}
@@ -47,22 +49,21 @@ export default async function DocumentsPage({
           type="submit"
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
         >
-          Filter
-        </button>
+          {t("Filter")}</button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Title</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Type</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Version</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Released</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Expiry</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Status</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Signed</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Title")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Type")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Study")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Version")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Released")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Expiry")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Status")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Signed")}</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500"></th>
             </tr>
           </thead>
@@ -84,28 +85,28 @@ export default async function DocumentsPage({
                       </a>
                     ) : (
                       <>
-                        {doc.title} <span className="ml-1 text-xs text-neutral-400">(no file attached)</span>
+                        {doc.title} <span className="ml-1 text-xs text-neutral-400">{t("(no file attached)")}</span>
                       </>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {humanizeEnum(doc.type)}
+                    {t(humanizeEnum(doc.type))}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.study.protocolId}</td>
                   <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
-                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(doc.releaseDate)}</td>
+                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(doc.releaseDate, t.locale)}</td>
                   <td
                     className={`whitespace-nowrap px-4 py-2 ${
                       expiringSoon ? "font-medium text-amber-600 dark:text-amber-400" : "text-neutral-500"
                     }`}
                   >
-                    {formatDate(doc.expiryDate)}
+                    {formatDate(doc.expiryDate, t.locale)}
                   </td>
                   <td className="px-4 py-2">
                     <DocumentStatusControl documentId={doc.id} status={displayStatus} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {doc.signedBy ? `${doc.signedBy.name} · ${formatDate(doc.signedAt)}` : "—"}
+                    {doc.signedBy ? `${doc.signedBy.name} · ${formatDate(doc.signedAt, t.locale)}` : "—"}
                   </td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-3">

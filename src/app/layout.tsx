@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { getI18n } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/preferences-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,14 +43,28 @@ export const viewport: Viewport = {
   themeColor: "#171717",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// "Match my device": the class is decided in the browser before first paint,
+// since the server can't know the device's colour scheme.
+const SYSTEM_THEME_SCRIPT = `(function(){try{var e=document.documentElement;if(e.dataset.theme==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches)e.classList.add("dark")}catch(_){}})()`;
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const [{ locale, messages }, theme] = await Promise.all([getI18n(), getTheme()]);
+
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang={locale}
+      data-theme={theme}
+      // The system-theme script may add "dark" before React hydrates.
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${theme === "dark" ? " dark" : ""}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers locale={locale} messages={messages}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

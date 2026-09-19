@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { humanizeEnum } from "@/lib/format";
+import { useT } from "@/lib/i18n/client";
 
 export type CalendarVisit = {
   id: string;
@@ -22,11 +23,6 @@ const STATUS_DOT: Record<string, string> = {
   MISSED: "bg-red-500",
   RESCHEDULED: "bg-amber-500",
 };
-
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTH_NAMES = Array.from({ length: 12 }, (_, m) =>
-  new Date(2000, m, 1).toLocaleDateString("en-US", { month: "long" }),
-);
 
 type Granularity = "month" | "year" | "day";
 
@@ -60,6 +56,7 @@ export function VisitsCalendar({
   visits: CalendarVisit[];
   onAddOnDay?: (dateKey: string) => void;
 }) {
+  const t = useT();
   const router = useRouter();
   const [granularity, setGranularity] = useState<Granularity>("month");
   const [monthCursor, setMonthCursor] = useState(() => {
@@ -80,8 +77,16 @@ export function VisitsCalendar({
   }, [visits]);
 
   const cells = useMemo(() => monthGridCells(monthCursor, visitsByDay), [monthCursor, visitsByDay]);
-  const monthLabel = monthCursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const dayLabel = dayCursor.toLocaleDateString("en-US", {
+  // Day and month names come from the browser's own locale data for the chosen language.
+  const dateLocale = t.locale === "en" ? "en-US" : t.locale;
+  const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
+    new Date(2000, 0, 2 + i).toLocaleDateString(dateLocale, { weekday: "short" }),
+  );
+  const MONTH_NAMES = Array.from({ length: 12 }, (_, m) =>
+    new Date(2000, m, 1).toLocaleDateString(dateLocale, { month: "long" }),
+  );
+  const monthLabel = monthCursor.toLocaleDateString(dateLocale, { month: "long", year: "numeric" });
+  const dayLabel = dayCursor.toLocaleDateString(dateLocale, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -149,28 +154,25 @@ export function VisitsCalendar({
                     : "border border-neutral-300 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 }`}
               >
-                {g}
+                {g === "day" ? t("Day") : g === "month" ? t("Month") : t("Year")}
               </button>
             ))}
           </div>
         </div>
         <div className="flex gap-2 text-sm">
           <button onClick={() => step(-1)} className={navButton}>
-            ← Prev
-          </button>
+            {t("← Prev")}</button>
           <button onClick={goToToday} className={navButton}>
-            Today
-          </button>
+            {t("Today")}</button>
           <button onClick={() => step(1)} className={navButton}>
-            Next →
-          </button>
+            {t("Next →")}</button>
         </div>
       </div>
 
       {granularity === "day" ? (
         <div className="p-4">
           {dayVisits.length === 0 ? (
-            <p className="text-sm text-neutral-500">No visits on this day.</p>
+            <p className="text-sm text-neutral-500">{t("No visits on this day.")}</p>
           ) : (
             <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {dayVisits.map((v) => (
@@ -185,7 +187,7 @@ export function VisitsCalendar({
                     </Link>
                     <span className="text-xs text-neutral-500">{v.protocolId}</span>
                   </div>
-                  <span className="text-xs text-neutral-500">{humanizeEnum(v.status)}</span>
+                  <span className="text-xs text-neutral-500">{t(humanizeEnum(v.status))}</span>
                 </li>
               ))}
             </ul>
@@ -196,8 +198,7 @@ export function VisitsCalendar({
               onClick={() => onAddOnDay(dayKey)}
               className="mt-3 text-sm text-neutral-600 hover:underline dark:text-neutral-400"
             >
-              + Add a visit on this day
-            </button>
+              {t("+ Add a visit on this day")}</button>
           )}
         </div>
       ) : granularity === "month" ? (
@@ -221,7 +222,7 @@ export function VisitsCalendar({
                   <button
                     type="button"
                     onClick={() => goToDay(date)}
-                    title="See this day's visits"
+                    title={t("See this day's visits")}
                     className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs hover:underline ${
                       isToday
                         ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
@@ -236,8 +237,8 @@ export function VisitsCalendar({
                     <button
                       type="button"
                       onClick={() => onAddOnDay(toDateKey(date))}
-                      title={`Add a visit on ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
-                      aria-label={`Add a visit on ${toDateKey(date)}`}
+                      title={t("Add a visit on {0}", [date.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })])}
+                      aria-label={t("Add a visit on {0}", [date.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })])}
                       className="flex h-5 w-5 items-center justify-center rounded text-sm leading-none text-neutral-300 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
                     >
                       +
@@ -249,7 +250,7 @@ export function VisitsCalendar({
                     <button
                       key={v.id}
                       onClick={() => router.push(`/dashboard/visits/${v.id}`)}
-                      title={`${v.protocolId} ${v.subjectCode} — ${v.visitType} (${v.status})`}
+                      title={`${v.protocolId} ${v.subjectCode} — ${v.visitType} (${t(humanizeEnum(v.status))})`}
                       className="flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     >
                       <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`} />
@@ -265,8 +266,7 @@ export function VisitsCalendar({
                       onClick={() => goToDay(date)}
                       className="px-1 text-[11px] text-neutral-400 hover:underline"
                     >
-                      +{dayCellVisits.length - 3} more
-                    </button>
+                      {t("+{0} more", [dayCellVisits.length - 3])}</button>
                   )}
                 </div>
               </div>
@@ -294,7 +294,7 @@ export function VisitsCalendar({
                       key={c.date.toISOString()}
                       disabled={c.visits.length === 0}
                       onClick={() => goToDay(c.date)}
-                      title={c.visits.length > 0 ? `${c.visits.length} visit(s) — open this day` : undefined}
+                      title={c.visits.length > 0 ? t("{0} visit(s) — open this day", [c.visits.length]) : undefined}
                       className={`flex h-5 w-5 items-center justify-center rounded-sm text-[9px] ${
                         c.visits.length > 0
                           ? "bg-blue-500 font-medium text-white"

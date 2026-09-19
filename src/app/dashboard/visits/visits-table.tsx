@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { VisitRowActions } from "./visit-row-actions";
+import { useT } from "@/lib/i18n/client";
 
 export type TableVisit = {
   id: string;
@@ -18,19 +21,20 @@ export type TableVisit = {
 };
 
 export function VisitsTable({ visits }: { visits: TableVisit[] }) {
+  const t = useT();
   return (
     <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
       <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
         <thead className="bg-neutral-50 dark:bg-neutral-900">
           <tr>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Subject</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Visit</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Target date</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Window</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Actual date</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Status</th>
-            <th className="px-4 py-2 text-left font-medium text-neutral-500">Actions</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Subject")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Study")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Visit")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Target date")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Window")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Actual date")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Status")}</th>
+            <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Actions")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -47,11 +51,11 @@ export function VisitsTable({ visits }: { visits: TableVisit[] }) {
                   {v.visitType}
                 </Link>
               </td>
-              <td className="whitespace-nowrap px-4 py-2">{formatDate(v.targetDate)}</td>
+              <td className="whitespace-nowrap px-4 py-2">{formatDate(v.targetDate, t.locale)}</td>
               <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                {formatDate(v.windowStart)} – {formatDate(v.windowEnd)}
+                {formatDate(v.windowStart, t.locale)} – {formatDate(v.windowEnd, t.locale)}
               </td>
-              <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(v.actualDate)}</td>
+              <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(v.actualDate, t.locale)}</td>
               <td className="whitespace-nowrap px-4 py-2">
                 <Badge value={v.status} />
               </td>

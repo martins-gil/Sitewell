@@ -528,7 +528,7 @@ export async function getKitExpirySummary() {
 /** Visits a kit can still be linked to (upcoming: scheduled or rescheduled),
  * for the Kits Inventory "link to a visit" pickers. Labels are built here so
  * server and client render the same text. */
-export async function getLinkableVisits() {
+export async function getLinkableVisits(locale: string = "en") {
   const ctx = await requireTenantContext();
   const visits = await withTenantContext(ctx, (tx) =>
     tx.visit.findMany({
@@ -546,7 +546,7 @@ export async function getLinkableVisits() {
   return visits.map((v) => ({
     id: v.id,
     studyId: v.studyId,
-    label: `${v.subject.subjectCode} · ${v.visitType} · ${formatDate(v.targetDate)}`,
+    label: `${v.subject.subjectCode} · ${v.visitType} · ${formatDate(v.targetDate, locale)}`,
   }));
 }
 

@@ -13,10 +13,13 @@ import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
 import { VisitNotes } from "./visit-notes";
+import { VisitSection } from "./visit-section";
 import { DocumentStatusControl } from "@/app/dashboard/documents/document-status-control";
 import { VisitDocHeader } from "./visit-doc-header";
 import { EditVisitForm } from "./edit-visit-form";
 import { DeleteVisitButton } from "./delete-visit-button";
+import { getT } from "@/lib/i18n/server";
+import { getSectionModes } from "@/lib/preferences-server";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -25,6 +28,8 @@ export default async function VisitDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getT();
+  const modes = await getSectionModes();
   const { id } = await params;
   const [visit, checklist, docHeader] = await Promise.all([
     getVisitById(id),
@@ -33,12 +38,15 @@ export default async function VisitDetailPage({
   ]);
   if (!visit) notFound();
   const availableKits = await getAssignableKitsForStudy(visit.studyId);
+  const nursingSheetUrl = visit.templateId
+    ? `/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`
+    : null;
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
         <Link href="/dashboard/visits" className="text-sm text-neutral-500 hover:underline">
-          ← Visits
+          {t("← Visits")}
         </Link>
         <div className="mt-1 flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{visit.visitType}</h1>
@@ -58,9 +66,9 @@ export default async function VisitDetailPage({
           visitType: visit.visitType,
           isCustom: visit.templateId === null,
           status: visit.status,
-          targetLabel: formatDate(visit.targetDate),
-          windowLabel: `${formatDate(visit.windowStart)} – ${formatDate(visit.windowEnd)}`,
-          actualLabel: formatDate(visit.actualDate),
+          targetLabel: formatDate(visit.targetDate, t.locale),
+          windowLabel: `${formatDate(visit.windowStart, t.locale)} – ${formatDate(visit.windowEnd, t.locale)}`,
+          actualLabel: formatDate(visit.actualDate, t.locale),
           targetInput: visit.targetDate.toISOString().slice(0, 10),
           actualInput: visit.actualDate ? visit.actualDate.toISOString().slice(0, 10) : "",
           windowBeforeDays: Math.round((visit.targetDate.getTime() - visit.windowStart.getTime()) / DAY_MS),
@@ -68,8 +76,7 @@ export default async function VisitDetailPage({
         }}
       />
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">Document details (printed on the .docx)</h2>
+      <VisitSection mode={modes.details} title={t("Document details (printed on the .docx)")}>
         <VisitDocHeader
           visitId={visit.id}
           values={{
@@ -81,7 +88,7 @@ export default async function VisitDetailPage({
             hasProtocolDocument: docHeader.protocolDocumentTitle !== null,
             protocolAwaitingSignature: docHeader.protocolAwaitingSignature,
             protocolVersion: docHeader.protocolVersion,
-            protocolReleaseLabel: formatDate(docHeader.protocolReleaseDate),
+            protocolReleaseLabel: formatDate(docHeader.protocolReleaseDate, t.locale),
             protocolReleaseInput: docHeader.protocolReleaseDate
               ? docHeader.protocolReleaseDate.toISOString().slice(0, 10)
               : "",
@@ -90,89 +97,87 @@ export default async function VisitDetailPage({
             checklistColumn: docHeader.checklistColumn,
           }}
         />
-      </div>
+      </VisitSection>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">Procedure checklist</h2>
+      <VisitSection mode={modes.checklist} title={t("Procedure checklist")}>
         <VisitChecklist
           visitId={visit.id}
           column={docHeader.checklistColumn}
           items={checklist.map((item) => ({ ...item, performedAt: toDateTimeInput(item.performedAt) }))}
         />
-      </div>
+      </VisitSection>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">Nursing sheet</h2>
+      <VisitSection mode={modes.nursing} title={t("Nursing sheet")}>
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
           <p className="px-4 py-3 text-sm text-neutral-600 dark:text-neutral-400">
             {docHeader.nursingSheetIsCustom
-              ? `The nursing record set up for ${visit.visitType} visits`
-              : "The standard nursing record"}{" "}
-            — {docHeader.nursingSheet.sections.length} section
-            {docHeader.nursingSheet.sections.length === 1 ? "" : "s"},{" "}
-            {docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0)} rows. It downloads with this
-            visit&apos;s number, date, subject and initials filled in
-            {visit.kits.length > 0 ? ", plus its kits and notes" : " and its notes"}; the readings are handwritten.{" "}
-            {visit.templateId ? (
-              <Link
-                href={`/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`}
-                className="underline"
-              >
-                {docHeader.nursingSheetIsCustom ? "Edit the sheet" : `Customise it for ${visit.visitType} visits`} →
+              ? t("The nursing record set up for {0} visits", [visit.visitType])
+              : t("The standard nursing record")}{" "}
+            —{" "}
+            {t("{0} sections, {1} rows.", [
+              docHeader.nursingSheet.sections.length,
+              docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0),
+            ])}{" "}
+            {visit.kits.length > 0
+              ? t("It downloads with this visit's number, date, subject and initials filled in, plus its kits and notes; the readings are handwritten.")
+              : t("It downloads with this visit's number, date, subject and initials filled in, plus its notes; the readings are handwritten.")}{" "}
+            {nursingSheetUrl ? (
+              <Link href={nursingSheetUrl} className="underline">
+                {docHeader.nursingSheetIsCustom
+                  ? t("Edit the sheet →")
+                  : t("Customise it for {0} visits →", [visit.visitType])}
               </Link>
             ) : (
-              "(Custom visits always use the standard sheet.)"
+              t("(Custom visits always use the standard sheet.)")
             )}
           </p>
           <a
             href={`/api/visits/${visit.id}/nursing-sheet-docx`}
             className="block border-t border-neutral-200 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
           >
-            Download nursing sheet (.docx)
+            {t("Download nursing sheet (.docx)")}
           </a>
         </div>
-      </div>
+      </VisitSection>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">Notes</h2>
+      <VisitSection mode={modes.notes} title={t("Notes")}>
         <VisitNotes visitId={visit.id} notes={visit.notes ?? ""} />
-      </div>
+      </VisitSection>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">Kits for this visit</h2>
+      <VisitSection mode={modes.kits} title={t("Kits for this visit")}>
         <VisitKits
           visitId={visit.id}
           visitOccurred={visit.actualDate !== null}
           kits={visit.kits.map((k) => ({
             id: k.id,
             name: k.name,
-            expiryLabel: formatDate(k.expiryDate),
+            expiryLabel: formatDate(k.expiryDate, t.locale),
             used: k.usedAt !== null,
           }))}
           availableKits={availableKits.map((k) => ({
             id: k.id,
-            label: `${k.name} · expires ${formatDate(k.expiryDate)}`,
+            label: t("{0} · expires {1}", [k.name, formatDate(k.expiryDate, t.locale)]),
           }))}
         />
-      </div>
+      </VisitSection>
 
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-neutral-500">
-          Documents for this visit {visit.documents.length > 0 && `(${visit.documents.length})`}
-        </h2>
+      <VisitSection
+        mode={modes.documents}
+        title={`${t("Documents for this visit")}${visit.documents.length > 0 ? ` (${visit.documents.length})` : ""}`}
+      >
         <VisitUploadForm studyId={visit.studyId} visitId={visit.id} />
 
         {visit.documents.length === 0 ? (
-          <p className="mt-3 text-sm text-neutral-400">No documents uploaded for this visit yet.</p>
+          <p className="mt-3 text-sm text-neutral-400">{t("No documents uploaded for this visit yet.")}</p>
         ) : (
           <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
             <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
               <thead className="bg-neutral-50 dark:bg-neutral-900">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-500">Title</th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-500">Type</th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-500">Version</th>
-                  <th className="px-4 py-2 text-left font-medium text-neutral-500">Status</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Title")}</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Type")}</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Version")}</th>
+                  <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -190,11 +195,11 @@ export default async function VisitDetailPage({
                         </a>
                       ) : (
                         <>
-                          {doc.title} <span className="ml-1 text-xs text-neutral-400">(no file attached)</span>
+                          {doc.title} <span className="ml-1 text-xs text-neutral-400">{t("(no file attached)")}</span>
                         </>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{humanizeEnum(doc.type)}</td>
+                    <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{t(humanizeEnum(doc.type))}</td>
                     <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
                     <td className="whitespace-nowrap px-4 py-2">
                       <DocumentStatusControl documentId={doc.id} status={getDocumentDisplayStatus(doc)} />
@@ -205,11 +210,14 @@ export default async function VisitDetailPage({
             </table>
           </div>
         )}
-      </div>
+      </VisitSection>
 
       {visit.status !== "COMPLETED" && (
         <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
-          <DeleteVisitButton visitId={visit.id} label={`${visit.visitType} for ${visit.subject.subjectCode}`} />
+          <DeleteVisitButton
+            visitId={visit.id}
+            label={t("{0} for {1}", [visit.visitType, visit.subject.subjectCode])}
+          />
         </div>
       )}
     </div>

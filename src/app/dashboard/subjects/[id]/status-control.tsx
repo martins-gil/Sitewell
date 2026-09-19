@@ -2,7 +2,9 @@
 
 import type { SubjectStatus } from "@prisma/client";
 import { useState, useTransition } from "react";
+import { humanizeEnum } from "@/lib/format";
 import { updateSubjectStatus } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 const STATUSES: SubjectStatus[] = [
   "IDENTIFIED",
@@ -21,6 +23,7 @@ export function StatusControl({
   subjectId: string;
   currentStatus: SubjectStatus;
 }) {
+  const t = useT();
   const [status, setStatus] = useState(currentStatus);
   const [pending, startTransition] = useTransition();
 
@@ -41,11 +44,11 @@ export function StatusControl({
       >
         {STATUSES.map((s) => (
           <option key={s} value={s}>
-            {s.replaceAll("_", " ")}
+            {t(humanizeEnum(s))}
           </option>
         ))}
       </select>
-      {pending && <span className="text-xs text-neutral-500">Saving…</span>}
+      {pending && <span className="text-xs text-neutral-500">{t("Saving…")}</span>}
     </div>
   );
 }

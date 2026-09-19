@@ -5,6 +5,7 @@ import { badgeColorClass } from "@/components/badge";
 import { DOCUMENT_STATUS_CHOICES, type DocumentDisplayStatus } from "@/lib/document-status";
 import { humanizeEnum } from "@/lib/format";
 import { setDocumentStatus } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 /** The document's status, shown as a coloured pill that's also the control:
  * pick another status to change it. */
@@ -15,6 +16,7 @@ export function DocumentStatusControl({
   documentId: string;
   status: DocumentDisplayStatus;
 }) {
+  const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   // What the server rendered, until the user picks something else and it's
@@ -31,7 +33,7 @@ export function DocumentStatusControl({
         setChosen(null);
       } catch (e) {
         setChosen(null);
-        setError(e instanceof Error ? e.message : "Couldn't change the status.");
+        setError(e instanceof Error ? e.message : t("Couldn't change the status."));
       }
     });
   }
@@ -42,12 +44,12 @@ export function DocumentStatusControl({
         value={shown}
         disabled={pending}
         onChange={(e) => handleChange(e.target.value as DocumentDisplayStatus)}
-        aria-label="Document status"
+        aria-label={t("Document status")}
         className={`cursor-pointer rounded-full border-0 px-2 py-0.5 text-xs font-medium disabled:opacity-60 ${badgeColorClass(shown)}`}
       >
         {DOCUMENT_STATUS_CHOICES.map((s) => (
           <option key={s} value={s}>
-            {humanizeEnum(s)}
+            {t(humanizeEnum(s))}
           </option>
         ))}
       </select>

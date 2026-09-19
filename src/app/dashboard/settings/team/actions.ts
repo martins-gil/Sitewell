@@ -44,7 +44,7 @@ export async function addTeamMember(formData: FormData) {
     throw e;
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/settings/team");
 }
 
 export async function updateTeamMember(userId: string, formData: FormData) {
@@ -69,7 +69,7 @@ export async function updateTeamMember(userId: string, formData: FormData) {
     throw e;
   }
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/settings/team");
 }
 
 export async function deleteTeamMember(userId: string) {
@@ -96,5 +96,5 @@ export async function deleteTeamMember(userId: string) {
     await tx.user.delete({ where: { id: userId } });
   });
 
-  revalidatePath("/dashboard/team");
+  revalidatePath("/dashboard/settings/team");
 }

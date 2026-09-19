@@ -9,6 +9,7 @@ import {
   type NursingSheetSection,
 } from "@/lib/nursing-sheet";
 import { saveNursingSheet } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950";
@@ -48,6 +49,7 @@ export function NursingSheetEditor({
   visitName: string;
   initial: NursingSheet | null;
 }) {
+  const t = useT();
   // Nothing customised yet: start from the standard sheet visits already use.
   const [sheet, setSheet] = useState<NursingSheet>(initial ?? defaultNursingSheet());
   const [exists, setExists] = useState(initial !== null);
@@ -77,15 +79,15 @@ export function NursingSheetEditor({
         await saveNursingSheet(studyId, templateId, sheet);
         setExists(true);
         setDirty(false);
-        setNotice("Saved.");
+        setNotice(t("Saved."));
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to save.");
+        setError(e instanceof Error ? e.message : t("Failed to save."));
       }
     });
   }
 
   function handleRemove() {
-    if (!window.confirm(`Go back to the standard nursing sheet for ${visitName} visits? Your changes to this one are lost.`)) {
+    if (!window.confirm(t("Go back to the standard nursing sheet for {0} visits? Your changes to this one are lost.", [visitName]))) {
       return;
     }
     setError(null);
@@ -95,9 +97,9 @@ export function NursingSheetEditor({
         setSheet(defaultNursingSheet());
         setExists(false);
         setDirty(true);
-        setNotice("Back to the standard sheet.");
+        setNotice(t("Back to the standard sheet."));
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to remove.");
+        setError(e instanceof Error ? e.message : t("Failed to remove."));
       }
     });
   }
@@ -105,7 +107,7 @@ export function NursingSheetEditor({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
-        <span className="text-neutral-500">Start from</span>
+        <span className="text-neutral-500">{t("Start from")}</span>
         <select
           defaultValue=""
           onChange={(e) => {
@@ -119,33 +121,33 @@ export function NursingSheetEditor({
           }}
           className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
-          <option value="">a template…</option>
+          <option value="">{t("a template…")}</option>
           {NURSING_SHEET_PRESETS.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
             </option>
           ))}
         </select>
-        <span className="text-xs text-neutral-400">Replaces what&apos;s below.</span>
+        <span className="text-xs text-neutral-400">{t("Replaces what's below.")}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
         <div>
-          <label className="block text-xs font-medium">Visit box label</label>
+          <label className="block text-xs font-medium">{t("Visit box label")}</label>
           <input
             value={sheet.visitLabel}
             onChange={(e) => edit((s) => ({ ...s, visitLabel: e.target.value }))}
-            placeholder="Week/Dia"
+            placeholder={t("Week/Dia")}
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-neutral-400">Printed before the visit name, e.g. “Week/Dia: {visitName}”.</p>
+          <p className="mt-1 text-xs text-neutral-400">{t("Printed before the visit name, e.g. “Week/Dia: {0}”.", [visitName])}</p>
         </div>
         <div>
-          <label className="block text-xs font-medium">Second title line (optional)</label>
+          <label className="block text-xs font-medium">{t("Second title line (optional)")}</label>
           <input
             value={sheet.subtitle}
             onChange={(e) => edit((s) => ({ ...s, subtitle: e.target.value }))}
-            placeholder="e.g. OLE Y1 Q4W"
+            placeholder={t("e.g. OLE Y1 Q4W")}
             className={inputClass}
           />
         </div>
@@ -156,14 +158,14 @@ export function NursingSheetEditor({
             onChange={(e) => edit((s) => ({ ...s, signature: e.target.checked }))}
             className="h-4 w-4"
           />
-          Signature and date line at the end
+          {t("Signature and date line at the end")}
         </label>
       </div>
 
       {sheet.sections.map((section, i) => (
         <div key={i} className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-neutral-500">Section {i + 1}</h2>
+            <h2 className="text-sm font-medium text-neutral-500">{t("Section {0}", [i + 1])}</h2>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -171,59 +173,56 @@ export function NursingSheetEditor({
                 disabled={i === 0}
                 onClick={() => edit((s) => ({ ...s, sections: moved(s.sections, i, i - 1) }))}
               >
-                Move up
-              </button>
+                {t("Move up")}</button>
               <button
                 type="button"
                 className={smallButton}
                 disabled={i === sheet.sections.length - 1}
                 onClick={() => edit((s) => ({ ...s, sections: moved(s.sections, i, i + 1) }))}
               >
-                Move down
-              </button>
+                {t("Move down")}</button>
               <button
                 type="button"
                 className="text-xs text-red-700 hover:underline disabled:opacity-40 dark:text-red-400"
                 disabled={sheet.sections.length === 1}
                 onClick={() => edit((s) => ({ ...s, sections: s.sections.filter((_, j) => j !== i) }))}
               >
-                Remove section
-              </button>
+                {t("Remove section")}</button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium">Title</label>
+              <label className="block text-xs font-medium">{t("Title")}</label>
               <input
                 value={section.title}
                 onChange={(e) => editSection(i, (s) => ({ ...s, title: e.target.value }))}
-                placeholder="e.g. Avaliação dos Sinais Vitais"
+                placeholder={t("e.g. Avaliação dos Sinais Vitais")}
                 className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium">Timepoint band (optional)</label>
+              <label className="block text-xs font-medium">{t("Timepoint band (optional)")}</label>
               <input
                 value={section.timepoint}
                 onChange={(e) => editSection(i, (s) => ({ ...s, timepoint: e.target.value }))}
-                placeholder="e.g. Pré-dose"
+                placeholder={t("e.g. Pré-dose")}
                 className={inputClass}
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-medium">Top-left header cell (optional)</label>
+              <label className="block text-xs font-medium">{t("Top-left header cell (optional)")}</label>
               <input
                 value={section.firstColumnHeader}
                 onChange={(e) => editSection(i, (s) => ({ ...s, firstColumnHeader: e.target.value }))}
-                placeholder="e.g. Parâmetro"
+                placeholder={t("e.g. Parâmetro")}
                 className={inputClass}
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-            <span className="text-xs font-medium">Columns</span>
+            <span className="text-xs font-medium">{t("Columns")}</span>
             {(
               [
                 ["result", "Result"],
@@ -250,20 +249,20 @@ export function NursingSheetEditor({
                 onChange={(e) => editSection(i, (s) => ({ ...s, includeKits: e.target.checked }))}
                 className="h-4 w-4"
               />
-              Show the visit&apos;s kits in the header
+              {t("Show the visit's kits in the header")}
             </label>
           </div>
 
           <div>
-            <p className="text-xs font-medium">Rows</p>
+            <p className="text-xs font-medium">{t("Rows")}</p>
             <ul className="mt-1 space-y-2">
               {section.rows.map((row, k) => (
                 <li key={k} className="grid grid-cols-[1fr_5rem_1fr_auto] items-start gap-2">
                   <input
                     value={row.label}
                     onChange={(e) => editRow(i, k, { label: e.target.value })}
-                    placeholder="Row name, e.g. Pulso (bpm)"
-                    aria-label="Row name"
+                    placeholder={t("Row name, e.g. Pulso (bpm)")}
+                    aria-label={t("Row name")}
                     className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
                   />
                   <input
@@ -272,15 +271,15 @@ export function NursingSheetEditor({
                     max={10}
                     value={row.readings}
                     onChange={(e) => editRow(i, k, { readings: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })}
-                    aria-label="Number of readings"
-                    title="Number of readings (e.g. 3 for blood pressure)"
+                    aria-label={t("Number of readings")}
+                    title={t("Number of readings (e.g. 3 for blood pressure)")}
                     className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
                   />
                   <input
                     value={row.note}
                     onChange={(e) => editRow(i, k, { note: e.target.value })}
-                    placeholder="Note beside it (optional)"
-                    aria-label="Row note"
+                    placeholder={t("Note beside it (optional)")}
+                    aria-label={t("Row note")}
                     className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
                   />
                   <span className="flex items-center gap-2 pt-1.5">
@@ -288,7 +287,7 @@ export function NursingSheetEditor({
                       type="button"
                       className={smallButton}
                       disabled={k === 0}
-                      aria-label="Move row up"
+                      aria-label={t("Move row up")}
                       onClick={() => editSection(i, (s) => ({ ...s, rows: moved(s.rows, k, k - 1) }))}
                     >
                       ↑
@@ -297,7 +296,7 @@ export function NursingSheetEditor({
                       type="button"
                       className={smallButton}
                       disabled={k === section.rows.length - 1}
-                      aria-label="Move row down"
+                      aria-label={t("Move row down")}
                       onClick={() => editSection(i, (s) => ({ ...s, rows: moved(s.rows, k, k + 1) }))}
                     >
                       ↓
@@ -308,13 +307,12 @@ export function NursingSheetEditor({
                       disabled={section.rows.length === 1}
                       onClick={() => editSection(i, (s) => ({ ...s, rows: s.rows.filter((_, j) => j !== k) }))}
                     >
-                      Remove
-                    </button>
+                      {t("Remove")}</button>
                   </span>
                 </li>
               ))}
             </ul>
-            <p className="mt-1 text-xs text-neutral-400">The number is how many readings the row has (blood pressure taken 3 times = 3).</p>
+            <p className="mt-1 text-xs text-neutral-400">{t("The number is how many readings the row has (blood pressure taken 3 times = 3).")}</p>
             <button
               type="button"
               onClick={() =>
@@ -322,16 +320,15 @@ export function NursingSheetEditor({
               }
               className="mt-2 text-sm text-neutral-600 hover:underline dark:text-neutral-400"
             >
-              + Add a row
-            </button>
+              {t("+ Add a row")}</button>
           </div>
 
           <div>
-            <label className="block text-xs font-medium">Footnote under the table (optional)</label>
+            <label className="block text-xs font-medium">{t("Footnote under the table (optional)")}</label>
             <input
               value={section.footnote}
               onChange={(e) => editSection(i, (s) => ({ ...s, footnote: e.target.value }))}
-              placeholder="e.g. (*) avaliar com pelo menos 1 minuto de intervalo"
+              placeholder={t("e.g. (*) avaliar com pelo menos 1 minuto de intervalo")}
               className={inputClass}
             />
           </div>
@@ -344,8 +341,7 @@ export function NursingSheetEditor({
         onClick={() => edit((s) => ({ ...s, sections: [...s.sections, structuredClone(EMPTY_SECTION)] }))}
         className="text-sm text-neutral-600 hover:underline disabled:opacity-40 dark:text-neutral-400"
       >
-        + Add a section
-      </button>
+        {t("+ Add a section")}</button>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -355,7 +351,7 @@ export function NursingSheetEditor({
           disabled={pending || (exists && !dirty)}
           className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
         >
-          {pending ? "Saving…" : exists ? "Save changes" : `Use this sheet for ${visitName} visits`}
+          {pending ? t("Saving…") : exists ? t("Save changes") : t("Use this sheet for {0} visits", [visitName])}
         </button>
         {exists && (
           <button
@@ -364,11 +360,10 @@ export function NursingSheetEditor({
             disabled={pending}
             className="text-sm text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
           >
-            Go back to the standard sheet
-          </button>
+            {t("Go back to the standard sheet")}</button>
         )}
         {notice && <span className="text-sm text-green-700 dark:text-green-400">{notice}</span>}
-        {exists && dirty && !notice && <span className="text-xs text-neutral-500">Unsaved changes</span>}
+        {exists && dirty && !notice && <span className="text-xs text-neutral-500">{t("Unsaved changes")}</span>}
       </div>
     </div>
   );

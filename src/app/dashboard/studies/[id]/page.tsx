@@ -6,12 +6,14 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { EditStudyForm } from "@/app/dashboard/studies/edit-study-form";
 import { PiSiteForm } from "./pi-site-form";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StudyOverviewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const t = await getT();
   const { id } = await params;
   const [session, study, patients, protocol] = await Promise.all([
     auth(),
@@ -26,8 +28,7 @@ export default async function StudyOverviewPage({
     <div className="max-w-3xl space-y-6">
       <div>
         <Link href="/dashboard/studies" className="text-sm text-neutral-500 hover:underline">
-          ← Studies
-        </Link>
+          {t("← Studies")}</Link>
         <div className="mt-1 flex items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{study.protocolId}</h1>
           <Badge value={study.status} />
@@ -35,14 +36,13 @@ export default async function StudyOverviewPage({
         <p className="mt-1 text-sm text-neutral-500">{study.title}</p>
         <p className="mt-1 text-xs text-neutral-500">
           {study.phase && <>{study.phase} · </>}
-          {study.sponsor ?? "Sponsor not set"}
+          {study.sponsor ?? t("Sponsor not set")}
         </p>
         <Link
           href={`/dashboard/studies/${study.id}/templates`}
           className="mt-2 inline-block text-sm text-neutral-600 hover:underline dark:text-neutral-400"
         >
-          Visit schedule →
-        </Link>
+          {t("Visit schedule →")}</Link>
       </div>
 
       {canManage && (
@@ -66,7 +66,7 @@ export default async function StudyOverviewPage({
           protocol
             ? {
                 version: protocol.doc.version,
-                releaseLabel: formatDate(protocol.doc.releaseDate),
+                releaseLabel: formatDate(protocol.doc.releaseDate, t.locale),
                 awaitingSignature: protocol.awaitingSignature,
               }
             : null
@@ -76,16 +76,16 @@ export default async function StudyOverviewPage({
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
           <h2 className="text-sm font-medium text-neutral-500">
-            Patients {patients.length > 0 && `(${patients.length})`}
+            {t("Patients")} {patients.length > 0 && `(${patients.length})`}
           </h2>
         </div>
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Subject</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Initials / name</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Stage</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Added</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Subject")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Initials / name")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Stage")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Added")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -100,14 +100,13 @@ export default async function StudyOverviewPage({
                 <td className="whitespace-nowrap px-4 py-2">
                   <Badge value={p.status} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(p.createdAt)}</td>
+                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(p.createdAt, t.locale)}</td>
               </tr>
             ))}
             {patients.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-4 text-center text-neutral-400">
-                  No patients in this study yet.
-                </td>
+                  {t("No patients in this study yet.")}</td>
               </tr>
             )}
           </tbody>
@@ -117,8 +116,7 @@ export default async function StudyOverviewPage({
             href={`/dashboard/subjects?studyId=${study.id}`}
             className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
           >
-            Open in Patients (add a new one here) →
-          </Link>
+            {t("Open in Patients (add a new one here) →")}</Link>
         </div>
       </div>
     </div>

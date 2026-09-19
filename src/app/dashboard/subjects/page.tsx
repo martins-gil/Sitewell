@@ -1,9 +1,10 @@
 import type { SubjectStatus } from "@prisma/client";
 import Link from "next/link";
 import { getSubjects, getStudies, getDuplicationSources } from "@/lib/queries";
-import { formatDate } from "@/lib/format";
+import { formatDate, humanizeEnum } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { AddPatientForm } from "./add-patient-form";
+import { getT } from "@/lib/i18n/server";
 
 const STATUSES: SubjectStatus[] = [
   "IDENTIFIED",
@@ -20,6 +21,7 @@ export default async function SubjectsPage({
 }: {
   searchParams: Promise<{ studyId?: string; status?: string }>;
 }) {
+  const t = await getT();
   const params = await searchParams;
   const status = STATUSES.includes(params.status as SubjectStatus)
     ? (params.status as SubjectStatus)
@@ -35,9 +37,9 @@ export default async function SubjectsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("Patients")}</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {subjects.length} subject{subjects.length === 1 ? "" : "s"} matching current filters
+            {t("{0} subject matching current filters|{0} subjects matching current filters", [subjects.length])}
           </p>
         </div>
         <AddPatientForm studies={studies} sources={duplicationSources} />
@@ -49,7 +51,7 @@ export default async function SubjectsPage({
           defaultValue={params.studyId ?? ""}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
-          <option value="">All studies</option>
+          <option value="">{t("All studies")}</option>
           {studies.map((s) => (
             <option key={s.id} value={s.id}>
               {s.protocolId} — {s.title}
@@ -61,10 +63,10 @@ export default async function SubjectsPage({
           defaultValue={params.status ?? ""}
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
-          <option value="">All stages</option>
+          <option value="">{t("All stages")}</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s.replaceAll("_", " ")}
+              {t(humanizeEnum(s))}
             </option>
           ))}
         </select>
@@ -72,67 +74,39 @@ export default async function SubjectsPage({
           type="submit"
           className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
         >
-          Filter
-        </button>
+          {t("Filter")}</button>
       </form>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Subject</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Initials / name</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Stage</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">I/E criteria</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Added</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Subject")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Initials / name")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Study")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Stage")}</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Added")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {subjects.map((subject) => {
-              const criteria = subject.ieCriteriaSnapshot as
-                | { criterion: string; met: boolean | null }[]
-                | null;
-              return (
-                <tr key={subject.id}>
-                  <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
-                    <Link href={`/dashboard/subjects/${subject.id}`} className="hover:underline">
-                      {subject.subjectCode}
-                    </Link>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2">{subject.displayName ?? "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-2">{subject.study.protocolId}</td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    <Badge value={subject.status} />
-                  </td>
-                  <td className="px-4 py-2">
-                    {criteria && criteria.length > 0 ? (
-                      <ul className="space-y-0.5">
-                        {criteria.map((c, i) => (
-                          <li
-                            key={i}
-                            className={
-                              c.met === true
-                                ? "text-green-700 dark:text-green-400"
-                                : c.met === false
-                                  ? "text-red-700 dark:text-red-400"
-                                  : "text-neutral-500"
-                            }
-                          >
-                            {c.met === true ? "✓" : c.met === false ? "✗" : "○"} {c.criterion}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="text-neutral-400">—</span>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {formatDate(subject.createdAt)}
-                  </td>
-                </tr>
-              );
-            })}
+            {/* The I/E criteria are only shown inside the patient's own file. */}
+            {subjects.map((subject) => (
+              <tr key={subject.id}>
+                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+                  <Link href={`/dashboard/subjects/${subject.id}`} className="hover:underline">
+                    {subject.subjectCode}
+                  </Link>
+                </td>
+                <td className="whitespace-nowrap px-4 py-2">{subject.displayName ?? "—"}</td>
+                <td className="whitespace-nowrap px-4 py-2">{subject.study.protocolId}</td>
+                <td className="whitespace-nowrap px-4 py-2">
+                  <Badge value={subject.status} />
+                </td>
+                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
+                  {formatDate(subject.createdAt, t.locale)}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

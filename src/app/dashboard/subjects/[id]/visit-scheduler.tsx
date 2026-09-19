@@ -7,6 +7,7 @@ import {
   type SchedulingTemplate,
 } from "@/components/add-visit-form";
 import { generateProtocolSchedule } from "@/app/dashboard/visits/actions";
+import { useT } from "@/lib/i18n/client";
 
 /**
  * The "build this patient's program" controls on the patient page: add one
@@ -20,6 +21,7 @@ export function VisitScheduler({
   subject: SchedulingSubject;
   templates: SchedulingTemplate[];
 }) {
+  const t = useT();
   const [mode, setMode] = useState<"none" | "add" | "generate">("none");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -33,11 +35,11 @@ export function VisitScheduler({
         const { created } = await generateProtocolSchedule(subject.id, String(formData.get("anchorDate") ?? ""));
         setMessage(
           created === 0
-            ? "Every protocol visit is already on this patient's schedule."
-            : `Added ${created} protocol visit${created === 1 ? "" : "s"}.`,
+            ? t("Every protocol visit is already on this patient's schedule.")
+            : t("Added {0} protocol visit.|Added {0} protocol visits.", [created]),
         );
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to generate the schedule.");
+        setError(e instanceof Error ? e.message : t("Failed to generate the schedule."));
       }
     });
   }
@@ -50,15 +52,13 @@ export function VisitScheduler({
           onClick={() => setMode(mode === "add" ? "none" : "add")}
           className="rounded-md bg-neutral-900 px-3 py-1.5 font-medium text-white dark:bg-white dark:text-neutral-900"
         >
-          + Add a visit
-        </button>
+          {t("+ Add a visit")}</button>
         <button
           type="button"
           onClick={() => setMode(mode === "generate" ? "none" : "generate")}
           className="rounded-md border border-neutral-300 px-3 py-1.5 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
         >
-          Add all protocol visits from a date
-        </button>
+          {t("Add all protocol visits from a date")}</button>
       </div>
 
       {mode === "add" && (
@@ -77,13 +77,10 @@ export function VisitScheduler({
           className="space-y-2 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
         >
           <p className="text-xs text-neutral-500">
-            Creates every visit type in the study&apos;s visit schedule that this patient doesn&apos;t have yet,
-            dated from the day you enter as Day 0 (Baseline) using each visit&apos;s offset from the protocol.
-            Adjust individual dates afterwards from each visit&apos;s Reschedule action.
-          </p>
+            {t("Creates every visit type in the study's visit schedule that this patient doesn't have yet, dated from the day you enter as Day 0 (Baseline) using each visit's offset from the protocol. Adjust individual dates afterwards from each visit's Reschedule action.")}</p>
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs font-medium">Day 0 (Baseline) date</label>
+              <label className="block text-xs font-medium">{t("Day 0 (Baseline) date")}</label>
               <input
                 type="date"
                 name="anchorDate"
@@ -96,11 +93,10 @@ export function VisitScheduler({
               disabled={pending}
               className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
             >
-              {pending ? "Adding…" : "Add protocol visits"}
+              {pending ? t("Adding…") : t("Add protocol visits")}
             </button>
             <button type="button" onClick={() => setMode("none")} className="text-xs text-neutral-500 hover:underline">
-              Close
-            </button>
+              {t("Close")}</button>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           {message && <p className="text-sm text-green-700 dark:text-green-400">{message}</p>}
