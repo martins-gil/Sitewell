@@ -21,8 +21,12 @@ const COLORS: Record<string, string> = {
   SUPERSEDED: "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
 };
 
+export function badgeColorClass(value: string): string {
+  return COLORS[value] ?? "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
+}
+
 export function Badge({ value }: { value: string }) {
-  const color = COLORS[value] ?? "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
+  const color = badgeColorClass(value);
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
       {humanizeEnum(value)}

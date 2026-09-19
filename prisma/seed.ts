@@ -315,7 +315,9 @@ async function main() {
           version: "v5.0",
           fileUrl: "https://example.com/placeholder/ib.pdf",
           expiryDate: faker.date.soon({ days: 45 }),
-          status: DocumentStatus.ACTIVE,
+          // Not signed yet, so Pending — status is set by people now, no
+          // longer worked out from the missing signature.
+          status: DocumentStatus.DRAFT,
         },
         {
           organizationId: org.id,

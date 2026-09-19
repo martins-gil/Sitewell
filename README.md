@@ -60,6 +60,12 @@ to org A, and a cross-tenant insert is rejected).
   "test data only" warning), patient detail page, an interactively-editable
   I/E criteria list (free-text criterion + met/not-met, not just the seeded
   snapshot)
+- ✅ Postponing or bringing forward a patient's visits: on the patient page,
+  every visit that hasn't happened has "Edit dates" — new date, window
+  before/after, and an option to move that patient's later visits by the same
+  number of days (the usual case when one visit slips). Moved visits are
+  marked Rescheduled and get a fresh reminder. Completed visits are corrected
+  from the visit's own page (Edit visit) instead.
 - ✅ Adding a patient by copying another (Patients → "+ Add patient" → "Copy
   from an existing patient"): the source's visit schedule appears as an
   editable list — set this patient's dates and windows per visit (or "Shift
@@ -103,8 +109,12 @@ to org A, and a cross-tenant insert is rejected).
   title, version, optional release/expiry dates) — **attaching a file is
   optional**, at creation or later via "Attach file" on the row, so the
   register is usable even where file storage isn't (the deployed site).
-  Adding a document with a version supersedes the current one
-  (study+visit+type+title as the matching key), local-disk storage
+  **Status is chosen when a document is added and can be changed any time**
+  from the Status column (Pending / Active / Expired / Superseded); an
+  Active document past its expiry date shows as Expired on its own, and
+  making a document Active (adding it as Active, signing a Pending one, or
+  setting it) supersedes the older Active version with the same study, type
+  and title (study+visit+type+title as the matching key), local-disk storage
   (`src/lib/storage.ts` — prototype only, doesn't work on Vercel, see
   CLAUDE.md), documents can now be scoped to a specific visit as well as a
   study/subject, and status is Pending/Active/Expired/Superseded — computed

@@ -7,10 +7,12 @@ export function EditDocumentDetails({
   documentId,
   version,
   releaseDateInput,
+  expiryDateInput,
 }: {
   documentId: string;
   version: string;
   releaseDateInput: string;
+  expiryDateInput: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -53,6 +55,15 @@ export function EditDocumentDetails({
           type="date"
           name="releaseDate"
           defaultValue={releaseDateInput}
+          className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
+        />
+      </div>
+      <div>
+        <label className="block text-[10px] font-medium text-neutral-500">Expiry date</label>
+        <input
+          type="date"
+          name="expiryDate"
+          defaultValue={expiryDateInput}
           className="rounded-md border border-neutral-300 px-2 py-1 text-xs dark:border-neutral-700 dark:bg-neutral-950"
         />
       </div>

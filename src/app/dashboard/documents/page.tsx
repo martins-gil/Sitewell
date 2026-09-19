@@ -1,10 +1,10 @@
 import { getDocuments, getStudies } from "@/lib/queries";
 import { formatDate, humanizeEnum, isWithinDays } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
-import { Badge } from "@/components/badge";
 import { UploadDocumentForm } from "./upload-form";
 import { SignButton } from "./sign-button";
 import { EditDocumentDetails } from "./edit-document-details";
+import { DocumentStatusControl } from "./document-status-control";
 import { AttachDocumentFile } from "./attach-document-file";
 
 export default async function DocumentsPage({
@@ -101,8 +101,8 @@ export default async function DocumentsPage({
                   >
                     {formatDate(doc.expiryDate)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2">
-                    <Badge value={displayStatus} />
+                  <td className="px-4 py-2">
+                    <DocumentStatusControl documentId={doc.id} status={displayStatus} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                     {doc.signedBy ? `${doc.signedBy.name} · ${formatDate(doc.signedAt)}` : "—"}
@@ -116,6 +116,7 @@ export default async function DocumentsPage({
                           documentId={doc.id}
                           version={doc.version}
                           releaseDateInput={doc.releaseDate ? doc.releaseDate.toISOString().slice(0, 10) : ""}
+                          expiryDateInput={doc.expiryDate ? doc.expiryDate.toISOString().slice(0, 10) : ""}
                         />
                       )}
                     </div>

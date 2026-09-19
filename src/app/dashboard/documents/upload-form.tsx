@@ -70,9 +70,6 @@ export function UploadDocumentForm({
             placeholder="e.g. RCN-101 Protocol"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
-          <p className="mt-1 text-xs text-neutral-400">
-            Uploading the same study + type + title again supersedes the current version.
-          </p>
         </div>
         <div>
           <label className="block text-xs font-medium">Version</label>
@@ -82,6 +79,23 @@ export function UploadDocumentForm({
             placeholder="v1.0"
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium">Status</label>
+          <select
+            name="status"
+            defaultValue="ACTIVE"
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          >
+            <option value="ACTIVE">Active — in force</option>
+            <option value="PENDING">Pending — awaiting sign-off</option>
+            <option value="EXPIRED">Expired</option>
+            <option value="SUPERSEDED">Superseded — replaced by a newer version</option>
+          </select>
+          <p className="mt-1 text-xs text-neutral-400">
+            You can change it later from the Status column. Adding an Active document supersedes the older
+            Active one with the same study, type and title.
+          </p>
         </div>
         <div>
           <label className="block text-xs font-medium">Release date (optional)</label>

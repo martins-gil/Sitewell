@@ -56,6 +56,19 @@ export function VisitUploadForm({ studyId, visitId }: { studyId: string; visitId
           />
         </div>
         <div className="col-span-2">
+          <label className="block text-xs font-medium">Status</label>
+          <select
+            name="status"
+            defaultValue="ACTIVE"
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          >
+            <option value="ACTIVE">Active</option>
+            <option value="PENDING">Pending</option>
+            <option value="EXPIRED">Expired</option>
+            <option value="SUPERSEDED">Superseded</option>
+          </select>
+        </div>
+        <div className="col-span-2">
           <label className="block text-xs font-medium">Title</label>
           <input
             name="title"

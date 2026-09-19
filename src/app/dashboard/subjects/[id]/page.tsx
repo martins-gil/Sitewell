@@ -7,7 +7,8 @@ import { StatusControl } from "./status-control";
 import { IeCriteriaEditor } from "./ie-criteria";
 import { EditDisplayName } from "./edit-display-name";
 import { VisitScheduler } from "./visit-scheduler";
-import { canScheduleVisits } from "@/lib/visit-scheduling";
+import { PatientVisitsTable } from "./patient-visits-table";
+import { canScheduleVisits, DAY_MS } from "@/lib/visit-scheduling";
 
 export default async function SubjectDetailPage({
   params,
@@ -85,34 +86,18 @@ export default async function SubjectDetailPage({
               : "No visits yet."}
           </p>
         ) : (
-          <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
-            <thead className="bg-neutral-50 dark:bg-neutral-900">
-              <tr>
-                <th className="px-5 py-2 text-left font-medium text-neutral-500">Visit</th>
-                <th className="px-5 py-2 text-left font-medium text-neutral-500">Target date</th>
-                <th className="px-5 py-2 text-left font-medium text-neutral-500">Window</th>
-                <th className="px-5 py-2 text-left font-medium text-neutral-500">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {subject.visits.map((v) => (
-                <tr key={v.id}>
-                  <td className="px-5 py-2">
-                    <Link href={`/dashboard/visits/${v.id}`} className="hover:underline">
-                      {v.visitType}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-2">{formatDate(v.targetDate)}</td>
-                  <td className="px-5 py-2 text-neutral-500">
-                    {formatDate(v.windowStart)} – {formatDate(v.windowEnd)}
-                  </td>
-                  <td className="px-5 py-2">
-                    <Badge value={v.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <PatientVisitsTable
+            visits={subject.visits.map((v) => ({
+              id: v.id,
+              visitType: v.visitType,
+              status: v.status,
+              targetLabel: formatDate(v.targetDate),
+              windowLabel: `${formatDate(v.windowStart)} – ${formatDate(v.windowEnd)}`,
+              targetInput: v.targetDate.toISOString().slice(0, 10),
+              windowBeforeDays: Math.round((v.targetDate.getTime() - v.windowStart.getTime()) / DAY_MS),
+              windowAfterDays: Math.round((v.windowEnd.getTime() - v.targetDate.getTime()) / DAY_MS),
+            }))}
+          />
         )}
       </div>
     </div>

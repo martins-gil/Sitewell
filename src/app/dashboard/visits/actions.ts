@@ -160,6 +160,73 @@ export async function updateVisit(visitId: string, formData: FormData) {
   revalidatePath("/dashboard/kits");
 }
 
+/** Moves a visit to another day — postponed or brought forward — and can carry
+ * the patient's LATER visits along by the same number of days, which is what
+ * usually happens when one visit slips. Keeps each moved visit's window size
+ * unless a new window is given for this one. Only for visits that haven't
+ * happened: a completed visit is corrected from its own page (Edit visit). */
+export async function moveVisit(visitId: string, formData: FormData) {
+  const ctx = await requireTenantContext();
+
+  const targetDate = parseDateOnly(String(formData.get("targetDate") ?? ""));
+  const windowBefore = wholeDays(formData.get("windowBeforeDays"));
+  const windowAfter = wholeDays(formData.get("windowAfterDays"));
+  const moveLater = formData.get("moveLater") === "on";
+
+  const subjectId = await withTenantContext(ctx, async (tx) => {
+    const visit = await tx.visit.findUniqueOrThrow({ where: { id: visitId } });
+    if (visit.status === "COMPLETED") {
+      throw new Error("A completed visit can't be moved — correct its date with Edit visit on the visit page.");
+    }
+
+    const deltaDays = Math.round((targetDate.getTime() - visit.targetDate.getTime()) / DAY_MS);
+    const dayChanged = visit.targetDate.toISOString().slice(0, 10) !== targetDate.toISOString().slice(0, 10);
+
+    await tx.visit.update({
+      where: { id: visitId },
+      data: {
+        targetDate,
+        windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
+        windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
+        // Moving a scheduled visit makes it Rescheduled, as the list's
+        // Reschedule does; a visit already Missed/Rescheduled keeps its status.
+        status: dayChanged && visit.status === "SCHEDULED" ? "RESCHEDULED" : visit.status,
+        reminderSentAt: dayChanged ? null : visit.reminderSentAt,
+      },
+    });
+
+    if (moveLater && deltaDays !== 0) {
+      const later = await tx.visit.findMany({
+        where: {
+          subjectId: visit.subjectId,
+          id: { not: visitId },
+          targetDate: { gt: visit.targetDate },
+          status: { in: ["SCHEDULED", "RESCHEDULED"] },
+        },
+      });
+      const shift = deltaDays * DAY_MS;
+      for (const v of later) {
+        await tx.visit.update({
+          where: { id: v.id },
+          data: {
+            targetDate: new Date(v.targetDate.getTime() + shift),
+            windowStart: new Date(v.windowStart.getTime() + shift),
+            windowEnd: new Date(v.windowEnd.getTime() + shift),
+            status: v.status === "SCHEDULED" ? "RESCHEDULED" : v.status,
+            reminderSentAt: null,
+          },
+        });
+      }
+    }
+
+    return visit.subjectId;
+  });
+
+  refresh();
+  revalidatePath(`/dashboard/subjects/${subjectId}`);
+  revalidatePath("/dashboard/visits/[id]", "page");
+}
+
 /** Saves the details printed on a visit's checklist document, each to where
  * it actually lives: PI name and site number on the study, protocol version
  * and release date on the study's protocol document, and the "(V3)" label and

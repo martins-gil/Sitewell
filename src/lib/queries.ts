@@ -571,7 +571,9 @@ export async function getExpiringDocuments(daysAhead = 60) {
   const until = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
   return withTenantContext(ctx, (tx) =>
     tx.document.findMany({
-      where: { expiryDate: { gte: now, lte: until } },
+      // Not documents already retired by hand (Expired/Superseded) — only ones
+      // that are still in force, or pending, and about to lapse.
+      where: { expiryDate: { gte: now, lte: until }, status: { notIn: ["EXPIRED", "SUPERSEDED"] } },
       include: { study: { select: { title: true, protocolId: true } } },
       orderBy: { expiryDate: "asc" },
     }),

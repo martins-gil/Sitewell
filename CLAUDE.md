@@ -90,14 +90,23 @@ picks this repo up next.
   WHERE migration_name = '...'` with the SHA-256 of the new file content
   (`Get-FileHash -Algorithm SHA256`), never `migrate reset` on a database with
   real work in it.
-- **Document status is computed, not stored** (`src/lib/document-status.ts`'s
-  `getDocumentDisplayStatus`) — Pending/Active/Expired derive live from
-  `signedAt`/`expiryDate`; the `status` column on `Document` only still holds
-  meaning for `SUPERSEDED` (set by the upload action when a newer version
-  replaces one). Never read `doc.status` directly for a user-facing badge —
-  always go through `getDocumentDisplayStatus`, or a fixed expiry date and an
-  unsigned document will keep showing whatever stale status it was created
-  with.
+- **Document status is SET BY PEOPLE and stored** (this used to be computed
+  from `signedAt`/`expiryDate` — it isn't anymore; migration
+  `20260921090000_document_status_is_set_by_people` converted existing rows so
+  nothing changed on screen). The user picks it when adding a document and can
+  change it any time (`setDocumentStatus`, `DocumentStatusControl`). Four
+  states: Pending (stored as `DRAFT`), Active, Expired, Superseded
+  (`toStoredStatus`/`getDocumentDisplayStatus` in `src/lib/document-status.ts`).
+  Still never read `doc.status` directly for a badge — go through
+  `getDocumentDisplayStatus`, because one rule is still automatic: an ACTIVE
+  document whose expiry date has passed is shown as Expired (so
+  `assertCanBeActive` refuses setting Active on one — fix the expiry first).
+  Versioning is tied to becoming ACTIVE, not to being added: adding an Active
+  document, signing a Pending one (which activates it), or setting one to
+  Active all run `supersedeOlderVersions` (same study/subject/visit/type/title,
+  older Active → Superseded). A document added as Pending does NOT retire the
+  version currently in force. Anyone signed in can change a status; the audit
+  trigger records who and when.
 - **Documents can be scoped to a study, a subject, AND/OR a specific visit**
   (`Document.visitId`, nullable, added after the initial schema). The
   supersede-on-reupload match key in `documents/actions.ts` includes

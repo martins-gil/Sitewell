@@ -12,6 +12,7 @@ import { Badge } from "@/components/badge";
 import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
+import { DocumentStatusControl } from "@/app/dashboard/documents/document-status-control";
 import { VisitDocHeader } from "./visit-doc-header";
 import { EditVisitForm } from "./edit-visit-form";
 import { DeleteVisitButton } from "./delete-visit-button";
@@ -153,7 +154,7 @@ export default async function VisitDetailPage({
                     <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{humanizeEnum(doc.type)}</td>
                     <td className="whitespace-nowrap px-4 py-2">{doc.version}</td>
                     <td className="whitespace-nowrap px-4 py-2">
-                      <Badge value={getDocumentDisplayStatus(doc)} />
+                      <DocumentStatusControl documentId={doc.id} status={getDocumentDisplayStatus(doc)} />
                     </td>
                   </tr>
                 ))}
