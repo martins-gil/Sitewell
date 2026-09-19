@@ -53,10 +53,13 @@ to org A, and a cross-tenant insert is rejected).
 - ✅ Module 1 (Patients — renamed from "Recruitment" per pilot feedback):
   patient list with study/stage filters, an "+ Add patient" form (choose a
   study, optional subject code — auto-generated as PROTOCOL-NNNN if left
-  blank — optional referral source; always creates the subject with
-  `is_test_data: true`, no form control to override it, per PROJECT_SPEC.md's
-  Phase 5 gate), patient detail page, an interactively-editable I/E criteria
-  list (free-text criterion + met/not-met, not just the seeded snapshot)
+  blank — optional initials/name, editable later from the patient page;
+  referral source was removed per pilot feedback; always creates the subject
+  with `is_test_data: true`, no form control to override it, per
+  PROJECT_SPEC.md's Phase 5 gate — the initials/name field carries the same
+  "test data only" warning), patient detail page, an interactively-editable
+  I/E criteria list (free-text criterion + met/not-met, not just the seeded
+  snapshot)
 - ✅ Module 2 (Visits): protocol visit-schedule builder per study
   (`/dashboard/studies/[id]/templates`), auto-generation of a subject's
   visits on enrollment, visit status actions (complete/miss/reschedule), a
@@ -93,11 +96,27 @@ to org A, and a cross-tenant insert is rejected).
   details" form on the study's visit-schedule page — fixed facts about the
   protocol document, not derived from whoever's logged in or when the file
   happens to be downloaded.
-- ✅ Kits: a lightweight inventory module (`/dashboard/kits`) for physical/
-  lab kit batches — name, which study, optionally which visit type they're
-  earmarked for, and an expiry date (highlighted amber within 30 days, red
-  once past). Not tied to an individual subject's visit; this is site
-  inventory, not a per-subject dispensing log.
+- ✅ Kits Inventory (`/dashboard/kits`): physical/lab kits — name, study,
+  expiry date, optionally earmarked for a visit type, and optionally linked
+  to one specific patient visit (from the inventory row, the add form, or
+  the visit's own page — a kit and its visit must be in the same study).
+  Filter by study; "Show used kits" reveals ones already removed. Once a
+  linked visit has an actual date, the kit can be removed from inventory as
+  used (kept as a row with `usedAt`, restorable). Expiry handling:
+  - Within 4 weeks of expiry (or already expired) and not marked ordered →
+    an orange banner across the top of every dashboard page, back every day
+    ("Dismiss for today" only hides it until tomorrow), plus a "Mark as
+    ordered" button on the banner and the inventory row that clears it.
+  - The same kits are emailed to every user in the organization (the address
+    they log in with) every 3 days until marked ordered — one daily Vercel
+    Cron run (`/api/cron/kit-expiry`, `vercel.json`) that spaces emails by
+    `lastExpiryEmailAt`. Needs `CRON_SECRET` set on the project, and
+    `RESEND_API_KEY` (plus a verified sending domain to reach anyone but the
+    Resend account owner) to actually deliver — otherwise it logs to the
+    console. See `.env.example`.
+  - Overview shows how many kits expire in the next 2 months (and how many
+    already have).
+  Site inventory, not a full per-subject dispensing log.
 - ✅ Installable on iPad/Android as a PWA — "Add to Home Screen" from Safari
   or Chrome gets an icon, a standalone (no browser chrome) window, and the
   themed status bar (`src/app/manifest.ts`, icons in `public/icons/`, the

@@ -156,11 +156,37 @@ picks this repo up next.
   used it. `addChecklistTemplateItem` upserts into the library on every add
   (by `[organizationId, label]`), so the library only ever grows from real
   usage; nothing prunes it.
-- **Kits are study/visit-type inventory, not per-subject.** `Kit` has no
-  link to an individual `Subject` or `Visit` — `visitScheduleTemplateId` is
-  which visit TYPE a batch is earmarked for (e.g. "Baseline kits, Lot B"),
-  not which subject received one. If a per-subject dispensing log is ever
-  wanted, that is a different model, not a change to this one.
+- **Kits are inventory with an optional link to one visit, not a dispensing
+  log.** `Kit.visitScheduleTemplateId` earmarks a visit TYPE;
+  `Kit.visitId` (nullable, `ON DELETE SET NULL`) ties it to one specific
+  subject's visit — always same-study, enforced in `assignKitToVisit`/
+  `addKit`, not just in the pickers. `usedAt` is a soft "removed from
+  inventory" (only allowed once the linked visit has an `actualDate`,
+  checked server-side in `markKitUsed`); `orderedAt` acknowledges a
+  replacement was ordered. Both exclude the kit from alerts/counts.
+  Expiry alerts are computed, not stored: the banner
+  (`getExpiringKitAlerts`, rendered by `dashboard/layout.tsx`) shows any
+  kit with `expiryDate <= now + 28 days`, unordered and unused — including
+  already-expired ones. "Daily" is just that: it renders on every visit, and
+  "Dismiss for today" is a per-browser `localStorage` date, so it returns
+  tomorrow. Constants live in `src/lib/kits.ts`.
+- **The kit-expiry email job is the one place with no logged-in user.**
+  `/api/cron/kit-expiry` (Vercel Cron, `vercel.json`) authenticates with
+  `CRON_SECRET` as a Bearer token and refuses to run at all if that env var
+  is unset. `src/lib/kit-reminders.ts` then runs through the normal
+  `app_runtime` client via `withTenantContext` with a synthetic
+  platform-admin context (RLS already allows that GUC to see every org) —
+  do NOT reach for `prisma-auth.ts` (owner role) for this; that client is for
+  the login bootstrap only. It emails all users of the kit's organization
+  (not just study assignees — Team-page-created users have no assignments),
+  one email per recipient, spaced 3 days via `lastExpiryEmailAt` with half a
+  day of slack so a daily cron doesn't drift to every 4 days. Emails are sent
+  between two short transactions, not inside one, so a slow provider can't
+  hit Prisma's interactive-transaction timeout.
+- **Patients have an optional `displayName` (initials/name) and no referral
+  source** — `referral_source` was dropped in migration
+  `20260919090000_kits_inventory_and_patient_name` at the user's request.
+  Still synthetic-only data until Phase 5; the form says so.
 - **Study and Team management (`/dashboard/studies` add/edit,
   `/dashboard/team`) are gated to `ORG_ADMIN`/platform admin**, checked both
   in the page (hides the UI, and `/dashboard/team` refuses to even query

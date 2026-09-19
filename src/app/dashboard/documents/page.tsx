@@ -5,8 +5,16 @@ import { Badge } from "@/components/badge";
 import { UploadDocumentForm } from "./upload-form";
 import { SignButton } from "./sign-button";
 
-export default async function DocumentsPage() {
-  const [documents, studies] = await Promise.all([getDocuments(), getStudies()]);
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ studyId?: string }>;
+}) {
+  const params = await searchParams;
+  const [documents, studies] = await Promise.all([
+    getDocuments({ studyId: params.studyId }),
+    getStudies(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -19,6 +27,27 @@ export default async function DocumentsPage() {
       </div>
 
       <UploadDocumentForm studies={studies} />
+
+      <form className="flex flex-wrap gap-3" method="get">
+        <select
+          name="studyId"
+          defaultValue={params.studyId ?? ""}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+        >
+          <option value="">All studies</option>
+          {studies.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.protocolId} — {s.title}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Filter
+        </button>
+      </form>
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">

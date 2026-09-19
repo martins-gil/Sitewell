@@ -35,6 +35,15 @@ export async function updateSubjectStatus(subjectId: string, status: SubjectStat
   revalidatePath("/dashboard");
 }
 
+export async function updateSubjectDisplayName(subjectId: string, displayName: string) {
+  const ctx = await requireTenantContext();
+  await withTenantContext(ctx, (tx) =>
+    tx.subject.update({ where: { id: subjectId }, data: { displayName: displayName.trim() || null } }),
+  );
+  revalidatePath(`/dashboard/subjects/${subjectId}`);
+  revalidatePath("/dashboard/subjects");
+}
+
 type IeCriterion = { criterion: string; met: boolean };
 
 export async function addIeCriterion(subjectId: string, criterion: string, met: boolean) {

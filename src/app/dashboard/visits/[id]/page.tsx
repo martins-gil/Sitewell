@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getVisitById, getVisitChecklist } from "@/lib/queries";
+import { getVisitById, getVisitChecklist, getAssignableKitsForStudy } from "@/lib/queries";
 import { formatDate, humanizeEnum } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
 import { Badge } from "@/components/badge";
 import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
+import { VisitKits } from "./visit-kits";
 
 export default async function VisitDetailPage({
   params,
@@ -15,6 +16,7 @@ export default async function VisitDetailPage({
   const { id } = await params;
   const [visit, checklist] = await Promise.all([getVisitById(id), getVisitChecklist(id)]);
   if (!visit) notFound();
+  const availableKits = await getAssignableKitsForStudy(visit.studyId);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -50,6 +52,24 @@ export default async function VisitDetailPage({
       <div>
         <h2 className="mb-3 text-sm font-medium text-neutral-500">Procedure checklist</h2>
         <VisitChecklist visitId={visit.id} items={checklist} />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-neutral-500">Kits for this visit</h2>
+        <VisitKits
+          visitId={visit.id}
+          visitOccurred={visit.actualDate !== null}
+          kits={visit.kits.map((k) => ({
+            id: k.id,
+            name: k.name,
+            expiryLabel: formatDate(k.expiryDate),
+            used: k.usedAt !== null,
+          }))}
+          availableKits={availableKits.map((k) => ({
+            id: k.id,
+            label: `${k.name} · expires ${formatDate(k.expiryDate)}`,
+          }))}
+        />
       </div>
 
       <div>

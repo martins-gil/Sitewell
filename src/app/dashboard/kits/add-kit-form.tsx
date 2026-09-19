@@ -4,8 +4,9 @@ import { useRef, useState, useTransition } from "react";
 import { addKit } from "./actions";
 
 type Study = { id: string; protocolId: string; templates: { id: string; name: string }[] };
+type VisitOption = { id: string; studyId: string; label: string };
 
-export function AddKitForm({ studies }: { studies: Study[] }) {
+export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitOptions: VisitOption[] }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export function AddKitForm({ studies }: { studies: Study[] }) {
       action={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
-      <h2 className="text-sm font-medium text-neutral-500">Add a kit</h2>
+      <h2 className="text-sm font-medium text-neutral-500">Add a kit to inventory</h2>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-medium">Study</label>
@@ -63,6 +64,24 @@ export function AddKitForm({ studies }: { studies: Study[] }) {
                 {t.name}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium">Link to a specific patient visit (optional)</label>
+          <select
+            key={studyId}
+            name="visitId"
+            defaultValue=""
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          >
+            <option value="">Not linked to a visit yet</option>
+            {visitOptions
+              .filter((v) => v.studyId === studyId)
+              .map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
           </select>
         </div>
         <div className="col-span-2">

@@ -12,6 +12,11 @@ export function isWithinDays(date: Date | null, days: number): boolean {
   return date.getTime() - Date.now() < days * 24 * 60 * 60 * 1000;
 }
 
+/** Whole days from now until the date (negative once it's past). */
+export function daysUntil(date: Date): number {
+  return Math.ceil((date.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
 export function isPast(date: Date | null): boolean {
   if (!date) return false;
   return date.getTime() < Date.now();

@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { StatusControl } from "./status-control";
 import { IeCriteriaEditor } from "./ie-criteria";
+import { EditDisplayName } from "./edit-display-name";
 
 export default async function SubjectDetailPage({
   params,
@@ -30,6 +31,9 @@ export default async function SubjectDetailPage({
         <p className="mt-1 text-sm text-neutral-500">
           {subject.study.protocolId} — {subject.study.title}
         </p>
+        <div className="mt-1">
+          <EditDisplayName subjectId={subject.id} initial={subject.displayName} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -44,9 +48,6 @@ export default async function SubjectDetailPage({
         <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
           <h2 className="mb-3 text-sm font-medium text-neutral-500">I/E criteria</h2>
           <IeCriteriaEditor subjectId={subject.id} initialCriteria={criteria ?? []} />
-          <p className="mt-3 text-xs text-neutral-500">
-            Referral source: {subject.referralSource ?? "—"}
-          </p>
         </div>
       </div>
 

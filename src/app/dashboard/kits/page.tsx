@@ -1,72 +1,91 @@
-import { getKits, getStudiesWithTemplatesForKits } from "@/lib/queries";
+import { getKits, getLinkableVisits, getStudiesWithTemplatesForKits } from "@/lib/queries";
 import { formatDate, isWithinDays, isPast } from "@/lib/format";
+import { KIT_EXPIRY_WARNING_DAYS } from "@/lib/kits";
 import { AddKitForm } from "./add-kit-form";
-import { DeleteKitButton } from "./delete-kit-button";
+import { KitsTable, type KitRow } from "./kits-table";
 
-export default async function KitsPage() {
-  const [kits, studies] = await Promise.all([getKits(), getStudiesWithTemplatesForKits()]);
+export default async function KitsInventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ studyId?: string; showUsed?: string }>;
+}) {
+  const params = await searchParams;
+  const showUsed = params.showUsed === "1";
+
+  const [kits, studies, visitOptions] = await Promise.all([
+    getKits({ studyId: params.studyId, showUsed }),
+    getStudiesWithTemplatesForKits(),
+    getLinkableVisits(),
+  ]);
+
+  // Dates and expiry states are worked out here, on the server, so the client
+  // table renders the same text on both sides and never has to read the clock.
+  const rows: KitRow[] = kits.map((kit) => ({
+    id: kit.id,
+    name: kit.name,
+    studyId: kit.studyId,
+    protocolId: kit.study.protocolId,
+    visitTypeName: kit.visitScheduleTemplate?.name ?? null,
+    visit: kit.visit
+      ? {
+          id: kit.visit.id,
+          label: `${kit.visit.subject.subjectCode} · ${kit.visit.visitType} · ${formatDate(
+            kit.visit.actualDate ?? kit.visit.targetDate,
+          )}`,
+          occurred: kit.visit.actualDate !== null,
+        }
+      : null,
+    expiryLabel: formatDate(kit.expiryDate),
+    expiryState: !kit.expiryDate
+      ? "none"
+      : isPast(kit.expiryDate)
+        ? "expired"
+        : isWithinDays(kit.expiryDate, KIT_EXPIRY_WARNING_DAYS)
+          ? "soon"
+          : "ok",
+    orderedLabel: kit.orderedAt ? formatDate(kit.orderedAt) : null,
+    usedLabel: kit.usedAt ? formatDate(kit.usedAt) : null,
+  }));
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Kits</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Kits Inventory</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {kits.length} kit{kits.length === 1 ? "" : "s"}. Site inventory of kit batches, optionally
-          earmarked for a specific visit type.
+          {rows.length} kit{rows.length === 1 ? "" : "s"}
+          {showUsed ? " (including used)" : ""}. Kits expiring within {KIT_EXPIRY_WARNING_DAYS / 7} weeks
+          raise an orange alert and a reminder email every 3 days until marked as ordered.
         </p>
       </div>
 
-      <AddKitForm studies={studies} />
+      <AddKitForm studies={studies} visitOptions={visitOptions} />
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
-        <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
-          <thead className="bg-neutral-50 dark:bg-neutral-900">
-            <tr>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Kit</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Assigned visit</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Expiry</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {kits.map((kit) => {
-              const expiringSoon = isWithinDays(kit.expiryDate, 30);
-              const expired = isPast(kit.expiryDate);
-              return (
-                <tr key={kit.id}>
-                  <td className="px-4 py-2">{kit.name}</td>
-                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{kit.study.protocolId}</td>
-                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {kit.visitScheduleTemplate?.name ?? "—"}
-                  </td>
-                  <td
-                    className={`whitespace-nowrap px-4 py-2 ${
-                      expired
-                        ? "font-medium text-red-600 dark:text-red-400"
-                        : expiringSoon
-                          ? "font-medium text-amber-600 dark:text-amber-400"
-                          : "text-neutral-500"
-                    }`}
-                  >
-                    {formatDate(kit.expiryDate)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-right">
-                    <DeleteKitButton kitId={kit.id} />
-                  </td>
-                </tr>
-              );
-            })}
-            {kits.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-4 text-center text-neutral-400">
-                  No kits recorded yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <form className="flex flex-wrap items-center gap-3" method="get">
+        <select
+          name="studyId"
+          defaultValue={params.studyId ?? ""}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+        >
+          <option value="">All studies</option>
+          {studies.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.protocolId}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
+          <input type="checkbox" name="showUsed" value="1" defaultChecked={showUsed} />
+          Show used kits
+        </label>
+        <button
+          type="submit"
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Filter
+        </button>
+      </form>
+
+      <KitsTable kits={rows} visitOptions={visitOptions} />
     </div>
   );
 }

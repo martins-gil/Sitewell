@@ -1,14 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
+import { getExpiringKitAlerts } from "@/lib/queries";
+import { daysUntil, formatDate } from "@/lib/format";
 import { SignOutButton } from "./sign-out-button";
+import { KitExpiryBanner } from "./kit-expiry-banner";
 
 const NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/subjects", label: "Patients" },
   { href: "/dashboard/studies", label: "Studies" },
   { href: "/dashboard/visits", label: "Visits Schedule" },
-  { href: "/dashboard/kits", label: "Kits" },
+  { href: "/dashboard/kits", label: "Kits Inventory" },
   { href: "/dashboard/documents", label: "Documents" },
   { href: "/dashboard/feedback", label: "Feedback" },
   { href: "/dashboard/settings/security", label: "Security" },
@@ -21,8 +24,22 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const canManageTeam = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
   const nav = canManageTeam ? [...NAV, TEAM_NAV_ITEM] : NAV;
 
+  // A platform admin has no organization of their own, so there's no "their"
+  // kits to warn about.
+  const expiringKits = session?.user?.organizationId
+    ? (await getExpiringKitAlerts()).map((k) => ({
+        id: k.id,
+        name: k.name,
+        protocolId: k.study.protocolId,
+        expiryLabel: formatDate(k.expiryDate),
+        daysLeft: k.expiryDate ? daysUntil(k.expiryDate) : 0,
+      }))
+    : [];
+
   return (
-    <div className="flex min-h-full flex-1">
+    <div className="flex min-h-full flex-1 flex-col">
+      <KitExpiryBanner kits={expiringKits} />
+      <div className="flex flex-1">
       <aside className="flex w-56 flex-col border-r border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-950">
         <div className="mb-6 px-2 text-lg font-semibold tracking-tight">SiteWell-ct</div>
         <nav className="flex flex-1 flex-col gap-1">
@@ -45,6 +62,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </div>
       </aside>
       <main className="flex-1 overflow-y-auto p-8">{children}</main>
+      </div>
     </div>
   );
 }

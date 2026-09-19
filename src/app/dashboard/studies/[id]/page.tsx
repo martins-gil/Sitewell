@@ -66,8 +66,8 @@ export default async function StudyOverviewPage({
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Subject</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">Initials / name</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Stage</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Referral source</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Added</th>
             </tr>
           </thead>
@@ -79,11 +79,9 @@ export default async function StudyOverviewPage({
                     {p.subjectCode}
                   </Link>
                 </td>
+                <td className="whitespace-nowrap px-4 py-2">{p.displayName ?? "—"}</td>
                 <td className="whitespace-nowrap px-4 py-2">
                   <Badge value={p.status} />
-                </td>
-                <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                  {p.referralSource ?? "—"}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{formatDate(p.createdAt)}</td>
               </tr>

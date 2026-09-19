@@ -1,5 +1,7 @@
 import type { SubjectStatus } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
+import { formatDate } from "@/lib/format";
+import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -109,6 +111,10 @@ export async function getVisitById(id: string) {
         documents: {
           include: { signedBy: { select: { name: true } } },
           orderBy: { createdAt: "desc" },
+        },
+        kits: {
+          select: { id: true, name: true, expiryDate: true, usedAt: true },
+          orderBy: { name: "asc" },
         },
       },
     }),
@@ -251,10 +257,11 @@ export async function getAllVisits() {
   );
 }
 
-export async function getDocuments() {
+export async function getDocuments(filters: { studyId?: string } = {}) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
     tx.document.findMany({
+      where: { studyId: filters.studyId || undefined },
       include: {
         study: { select: { title: true, protocolId: true } },
         signedBy: { select: { name: true } },
@@ -274,15 +281,101 @@ export async function getFeedbackSubmissions() {
   );
 }
 
-export async function getKits() {
+/** Kits inventory. Used kits (usedAt set) are hidden unless showUsed. */
+export async function getKits(filters: { studyId?: string; showUsed?: boolean } = {}) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
     tx.kit.findMany({
+      where: {
+        studyId: filters.studyId || undefined,
+        usedAt: filters.showUsed ? undefined : null,
+      },
       include: {
         study: { select: { protocolId: true } },
         visitScheduleTemplate: { select: { name: true } },
+        visit: {
+          select: {
+            id: true,
+            visitType: true,
+            targetDate: true,
+            actualDate: true,
+            subject: { select: { subjectCode: true } },
+          },
+        },
       },
       orderBy: [{ expiryDate: "asc" }, { createdAt: "desc" }],
+    }),
+  );
+}
+
+/** Kits that need the orange banner: expiring within the warning window or
+ * already expired, and not yet marked ordered or used. */
+export async function getExpiringKitAlerts() {
+  const ctx = await requireTenantContext();
+  const warnBy = new Date(Date.now() + KIT_EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000);
+  return withTenantContext(ctx, (tx) =>
+    tx.kit.findMany({
+      where: { expiryDate: { lte: warnBy }, orderedAt: null, usedAt: null },
+      select: {
+        id: true,
+        name: true,
+        expiryDate: true,
+        study: { select: { protocolId: true } },
+      },
+      orderBy: { expiryDate: "asc" },
+    }),
+  );
+}
+
+/** Overview card: kits (not yet used) expiring in the next two months, plus
+ * how many have already expired. */
+export async function getKitExpirySummary() {
+  const ctx = await requireTenantContext();
+  const now = new Date();
+  const until = new Date(now.getTime() + KIT_OVERVIEW_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  return withTenantContext(ctx, async (tx) => {
+    const [expiringSoon, expired] = await Promise.all([
+      tx.kit.count({ where: { usedAt: null, expiryDate: { gte: now, lte: until } } }),
+      tx.kit.count({ where: { usedAt: null, expiryDate: { lt: now } } }),
+    ]);
+    return { expiringSoon, expired };
+  });
+}
+
+/** Visits a kit can still be linked to (upcoming: scheduled or rescheduled),
+ * for the Kits Inventory "link to a visit" pickers. Labels are built here so
+ * server and client render the same text. */
+export async function getLinkableVisits() {
+  const ctx = await requireTenantContext();
+  const visits = await withTenantContext(ctx, (tx) =>
+    tx.visit.findMany({
+      where: { status: { in: ["SCHEDULED", "RESCHEDULED"] } },
+      select: {
+        id: true,
+        studyId: true,
+        visitType: true,
+        targetDate: true,
+        subject: { select: { subjectCode: true } },
+      },
+      orderBy: { targetDate: "asc" },
+    }),
+  );
+  return visits.map((v) => ({
+    id: v.id,
+    studyId: v.studyId,
+    label: `${v.subject.subjectCode} · ${v.visitType} · ${formatDate(v.targetDate)}`,
+  }));
+}
+
+/** Kits of a visit's study that aren't assigned to any visit yet and haven't
+ * been used — what the visit page's "assign a kit" picker offers. */
+export async function getAssignableKitsForStudy(studyId: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, (tx) =>
+    tx.kit.findMany({
+      where: { studyId, visitId: null, usedAt: null },
+      select: { id: true, name: true, expiryDate: true },
+      orderBy: [{ expiryDate: "asc" }, { name: "asc" }],
     }),
   );
 }

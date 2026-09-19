@@ -87,9 +87,9 @@ export default async function SubjectsPage({
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Subject</th>
+              <th className="px-4 py-2 text-left font-medium text-neutral-500">Initials / name</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Study</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Stage</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">Referral source</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">I/E criteria</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">Added</th>
             </tr>
@@ -106,12 +106,10 @@ export default async function SubjectsPage({
                       {subject.subjectCode}
                     </Link>
                   </td>
+                  <td className="whitespace-nowrap px-4 py-2">{subject.displayName ?? "—"}</td>
                   <td className="whitespace-nowrap px-4 py-2">{subject.study.protocolId}</td>
                   <td className="whitespace-nowrap px-4 py-2">
                     <Badge value={subject.status} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
-                    {subject.referralSource ?? "—"}
                   </td>
                   <td className="px-4 py-2">
                     {criteria && criteria.length > 0 ? (

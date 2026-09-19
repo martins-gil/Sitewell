@@ -9,7 +9,7 @@ export async function addSubject(formData: FormData) {
 
   const studyId = String(formData.get("studyId") ?? "");
   const subjectCodeOverride = String(formData.get("subjectCode") ?? "").trim();
-  const referralSource = String(formData.get("referralSource") ?? "").trim() || null;
+  const displayName = String(formData.get("displayName") ?? "").trim() || null;
   const duplicateFromSubjectId = String(formData.get("duplicateFromSubjectId") ?? "").trim() || null;
 
   if (!studyId) throw new Error("Study is required.");
@@ -41,7 +41,7 @@ export async function addSubject(formData: FormData) {
         studyId,
         subjectCode,
         status: "IDENTIFIED",
-        referralSource,
+        displayName,
         isTestData: true,
       },
     });

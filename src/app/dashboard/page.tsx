@@ -1,13 +1,19 @@
 import Link from "next/link";
-import { getSubjectFunnelStats, getUpcomingVisits, getExpiringDocuments } from "@/lib/queries";
+import {
+  getSubjectFunnelStats,
+  getUpcomingVisits,
+  getExpiringDocuments,
+  getKitExpirySummary,
+} from "@/lib/queries";
 import { formatDate, humanizeEnum } from "@/lib/format";
 
 export default async function DashboardOverviewPage() {
-  const [funnel, visitsNextWeek, upcomingVisits, expiringDocs] = await Promise.all([
+  const [funnel, visitsNextWeek, upcomingVisits, expiringDocs, kitSummary] = await Promise.all([
     getSubjectFunnelStats(),
     getUpcomingVisits(7),
     getUpcomingVisits(14),
     getExpiringDocuments(60),
+    getKitExpirySummary(),
   ]);
 
   return (
@@ -19,7 +25,7 @@ export default async function DashboardOverviewPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Link href="/dashboard/subjects" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
           <div className="text-sm text-neutral-500">Patients in funnel</div>
           <div className="mt-1 text-3xl font-semibold">{funnel.total}</div>
@@ -36,6 +42,15 @@ export default async function DashboardOverviewPage() {
         <Link href="/dashboard/documents" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
           <div className="text-sm text-neutral-500">Documents expiring in 60 days</div>
           <div className="mt-1 text-3xl font-semibold">{expiringDocs.length}</div>
+        </Link>
+        <Link href="/dashboard/kits" className="rounded-lg border border-neutral-200 p-5 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600">
+          <div className="text-sm text-neutral-500">Kits expiring in 2 months</div>
+          <div className="mt-1 text-3xl font-semibold">{kitSummary.expiringSoon}</div>
+          {kitSummary.expired > 0 && (
+            <div className="mt-1 text-xs font-medium text-red-600 dark:text-red-400">
+              + {kitSummary.expired} already expired
+            </div>
+          )}
         </Link>
       </div>
 

@@ -86,12 +86,16 @@ export function AddPatientForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">Referral source (optional)</label>
+          <label className="block text-xs font-medium">Initials / name (optional)</label>
           <input
-            name="referralSource"
-            placeholder="e.g. Physician referral"
+            name="displayName"
+            placeholder="e.g. M.C."
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
+          <p className="mt-1 text-xs text-neutral-500">
+            Test data only for now — don&apos;t enter a real patient&apos;s name or initials until the
+            Phase 5 compliance work is done.
+          </p>
         </div>
         <div className="col-span-2">
           <label className="block text-xs font-medium">Duplicate visits from (optional)</label>

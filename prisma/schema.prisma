@@ -192,8 +192,10 @@ model Subject {
   organizationId     String        @map("organization_id")
   studyId            String        @map("study_id")
   subjectCode        String        @map("subject_code")
+  // Optional initials/name shown next to the subject code. Synthetic test
+  // data only until Phase 5 (see PROJECT_SPEC.md) — the forms say so.
+  displayName        String?       @map("display_name")
   status             SubjectStatus @default(IDENTIFIED)
-  referralSource     String?       @map("referral_source")
   ieCriteriaSnapshot Json?         @map("ie_criteria_snapshot")
   isTestData         Boolean       @default(true) @map("is_test_data")
   enrolledAt         DateTime?     @map("enrolled_at")
@@ -276,26 +278,41 @@ model ChecklistTaskLibrary {
   @@map("checklist_task_library")
 }
 
-// Physical/lab kit inventory — a batch of kits earmarked for a specific
-// visit type (e.g. "Baseline blood draw kits, Lot #4521"), with an expiry
-// date. Not tied to an individual subject's visit; this is site inventory,
-// not a per-subject dispensing log.
+// Physical/lab kit inventory — a kit (or batch) with an expiry date, which
+// can be earmarked for a visit TYPE (visitScheduleTemplateId, e.g. "Baseline
+// blood draw kits, Lot #4521") and/or assigned to one specific subject's
+// visit (visitId). Not a full per-subject dispensing log — visitId is just
+// "this kit is set aside for / was used at that visit".
+//
+// orderedAt: someone acknowledged a replacement was ordered — stops the
+// expiry banner and the every-3-days email for this kit.
+// usedAt: soft-removed from inventory once used (only allowed after the
+// linked visit has an actualDate) — kept as a row so history isn't lost, and
+// excluded from expiry alerts/counts.
+// lastExpiryEmailAt: when the expiry reminder email last went out for this
+// kit, so the cron job can space them 3 days apart.
 model Kit {
   id                      String    @id @default(cuid())
   organizationId          String    @map("organization_id")
   studyId                 String    @map("study_id")
   visitScheduleTemplateId String?   @map("visit_schedule_template_id")
+  visitId                 String?   @map("visit_id")
   name                    String
   expiryDate              DateTime? @map("expiry_date")
+  orderedAt               DateTime? @map("ordered_at")
+  usedAt                  DateTime? @map("used_at")
+  lastExpiryEmailAt       DateTime? @map("last_expiry_email_at")
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   organization          Organization           @relation(fields: [organizationId], references: [id])
   study                 Study                  @relation(fields: [studyId], references: [id])
   visitScheduleTemplate VisitScheduleTemplate? @relation(fields: [visitScheduleTemplateId], references: [id])
+  visit                 Visit?                 @relation(fields: [visitId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([studyId])
+  @@index([visitId])
   @@map("kits")
 }
 
@@ -321,6 +338,7 @@ model Visit {
   organization     Organization           @relation(fields: [organizationId], references: [id])
   documents        Document[]
   checklistResults VisitChecklistResult[]
+  kits             Kit[]
 
   @@index([organizationId])
   @@index([studyId, targetDate])

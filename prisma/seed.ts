@@ -12,15 +12,6 @@ const prisma = new PrismaClient({
 
 const DEMO_PASSWORD = "Password123!";
 
-const REFERRAL_SOURCES = [
-  "Physician referral",
-  "Online advertisement",
-  "Patient registry",
-  "Word of mouth",
-  "Community event",
-  "Site database",
-];
-
 const IE_CRITERIA = [
   "Age 18–65",
   "Confirmed diagnosis per protocol",
@@ -357,7 +348,8 @@ async function main() {
           studyId: study.id,
           subjectCode: `${def.protocolId}-${String(i).padStart(4, "0")}`,
           status,
-          referralSource: faker.helpers.arrayElement(REFERRAL_SOURCES),
+          // Synthetic initials only (faker), never a real person's.
+          displayName: `${faker.person.firstName()[0]}.${faker.person.lastName()[0]}.`,
           ieCriteriaSnapshot: IE_CRITERIA.map((criterion) => ({
             criterion,
             met: faker.datatype.boolean({ probability: 0.85 }),
@@ -404,6 +396,18 @@ async function main() {
           });
         }
       }
+    }
+
+    // Link the Baseline kit to one completed Baseline visit, so a fresh
+    // database has a kit that's eligible for "Remove from inventory (used)".
+    const completedBaseline = await prisma.visit.findFirst({
+      where: { studyId: study.id, templateId: baselineTemplate.id, actualDate: { not: null } },
+    });
+    if (completedBaseline) {
+      await prisma.kit.updateMany({
+        where: { studyId: study.id, name: `${def.protocolId} Baseline Blood Draw Kits — Lot B` },
+        data: { visitId: completedBaseline.id },
+      });
     }
   }
 
