@@ -4,7 +4,12 @@ import { readStoredFile } from "@/lib/storage";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const ctx = await requireTenantContext();
+  let ctx;
+  try {
+    ctx = await requireTenantContext();
+  } catch {
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  }
 
   // Looking the row up through withTenantContext is what actually enforces
   // access here — RLS means this returns null for a document in another
