@@ -7,7 +7,7 @@ import { saveUploadedFile } from "@/lib/storage";
 import { parseDisplayStatus, toStoredStatus, type DocumentDisplayStatus } from "@/lib/document-status";
 
 const STORAGE_UNAVAILABLE =
-  "The file couldn't be saved — file storage isn't set up on this site yet. Leave the file empty to log the document without one.";
+  "The file couldn't be saved. Try again, or leave the file empty to log the document without one and attach it later.";
 
 // A file is optional: a document can be logged (title, type, version, dates)
 // with nothing attached and get a file later (attachDocumentFile). Returns null
@@ -16,7 +16,9 @@ async function saveOptionalFile(organizationId: string, file: FormDataEntryValue
   if (!(file instanceof File) || file.size === 0) return null;
   try {
     return (await saveUploadedFile(organizationId, file)).relativePath;
-  } catch {
+  } catch (error) {
+    // Logged for whoever runs the site; the user gets the plain message.
+    console.error("[storage] saving a file failed:", error instanceof Error ? error.message : error);
     throw new Error(STORAGE_UNAVAILABLE);
   }
 }

@@ -108,15 +108,16 @@ to org A, and a cross-tenant insert is rejected).
 - 🟡 Module 3 (Documents): a document is a log line first (study, type,
   title, version, optional release/expiry dates) — **attaching a file is
   optional**, at creation or later via "Attach file" on the row, so the
-  register is usable even where file storage isn't (the deployed site).
+  register is usable without one.
   **Status is chosen when a document is added and can be changed any time**
   from the Status column (Pending / Active / Expired / Superseded); an
   Active document past its expiry date shows as Expired on its own, and
   making a document Active (adding it as Active, signing a Pending one, or
   setting it) supersedes the older Active version with the same study, type
-  and title (study+visit+type+title as the matching key), local-disk storage
-  (`src/lib/storage.ts` — prototype only, doesn't work on Vercel, see
-  CLAUDE.md), documents can now be scoped to a specific visit as well as a
+  and title (study+visit+type+title as the matching key), file storage
+  (`src/lib/storage.ts`: a private Cloudflare R2 bucket when the `R2_*`
+  settings are present — required on Vercel, files up to 4 MB — otherwise the
+  local `uploads/` folder; see CLAUDE.md and `.env.example`), documents can now be scoped to a specific visit as well as a
   study/subject, and status is Pending/Active/Expired/Superseded — computed
   live from `signedAt`/`expiryDate` (`src/lib/document-status.ts`) rather
   than a manually-maintained field, so it's never stale.

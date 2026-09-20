@@ -35,18 +35,22 @@ picks this repo up next.
   `true`. Per PROJECT_SPEC.md, no real subject/patient data is allowed in
   this system before Phase 5 — don't build a path that creates subjects with
   `is_test_data: false`.
-- **Document storage is local disk** (`src/lib/storage.ts`, files under the
-  gitignored `uploads/`), because no object storage (S3/R2/Vercel Blob) is
-  configured. `/api/documents/[id]/file` re-checks org access via
-  `withTenantContext` before reading the file — don't add a route that reads
-  from `uploads/` directly by path without going through that check first.
-  **This does not work on Vercel** — serverless functions there have a
-  read-only filesystem outside `/tmp`, and even `/tmp` doesn't persist or
-  share across invocations, so an uploaded file is gone (or the write fails
-  outright) by the time anything tries to read it back. Swap `storage.ts` for
-  a real object-storage client (S3/R2/Vercel Blob) before relying on document
-  upload in the deployed environment — this is the biggest gap between "runs
-  locally" and "actually usable by pilot testers on the deployed URL."
+- **Document storage has two backends** (`src/lib/storage.ts`): Cloudflare R2
+  (any S3-compatible bucket) when `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`
+  and `R2_SECRET_ACCESS_KEY` are ALL set, else local disk (the gitignored
+  `uploads/`, for development). Vercel functions have no persistent disk, so the
+  deployed site needs the R2 settings — without them an upload fails with the
+  "couldn't be saved" message and the document can still be logged with no file.
+  The bucket must stay PRIVATE and have no public URL: every download goes
+  through `/api/documents/[id]/file`, which re-checks org access via
+  `withTenantContext` before `readStoredFile` is called — don't add a route or
+  a presigned URL that reaches a file without going through that check. Keys are
+  `<organizationId>/<uuid>-<original name>` (the download route derives the
+  file name, extension included, from that). The R2 bucket for this project was
+  created in the EU jurisdiction (its endpoint has `.eu.` in it); that can't be
+  changed after creation. Uploads are capped at 4 MB (`next.config.ts`),
+  because Vercel refuses request bodies over ~4.5 MB; larger files would need
+  uploads straight to the bucket (presigned URLs).
 - **`package.json` needs `"postinstall": "prisma generate"`.** Without it,
   Vercel's build installs dependencies but never generates the Prisma
   Client, and every page that touches the database 500s in production with
@@ -453,6 +457,6 @@ documents the shape for setting this up elsewhere.
 `martins-gil/Sitewell`, Neon Postgres for production. Two databases exist —
 local (`sitepilot`) and Neon (`neondb`) — with independent seeded data
 (different random subject counts; that's expected, not a bug). Document
-upload does NOT work on the deployed site (see the local-disk-storage note
-above) even though it works locally — remember which environment you're
-testing against.
+upload on the deployed site only works once the R2 settings are in Vercel
+(see the storage note above); locally it uses the disk — remember which
+environment you're testing against.

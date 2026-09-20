@@ -25,13 +25,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     bytes = await readStoredFile(document.fileUrl);
   } catch {
-    return NextResponse.json({ error: "File not found on disk" }, { status: 404 });
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
+
+  // Keep the uploaded file's own name (and so its .pdf / .docx extension): the
+  // stored key is `<org>/<uuid>-<original name>`. The title is the fallback.
+  const storedName = document.fileUrl.split("/").pop()?.slice(37) ?? "";
+  const filename = (storedName || document.title).replace(/["\\\r\n]/g, "");
 
   return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${document.title.replace(/"/g, "")}"`,
+      "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
 }
