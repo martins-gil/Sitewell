@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { EditStudyForm } from "@/app/dashboard/studies/edit-study-form";
 import { PiSiteForm } from "./pi-site-form";
+import { StudyCriteriaCard } from "./study-criteria-card";
 import { getT } from "@/lib/i18n/server";
 
 export default async function StudyOverviewPage({
@@ -26,6 +27,7 @@ export default async function StudyOverviewPage({
   ]);
   if (!study) notFound();
   const colorId = resolveStudyColors(allStudies)[study.id] ?? "blue";
+  const ieCriteria = study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
   const departmentName = departments.find((d) => d.id === study.departmentId)?.name ?? null;
   const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
@@ -84,6 +86,14 @@ export default async function StudyOverviewPage({
               }
             : null
         }
+      />
+
+      <StudyCriteriaCard
+        studyId={study.id}
+        initial={{
+          inclusion: ieCriteria?.inclusion ?? [],
+          exclusion: ieCriteria?.exclusion ?? [],
+        }}
       />
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">

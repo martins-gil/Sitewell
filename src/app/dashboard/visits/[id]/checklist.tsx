@@ -8,6 +8,8 @@ import {
   removeVisitChecklistItem,
 } from "./checklist-actions";
 import { useT } from "@/lib/i18n/client";
+import { ChecklistTextImport } from "@/components/checklist-text-import";
+import { addVisitChecklistItemsBulk } from "@/app/dashboard/bulk-checklist-actions";
 
 export type ChecklistItem = {
   id: string;
@@ -182,12 +184,18 @@ export function VisitChecklist({
             </div>
           </form>
         ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
-          >
-            {t("+ Add a procedure to this visit")}</button>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+            >
+              {t("+ Add a procedure to this visit")}</button>
+            <ChecklistTextImport
+              saveLabel={t("Add these to this visit")}
+              onSave={(list) => addVisitChecklistItemsBulk(visitId, list)}
+            />
+          </div>
         )}
       </div>
 

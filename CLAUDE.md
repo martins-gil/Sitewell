@@ -207,8 +207,18 @@ picks this repo up next.
   document yet; a custom visit with no checklist) and skipped server-side by
   `formData.has`, not blanked. Visits themselves are editable
   (`updateVisit`): a visit made from a protocol visit type keeps its name
-  (that's what links it to the checklist); entering an actual date forces
+  UNLESS `canRenameVisit` (queries.ts) says otherwise — the link to the
+  checklist is `templateId`, not the name, so a visit that shares its
+  `templateId` with another of the same patient's visits (a repeat) or already
+  has a different name may be renamed; entering an actual date forces
   Completed; a moved target date clears `reminderSentAt`.
+- **Repeating a visit** (`repeatVisit`, `visits/actions.ts`): a copy keeps the
+  source's `templateId` — that is what keeps the checklist column, version,
+  footnote and nursing sheet identical — and only the name/date/windows
+  change. It may go to another patient of the SAME study (checked server-side,
+  and the patient must `canScheduleVisits`). The source's checklist rows are
+  copied (label/detail/order/removed) but unticked, with no time; notes, kits
+  and documents are not. Returns a result object, never throws.
 - **Procedure date/time, visit notes and nursing sheets.**
   `VisitScheduleTemplate.checklistColumn` (`VERIFIED` | `DATETIME`) is a
   per-visit-TYPE choice of the checklist's last column — it lives on the
@@ -347,6 +357,38 @@ picks this repo up next.
   reach the client. Self-deletion is blocked outright. `PLATFORM_ADMIN` is
   deliberately not an assignable role from this page — it's cross-org, not
   something one org's admin should be able to grant.
+
+- **I/E criteria are typed and live in two places.** `Study.ieCriteria`
+  (`{inclusion: string[], exclusion: string[]}`, saved from the study page's
+  card via `saveStudyCriteria`) is the protocol's list; `Subject.ieCriteriaSnapshot`
+  entries are `{criterion, met, type?: "I" | "E"}` (no `type` = inclusion, for
+  rows saved before the split). `met` always means the criterion AS WRITTEN,
+  so for an exclusion criterion `met: true` ("applies") is the BAD answer —
+  `ie-criteria.tsx` inverts the colours/labels for E. `addSubject` seeds a new
+  patient from the study list (not assessed, `met: null`); a patient can also
+  `loadStudyCriteria` or import pasted text (`addIeCriteriaBulk`), both of
+  which skip a criterion already on the list (same text + type).
+- **Search** (`src/lib/search.ts`, `/api/search`, header `GlobalSearch`, results
+  page `/dashboard/search`): terms split on whitespace/commas/semicolons, ALL
+  must match (accent-insensitive); the DB is queried with the longest term as
+  a `contains` anchor and the rest is filtered in JS. Runs under the caller's
+  tenant context like any other query.
+- **AI is optional and one-way out** (`src/lib/ai.ts`, env `ANTHROPIC_API_KEY`,
+  optional `ANTHROPIC_MODEL`, default `claude-opus-5`). Used by
+  `import-actions.ts` (pasted criteria / checklist text) and
+  `dashboard/help/actions.ts` (Help assistant). Rules: never send patient data
+  (only pasted protocol text and the typed help question, which the UI warns
+  about); every AI feature must have a no-AI fallback (`text-import.ts` rules
+  parser; the Help page lists the closest articles) and returns a result
+  object, never throws; every AI reply is validated (zod) or shown as a
+  suggestion the user confirms before anything is saved; per-user in-memory
+  throttle in `src/lib/throttle.ts`. The Help assistant answers ONLY from
+  `src/lib/help/articles.ts` — when a screen or a button name changes, update
+  the matching article (and its catalog rows), or the assistant will keep
+  teaching the old steps. Article `keywords` are English-only search aids.
+- **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
+  `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
+  is an inline `backgroundColor` with light text (`dark` prop on the nav).
 
 ## Before calling a change done
 

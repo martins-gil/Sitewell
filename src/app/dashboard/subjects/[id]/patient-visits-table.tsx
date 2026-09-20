@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/badge";
+import { RepeatVisitForm } from "@/components/repeat-visit-form";
 import { moveVisit } from "@/app/dashboard/visits/actions";
 import { useT } from "@/lib/i18n/client";
 
@@ -22,9 +23,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const inputClass =
   "mt-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950";
 
-function VisitRow({ visit }: { visit: PatientVisit }) {
+export type RepeatOptions = {
+  subjectId: string;
+  patients: { id: string; subjectCode: string; displayName: string | null }[];
+};
+
+function VisitRow({ visit, repeat }: { visit: PatientVisit; repeat: RepeatOptions | null }) {
   const t = useT();
   const [editing, setEditing] = useState(false);
+  const [repeating, setRepeating] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(visit.targetInput);
@@ -45,6 +52,26 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
         setError(e instanceof Error ? e.message : t("Couldn't move the visit."));
       }
     });
+  }
+
+  if (repeating && repeat) {
+    return (
+      <tr>
+        <td colSpan={5} className="px-5 py-3">
+          <p className="mb-2 text-sm font-medium">{t("Repeat {0}", [visit.visitType])}</p>
+          <RepeatVisitForm
+            visitId={visit.id}
+            defaultName={visit.visitType}
+            sourceDate={visit.targetInput}
+            windowBeforeDays={visit.windowBeforeDays}
+            windowAfterDays={visit.windowAfterDays}
+            subjectId={repeat.subjectId}
+            patients={repeat.patients}
+            onClose={() => setRepeating(false)}
+          />
+        </td>
+      </tr>
+    );
   }
 
   if (editing) {
@@ -140,18 +167,30 @@ function VisitRow({ visit }: { visit: PatientVisit }) {
         <Badge value={visit.status} />
       </td>
       <td className="whitespace-nowrap px-5 py-2 text-right">
-        {canMove ? (
-          <button type="button" onClick={() => setEditing(true)} className="text-xs hover:underline">
-            {t("Edit dates")}</button>
-        ) : (
-          <span className="text-xs text-neutral-400">—</span>
-        )}
+        <span className="inline-flex items-center gap-3">
+          {canMove ? (
+            <button type="button" onClick={() => setEditing(true)} className="text-xs hover:underline">
+              {t("Edit dates")}</button>
+          ) : (
+            <span className="text-xs text-neutral-400">—</span>
+          )}
+          {repeat && (
+            <button
+              type="button"
+              onClick={() => setRepeating(true)}
+              title={t("Repeat or copy this visit →")}
+              className="text-xs hover:underline"
+            >
+              {t("Repeat")}
+            </button>
+          )}
+        </span>
       </td>
     </tr>
   );
 }
 
-export function PatientVisitsTable({ visits }: { visits: PatientVisit[] }) {
+export function PatientVisitsTable({ visits, repeat }: { visits: PatientVisit[]; repeat: RepeatOptions | null }) {
   const t = useT();
   return (
     <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">
@@ -166,7 +205,7 @@ export function PatientVisitsTable({ visits }: { visits: PatientVisit[] }) {
       </thead>
       <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
         {visits.map((v) => (
-          <VisitRow key={v.id} visit={v} />
+          <VisitRow key={v.id} visit={v} repeat={repeat} />
         ))}
       </tbody>
     </table>

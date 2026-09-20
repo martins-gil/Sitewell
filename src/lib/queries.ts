@@ -268,6 +268,7 @@ export async function getSubjectById(id: string) {
             id: true,
             title: true,
             protocolId: true,
+            ieCriteria: true,
             templates: {
               orderBy: { sortOrder: "asc" },
               select: {
@@ -322,6 +323,31 @@ export async function getVisitSchedulingData() {
         scheduledTemplateIds: s.visits.flatMap((v) => (v.templateId ? [v.templateId] : [])),
       })),
     };
+  });
+}
+
+/**
+ * Whether a visit's name can be edited. A visit made from a protocol visit
+ * type keeps that type's name — except once it's one of a REPEATED pair
+ * (the same visit type twice for a patient, e.g. Week 4 repeated as Week 8) or
+ * has been renamed already: then the name is what tells the copies apart.
+ * The link to the visit type (and so its checklist and nursing sheet) is by
+ * `templateId`, never by name, so renaming doesn't break it.
+ */
+export async function canRenameVisit(visitId: string): Promise<boolean> {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const visit = await tx.visit.findUnique({
+      where: { id: visitId },
+      select: { templateId: true, visitType: true, subjectId: true, template: { select: { name: true } } },
+    });
+    if (!visit) return false;
+    if (!visit.templateId) return true;
+    if (visit.visitType !== visit.template?.name) return true;
+    const siblings = await tx.visit.count({
+      where: { subjectId: visit.subjectId, templateId: visit.templateId, id: { not: visitId } },
+    });
+    return siblings > 0;
   });
 }
 

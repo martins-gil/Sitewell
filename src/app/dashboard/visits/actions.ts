@@ -8,6 +8,7 @@ import { generateMissingVisitsForSubject } from "@/lib/visit-generation";
 import { canScheduleVisits, DAY_MS, parseDateOnly, wholeDays } from "@/lib/visit-scheduling";
 import { setStudyPiAndSite } from "@/lib/study-details";
 import { pickProtocolDocument } from "@/lib/protocol-document";
+import { canRenameVisit } from "@/lib/queries";
 
 function refresh() {
   revalidatePath("/dashboard/visits");
@@ -127,11 +128,13 @@ export async function updateVisit(visitId: string, formData: FormData) {
     throw new Error("Enter the actual date for a completed visit.");
   }
 
+  const renamable = await canRenameVisit(visitId);
+
   const subjectId = await withTenantContext(ctx, async (tx) => {
     const visit = await tx.visit.findUniqueOrThrow({ where: { id: visitId } });
 
     let visitType = visit.visitType;
-    if (!visit.templateId) {
+    if (renamable) {
       if (!customName) throw new Error("Visit name is required.");
       visitType = customName;
     }
@@ -158,6 +161,79 @@ export async function updateVisit(visitId: string, formData: FormData) {
   revalidatePath(`/dashboard/subjects/${subjectId}`);
   // Kits offered for removal depend on whether the visit has an actual date.
   revalidatePath("/dashboard/kits");
+}
+
+export type RepeatVisitResult =
+  | { ok: true; id: string }
+  | { ok: false; problem: "NAME_REQUIRED" | "DATE_REQUIRED" | "OTHER_STUDY" | "NOT_SCHEDULABLE" };
+
+/**
+ * Repeats a visit: a new visit that is the same kind of visit — same visit
+ * type, so the same checklist, nursing sheet and document details — under a
+ * different name and date (Week 4 repeated as Week 8, or as Week 4 of another
+ * patient). The source's procedures are copied as they stand (added, removed
+ * and reordered ones included) but start unticked and untimed; its notes,
+ * kits, attached documents, status and dates are not copied, since those
+ * describe what happened at THAT visit. The target patient can be the same one
+ * or another patient of the same study.
+ */
+export async function repeatVisit(sourceVisitId: string, formData: FormData): Promise<RepeatVisitResult> {
+  const ctx = await requireTenantContext();
+
+  const name = String(formData.get("visitType") ?? "").trim();
+  const dateRaw = String(formData.get("targetDate") ?? "");
+  const windowBefore = wholeDays(formData.get("windowBeforeDays"));
+  const windowAfter = wholeDays(formData.get("windowAfterDays"));
+  if (!name) return { ok: false, problem: "NAME_REQUIRED" };
+  if (!dateRaw) return { ok: false, problem: "DATE_REQUIRED" };
+  const targetDate = parseDateOnly(dateRaw);
+
+  const outcome = await withTenantContext(ctx, async (tx): Promise<RepeatVisitResult & { subjectId?: string }> => {
+    const source = await tx.visit.findUniqueOrThrow({ where: { id: sourceVisitId } });
+    const targetSubjectId = String(formData.get("subjectId") ?? "") || source.subjectId;
+    const subject = await tx.subject.findUniqueOrThrow({ where: { id: targetSubjectId } });
+    if (subject.studyId !== source.studyId) return { ok: false, problem: "OTHER_STUDY" };
+    if (!canScheduleVisits(subject.status)) return { ok: false, problem: "NOT_SCHEDULABLE" };
+
+    const created = await tx.visit.create({
+      data: {
+        organizationId: subject.organizationId,
+        subjectId: subject.id,
+        studyId: subject.studyId,
+        // Same visit type: this is what makes its documents identical.
+        templateId: source.templateId,
+        visitType: name,
+        targetDate,
+        windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
+        windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
+        status: "SCHEDULED",
+      },
+    });
+
+    const procedures = await tx.visitChecklistResult.findMany({ where: { visitId: source.id } });
+    if (procedures.length > 0) {
+      await tx.visitChecklistResult.createMany({
+        data: procedures.map((p) => ({
+          organizationId: subject.organizationId,
+          visitId: created.id,
+          templateItemId: p.templateItemId,
+          label: p.label,
+          detail: p.detail,
+          sortOrder: p.sortOrder,
+          removed: p.removed,
+          verified: false,
+          performedAt: null,
+        })),
+      });
+    }
+    return { ok: true, id: created.id, subjectId: subject.id };
+  });
+
+  if (!outcome.ok) return outcome;
+  refresh();
+  revalidatePath(`/dashboard/subjects/${outcome.subjectId}`);
+  revalidatePath(`/dashboard/visits/${sourceVisitId}`);
+  return { ok: true, id: outcome.id };
 }
 
 /** The coordinator's free-text notes for a visit (also printed at the end of

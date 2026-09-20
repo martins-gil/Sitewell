@@ -5,6 +5,8 @@ import {
   getVisitChecklist,
   getVisitChecklistHeader,
   getAssignableKitsForStudy,
+  canRenameVisit,
+  getVisitSchedulingData,
 } from "@/lib/queries";
 import { formatDate, humanizeEnum, toDateTimeInput } from "@/lib/format";
 import { getDocumentDisplayStatus } from "@/lib/document-status";
@@ -13,6 +15,7 @@ import { VisitUploadForm } from "./visit-upload-form";
 import { VisitChecklist } from "./checklist";
 import { VisitKits } from "./visit-kits";
 import { VisitNotes } from "./visit-notes";
+import { RepeatVisitCard } from "./repeat-visit-card";
 import { PageSection } from "@/components/page-section";
 import { DocumentStatusControl } from "@/app/dashboard/documents/document-status-control";
 import { VisitDocHeader } from "./visit-doc-header";
@@ -37,7 +40,14 @@ export default async function VisitDetailPage({
     getVisitChecklistHeader(id),
   ]);
   if (!visit) notFound();
-  const availableKits = await getAssignableKitsForStudy(visit.studyId);
+  const [availableKits, renamable, scheduling] = await Promise.all([
+    getAssignableKitsForStudy(visit.studyId),
+    canRenameVisit(visit.id),
+    getVisitSchedulingData(),
+  ]);
+  // Patients of this study the visit can be repeated for (this one included, if it can take visits).
+  const studyPatients = scheduling.subjects.filter((s) => s.studyId === visit.studyId);
+  const canRepeat = studyPatients.length > 0;
   const nursingSheetUrl = visit.templateId
     ? `/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`
     : null;
@@ -64,7 +74,8 @@ export default async function VisitDetailPage({
         visitId={visit.id}
         values={{
           visitType: visit.visitType,
-          isCustom: visit.templateId === null,
+          // Custom visits, and repeated / renamed ones, can be renamed.
+          isCustom: renamable,
           status: visit.status,
           targetLabel: formatDate(visit.targetDate, t.locale),
           windowLabel: `${formatDate(visit.windowStart, t.locale)} – ${formatDate(visit.windowEnd, t.locale)}`,
@@ -75,6 +86,18 @@ export default async function VisitDetailPage({
           windowAfterDays: Math.round((visit.windowEnd.getTime() - visit.targetDate.getTime()) / DAY_MS),
         }}
       />
+
+      {canRepeat && (
+        <RepeatVisitCard
+          visitId={visit.id}
+          defaultName={visit.visitType}
+          sourceDate={visit.targetDate.toISOString().slice(0, 10)}
+          windowBeforeDays={Math.round((visit.targetDate.getTime() - visit.windowStart.getTime()) / DAY_MS)}
+          windowAfterDays={Math.round((visit.windowEnd.getTime() - visit.targetDate.getTime()) / DAY_MS)}
+          subjectId={visit.subject.id}
+          patients={studyPatients}
+        />
+      )}
 
       <PageSection mode={modes.details} title={t("Document details (printed on the .docx)")}>
         <VisitDocHeader

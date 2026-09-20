@@ -227,6 +227,31 @@ to org A, and a cross-tenant insert is rejected).
   and a password an admin set (new member, or "Reset password" on the Team
   tab — also how to unlock someone) is marked temporary until the user
   replaces it. The audit log no longer stores password hashes or 2FA secrets.
+- ✅ Repeating visits, search, Help and text importers:
+  - **Repeat a visit**: identical visits (Week 4 → Week 8) don't have to be
+    rebuilt. "Repeat" on a patient's visit row (or "Repeat or copy this visit"
+    on the visit page) makes a new visit of the same visit type — same
+    procedures, nursing sheet and document details — with the name and date
+    you give it, for the same patient or another one of the same study. A
+    repeated visit can be renamed afterwards; a plain protocol visit can't.
+  - **Search bar** at the top of every page (Ctrl/⌘+K): patients, visits,
+    studies, documents and kits; several words narrow it down
+    ("RCN-101-0009, week 4"). "See all results" opens `/dashboard/search`.
+  - **Left bar colour** is a Settings preference (cookie `sw_sidebar`).
+  - **Help** (`/dashboard/help`): about two dozen step-by-step answers for a
+    coordinator new to the app, filterable, in all six languages, plus an
+    "Ask a question" box. With `ANTHROPIC_API_KEY` set it writes an answer from
+    those articles; without it it lists the closest articles.
+  - **Paste-text importers**: a study's inclusion / exclusion criteria (study
+    page → "Eligibility criteria (I/E)"), the same for one patient, and a
+    visit type's or a single visit's procedure checklist. The pasted text is
+    split into separate, editable bullet points (inclusion and exclusion apart)
+    that are confirmed before anything is saved. Uses Claude when
+    `ANTHROPIC_API_KEY` is set and built-in rules otherwise — see below.
+  - **AI is optional and never sees patient data.** Only pasted protocol text
+    and Help questions are sent (`src/lib/ai.ts`); the screens say so. Model:
+    `claude-opus-5`, or whatever `ANTHROPIC_MODEL` names. It costs money per
+    use, so both features are throttled per user.
 - ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
   redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin

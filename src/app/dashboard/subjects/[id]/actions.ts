@@ -44,9 +44,16 @@ export async function updateSubjectDisplayName(subjectId: string, displayName: s
   revalidatePath("/dashboard/subjects");
 }
 
-// met: true = meets it, false = doesn't, null = not assessed yet (e.g. a
-// criterion cloned from another patient's list — see addSubject).
-type IeCriterion = { criterion: string; met: boolean | null };
+// met: true = the patient meets the criterion AS WRITTEN, false = doesn't, null =
+// not assessed yet (e.g. a criterion cloned from another patient's list — see
+// addSubject). For an exclusion criterion, "meets it" is the bad answer.
+// type: "I" inclusion / "E" exclusion; criteria saved before the split have none
+// and are treated as inclusion.
+type IeType = "I" | "E";
+type IeCriterion = { criterion: string; met: boolean | null; type?: IeType };
+
+const sameCriterion = (a: { criterion: string; type?: IeType }, b: { criterion: string; type?: IeType }) =>
+  a.criterion.trim().toLowerCase() === b.criterion.trim().toLowerCase() && (a.type ?? "I") === (b.type ?? "I");
 
 async function updateCriteria(subjectId: string, change: (list: IeCriterion[]) => IeCriterion[]) {
   const ctx = await requireTenantContext();
@@ -79,7 +86,7 @@ export async function removeIeCriterion(subjectId: string, index: number) {
   });
 }
 
-export async function addIeCriterion(subjectId: string, criterion: string, met: boolean | null) {
+export async function addIeCriterion(subjectId: string, criterion: string, met: boolean | null, type: IeType = "I") {
   const ctx = await requireTenantContext();
   const trimmed = criterion.trim();
   if (!trimmed) throw new Error("Criterion text is required.");
@@ -90,7 +97,7 @@ export async function addIeCriterion(subjectId: string, criterion: string, met: 
       select: { ieCriteriaSnapshot: true },
     });
     const existing = (subject.ieCriteriaSnapshot as IeCriterion[] | null) ?? [];
-    const updated = [...existing, { criterion: trimmed, met }];
+    const updated = [...existing, { criterion: trimmed, met, type }];
 
     await tx.subject.update({
       where: { id: subjectId },
@@ -99,4 +106,52 @@ export async function addIeCriterion(subjectId: string, criterion: string, met: 
   });
 
   revalidatePath(`/dashboard/subjects/${subjectId}`);
+}
+
+/** Adds a list of criteria (from pasted text, or the study's list) as "not
+ * assessed", skipping any the patient already has (same text and group). */
+async function addNotAssessed(subjectId: string, incoming: { criterion: string; type: IeType }[]) {
+  const ctx = await requireTenantContext();
+  const added = await withTenantContext(ctx, async (tx) => {
+    const subject = await tx.subject.findUniqueOrThrow({
+      where: { id: subjectId },
+      select: { ieCriteriaSnapshot: true },
+    });
+    const existing = (subject.ieCriteriaSnapshot as IeCriterion[] | null) ?? [];
+    const fresh = incoming
+      .map((c) => ({ criterion: c.criterion.trim(), type: c.type }))
+      .filter((c) => c.criterion && !existing.some((e) => sameCriterion(e, c)))
+      .filter((c, i, all) => all.findIndex((o) => sameCriterion(o, c)) === i)
+      .slice(0, 200);
+    if (fresh.length > 0) {
+      await tx.subject.update({
+        where: { id: subjectId },
+        data: { ieCriteriaSnapshot: [...existing, ...fresh.map((c) => ({ ...c, met: null }))] },
+      });
+    }
+    return fresh.length;
+  });
+  revalidatePath(`/dashboard/subjects/${subjectId}`);
+  return { added };
+}
+
+export async function addIeCriteriaBulk(subjectId: string, items: { criterion: string; type: IeType }[]) {
+  return addNotAssessed(subjectId, items.filter((i) => i.type === "I" || i.type === "E"));
+}
+
+/** Copies the study's inclusion/exclusion list onto the patient. */
+export async function loadStudyCriteria(subjectId: string) {
+  const ctx = await requireTenantContext();
+  const list = await withTenantContext(ctx, async (tx) => {
+    const subject = await tx.subject.findUniqueOrThrow({
+      where: { id: subjectId },
+      select: { study: { select: { ieCriteria: true } } },
+    });
+    const value = subject.study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+    return [
+      ...(value?.inclusion ?? []).map((criterion) => ({ criterion, type: "I" as const })),
+      ...(value?.exclusion ?? []).map((criterion) => ({ criterion, type: "E" as const })),
+    ];
+  });
+  return addNotAssessed(subjectId, list);
 }

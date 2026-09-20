@@ -159,6 +159,10 @@ model Study {
   color             String?
   // The department (e.g. Oncology) the study belongs to; null = none set.
   departmentId      String?   @map("department_id")
+  // The protocol's eligibility criteria, split into inclusion and exclusion:
+  // { inclusion: string[], exclusion: string[] }. New patients of the study
+  // can start from this list (each one "not assessed"). Null = none entered.
+  ieCriteria        Json?     @map("ie_criteria")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

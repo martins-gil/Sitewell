@@ -11,7 +11,7 @@ import { useTransition } from "react";
  * (If the address carries filters — /patients?study=… — the click is a normal
  * navigation, which clears them.)
  */
-export function SidebarNav({ items }: { items: { href: string; label: string }[] }) {
+export function SidebarNav({ items, dark }: { items: { href: string; label: string }[]; dark: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [refreshing, startTransition] = useTransition();
@@ -31,10 +31,14 @@ export function SidebarNav({ items }: { items: { href: string; label: string }[]
                 startTransition(() => router.refresh());
               }
             }}
-            className={`rounded-md px-2 py-1.5 text-sm hover:bg-neutral-200 dark:hover:bg-neutral-800 ${
-              active
-                ? "bg-neutral-200 font-medium text-neutral-900 dark:bg-neutral-800 dark:text-white"
-                : "text-neutral-700 dark:text-neutral-300"
+            className={`rounded-md px-2 py-1.5 text-sm ${
+              dark
+                ? active
+                  ? "bg-white/15 font-medium text-white"
+                  : "text-white/80 hover:bg-white/10"
+                : active
+                  ? "bg-neutral-200 font-medium text-neutral-900 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-800"
+                  : "text-neutral-700 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
             } ${refreshing && pathname === item.href ? "animate-pulse" : ""}`}
           >
             {item.label}

@@ -2,8 +2,8 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { LOCALE_COOKIE, SECTIONS_COOKIE, THEME_COOKIE, isLocale, isTheme } from "@/lib/i18n/config";
-import { parseSectionModes, type SectionModes } from "@/lib/preferences";
+import { LOCALE_COOKIE, SECTIONS_COOKIE, SIDEBAR_COOKIE, THEME_COOKIE, isLocale, isTheme } from "@/lib/i18n/config";
+import { isSidebarColor, parseSectionModes, type SectionModes } from "@/lib/preferences";
 
 // Display preferences are per browser (cookies), not per account — they're
 // needed on the login page too, and the server reads them while rendering.
@@ -20,6 +20,12 @@ export async function setTheme(theme: string) {
   if (!isTheme(theme)) throw new Error("Unsupported theme.");
   (await cookies()).set(THEME_COOKIE, theme, COOKIE_OPTIONS);
   revalidatePath("/", "layout");
+}
+
+export async function setSidebarColor(color: string) {
+  if (!isSidebarColor(color)) throw new Error("Unsupported colour.");
+  (await cookies()).set(SIDEBAR_COOKIE, color, COOKIE_OPTIONS);
+  revalidatePath("/dashboard", "layout");
 }
 
 export async function setSectionModes(modes: SectionModes) {

@@ -26,6 +26,7 @@ export function isLocale(value: unknown): value is Locale {
 export const LOCALE_COOKIE = "sw_locale";
 export const THEME_COOKIE = "sw_theme";
 export const SECTIONS_COOKIE = "sw_sections";
+export const SIDEBAR_COOKIE = "sw_sidebar";
 
 export const THEMES = ["system", "light", "dark"] as const;
 export type Theme = (typeof THEMES)[number];

@@ -5,6 +5,8 @@ import { addChecklistTemplateItem, deleteChecklistTemplateItem } from "./actions
 import { DeleteChecklistItemButton } from "./delete-item-button";
 import { AddChecklistItemForm } from "./add-item-form";
 import { getT } from "@/lib/i18n/server";
+import { ChecklistTextImport } from "@/components/checklist-text-import";
+import { addChecklistTemplateItemsBulk } from "@/app/dashboard/bulk-checklist-actions";
 
 export default async function ChecklistTemplatePage({
   params,
@@ -20,6 +22,7 @@ export default async function ChecklistTemplatePage({
   if (!template) notFound();
 
   const addItemWithIds = addChecklistTemplateItem.bind(null, studyId, templateId);
+  const addItemsBulkWithIds = addChecklistTemplateItemsBulk.bind(null, studyId, templateId);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -68,6 +71,14 @@ export default async function ChecklistTemplatePage({
       </div>
 
       <AddChecklistItemForm library={library} addItem={addItemWithIds} />
+
+      <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
+        <h2 className="mb-2 text-sm font-medium text-neutral-500">{t("Add several at once")}</h2>
+        <ChecklistTextImport
+          saveLabel={t("Add these to the checklist")}
+          onSave={addItemsBulkWithIds}
+        />
+      </div>
     </div>
   );
 }

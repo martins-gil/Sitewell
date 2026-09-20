@@ -78,13 +78,23 @@ export async function addSubject(formData: FormData) {
     // ("not assessed"), because whether this new patient meets a criterion
     // is for someone to decide — silently inheriting another patient's ✓
     // would record an assessment nobody made.
-    const criteria =
+    let criteria: { criterion: string; met: null; type: "I" | "E" }[] =
       source && copyCriteria
-        ? ((source.ieCriteriaSnapshot as { criterion: string }[] | null) ?? []).map((c) => ({
+        ? ((source.ieCriteriaSnapshot as { criterion: string; type?: "I" | "E" }[] | null) ?? []).map((c) => ({
             criterion: c.criterion,
             met: null,
+            type: c.type === "E" ? "E" : "I",
           }))
         : [];
+    // A new patient (not copied from another) starts from the study's own
+    // criteria, if it has any — each one "not assessed".
+    if (!source) {
+      const fromStudy = study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+      criteria = [
+        ...(fromStudy?.inclusion ?? []).map((criterion) => ({ criterion, met: null, type: "I" as const })),
+        ...(fromStudy?.exclusion ?? []).map((criterion) => ({ criterion, met: null, type: "E" as const })),
+      ];
+    }
 
     // is_test_data is always true here, deliberately, with no form control
     // to override it — PROJECT_SPEC.md's guardrail is no real subject data

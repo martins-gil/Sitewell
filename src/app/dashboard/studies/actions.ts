@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { setStudyPiAndSite } from "@/lib/study-details";
 import { isStudyColor } from "@/lib/study-colors";
+import { cleanCriteria, criteriaDraftSchema, type CriteriaDraft } from "@/lib/text-import";
 
 function requireOrgAdmin(ctx: { role: string; isPlatformAdmin: boolean }) {
   if (ctx.role !== "ORG_ADMIN" && !ctx.isPlatformAdmin) {
@@ -113,4 +114,27 @@ export async function updateStudyCore(studyId: string, formData: FormData) {
   revalidatePath(`/dashboard/studies/${studyId}`);
   revalidatePath(`/dashboard/studies/${studyId}/templates`);
   revalidatePath("/dashboard/visits");
+}
+
+/** Saves the study's inclusion / exclusion criteria (from pasted text or typed
+ * in). Open to everyone, like the PI name on the same page. Returns a result
+ * rather than throwing so the form can say what went wrong. */
+export async function saveStudyCriteria(studyId: string, draft: CriteriaDraft): Promise<{ ok: boolean }> {
+  const ctx = await requireTenantContext();
+  const parsed = criteriaDraftSchema.safeParse({
+    inclusion: draft.inclusion.map((s) => s.trim()).filter(Boolean),
+    exclusion: draft.exclusion.map((s) => s.trim()).filter(Boolean),
+  });
+  if (!parsed.success) return { ok: false };
+  const clean = cleanCriteria(parsed.data);
+
+  await withTenantContext(ctx, (tx) =>
+    tx.study.update({
+      where: { id: studyId },
+      data: { ieCriteria: clean.inclusion.length + clean.exclusion.length > 0 ? clean : Prisma.DbNull },
+    }),
+  );
+  revalidatePath(`/dashboard/studies/${studyId}`);
+  revalidatePath("/dashboard/subjects/[id]", "page");
+  return { ok: true };
 }

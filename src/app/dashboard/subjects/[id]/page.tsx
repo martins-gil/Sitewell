@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getSubjectById } from "@/lib/queries";
+import { getSubjectById, getVisitSchedulingData } from "@/lib/queries";
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { StatusControl } from "./status-control";
@@ -23,8 +23,15 @@ export default async function SubjectDetailPage({
   const { id } = await params;
   const subject = await getSubjectById(id);
   if (!subject) notFound();
+  // Where a visit can be repeated to: patients of this study that can take visits.
+  const scheduling = await getVisitSchedulingData();
+  const repeatPatients = scheduling.subjects.filter((s) => s.studyId === subject.studyId);
 
-  const criteria = subject.ieCriteriaSnapshot as { criterion: string; met: boolean | null }[] | null;
+  const criteria = subject.ieCriteriaSnapshot as
+    | { criterion: string; met: boolean | null; type?: "I" | "E" }[]
+    | null;
+  const studyList = subject.study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+  const studyHasCriteria = (studyList?.inclusion?.length ?? 0) + (studyList?.exclusion?.length ?? 0) > 0;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -54,7 +61,11 @@ export default async function SubjectDetailPage({
       {/* The criteria list can be long, so it can be collapsed or hidden in Settings. */}
       <PageSection mode={modes.criteria} title={t("I/E criteria")}>
         <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
-          <IeCriteriaEditor subjectId={subject.id} initialCriteria={criteria ?? []} />
+          <IeCriteriaEditor
+            subjectId={subject.id}
+            initialCriteria={criteria ?? []}
+            studyHasCriteria={studyHasCriteria}
+          />
         </div>
       </PageSection>
 
@@ -100,6 +111,7 @@ export default async function SubjectDetailPage({
               windowBeforeDays: Math.round((v.targetDate.getTime() - v.windowStart.getTime()) / DAY_MS),
               windowAfterDays: Math.round((v.windowEnd.getTime() - v.targetDate.getTime()) / DAY_MS),
             }))}
+            repeat={repeatPatients.length > 0 ? { subjectId: subject.id, patients: repeatPatients } : null}
           />
         )}
       </div>

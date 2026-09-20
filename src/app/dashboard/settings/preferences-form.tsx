@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setSectionModes, setTheme } from "@/app/preferences-actions";
+import { setSectionModes, setSidebarColor, setTheme } from "@/app/preferences-actions";
 import { LanguageSelect } from "@/components/language-select";
 import { useT } from "@/lib/i18n/client";
 import type { Theme } from "@/lib/i18n/config";
-import { PATIENT_SECTIONS, VISIT_SECTIONS, type SectionMode, type SectionModes } from "@/lib/preferences";
+import {
+  PATIENT_SECTIONS,
+  SIDEBAR_COLORS,
+  VISIT_SECTIONS,
+  type SectionMode,
+  type SectionModes,
+  type SidebarColorId,
+} from "@/lib/preferences";
 
 // Apply the theme right away, without waiting for the server round-trip.
 function applyThemeNow(theme: Theme) {
@@ -15,10 +22,31 @@ function applyThemeNow(theme: Theme) {
   root.classList.toggle("dark", dark);
 }
 
-export function PreferencesForm({ theme, sectionModes }: { theme: Theme; sectionModes: SectionModes }) {
+export function PreferencesForm({
+  theme,
+  sectionModes,
+  sidebarColor,
+}: {
+  theme: Theme;
+  sectionModes: SectionModes;
+  sidebarColor: SidebarColorId;
+}) {
   const t = useT();
   const [pending, startTransition] = useTransition();
   const [chosenTheme, setChosenTheme] = useState(theme);
+  const [chosenSidebar, setChosenSidebar] = useState(sidebarColor);
+
+  function chooseSidebar(next: SidebarColorId) {
+    setChosenSidebar(next);
+    setError(null);
+    startTransition(async () => {
+      try {
+        await setSidebarColor(next);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t("Failed to save."));
+      }
+    });
+  }
   const [modes, setModes] = useState(sectionModes);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +107,28 @@ export function PreferencesForm({ theme, sectionModes }: { theme: Theme; section
               {option.label}
             </label>
           ))}
+        </div>
+        <div className="border-t border-neutral-100 pt-3 dark:border-neutral-800">
+          <span className="block text-sm">{t("Colour of the left bar")}</span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SIDEBAR_COLORS.map((c) => (
+              <label key={c.id} title={t(c.label)} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="sidebar"
+                  value={c.id}
+                  checked={chosenSidebar === c.id}
+                  onChange={() => chooseSidebar(c.id)}
+                  className="peer sr-only"
+                  aria-label={t(c.label)}
+                />
+                <span
+                  className="block h-7 w-7 rounded-full ring-2 ring-neutral-300 ring-offset-2 ring-offset-white peer-checked:ring-neutral-900 peer-focus-visible:ring-neutral-500 dark:ring-neutral-700 dark:ring-offset-neutral-950 dark:peer-checked:ring-white"
+                  style={{ backgroundColor: c.bg ?? "#e5e5e5" }}
+                />
+              </label>
+            ))}
+          </div>
         </div>
       </section>
 
