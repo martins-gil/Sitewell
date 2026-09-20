@@ -247,7 +247,7 @@ export function IeCriteriaEditor({
         )}
       </div>
 
-      {initialCriteria.length > 0 && (
+      {(initialCriteria.length > 0 || studyHasCriteria) && (
         <a
           href={`/api/subjects/${subjectId}/ie-docx`}
           className="inline-block text-sm font-medium text-neutral-700 hover:underline dark:text-neutral-300"

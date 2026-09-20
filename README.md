@@ -260,9 +260,12 @@ to org A, and a cross-tenant insert is rejected).
     first if needed). The link can be replaced or switched off at any time.
     Needs the deployed site to be reachable from the internet, so it can't be
     subscribed to from `localhost`.
-  - **I/E criteria as a Word document**: "Download I/E criteria (.docx)" on a
-    patient (recorded answers ticked) and "Download blank I/E form (.docx)" on
-    a study, in the same style as the checklist.
+  - **I/E criteria as a Word document**, following the site's "Checklist for
+    verification of inclusion and exclusion criteria" template (Yes / No / NA /
+    Comments, eligibility line, signature and date): on a visit ("Download I/E
+    criteria form for this visit"), on a patient, and blank on a study. Recorded
+    answers come ticked. The study page now also holds the study's EU CT number,
+    which prints in the footer.
   - **Copying a patient**: entering the Baseline / Day 0 date places every
     protocol visit on its day from Baseline with the protocol's window (a
     repeated visit keeps its spacing).

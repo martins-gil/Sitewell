@@ -12,11 +12,13 @@ export function PiSiteForm({
   studyId,
   piName,
   siteNumber,
+  euCtNumber,
   protocol,
 }: {
   studyId: string;
   piName: string | null;
   siteNumber: string | null;
+  euCtNumber: string | null;
   protocol: { version: string; releaseLabel: string; awaitingSignature: boolean } | null;
 }) {
   const t = useT();
@@ -51,6 +53,15 @@ export function PiSiteForm({
         <div>
           <label className="block text-xs font-medium">{t("Site Nº")}</label>
           <input name="siteNumber" defaultValue={siteNumber ?? ""} placeholder={t("e.g. 00001")} className={inputClass} />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium">{t("EU CT number (printed on the I/E form)")}</label>
+          <input
+            name="euCtNumber"
+            defaultValue={euCtNumber ?? ""}
+            placeholder={t("e.g. 2023-000000-00")}
+            className={inputClass}
+          />
         </div>
       </div>
       <p className="text-xs text-neutral-500">

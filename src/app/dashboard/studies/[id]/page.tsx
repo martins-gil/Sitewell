@@ -77,6 +77,7 @@ export default async function StudyOverviewPage({
         studyId={study.id}
         piName={study.piName}
         siteNumber={study.sites[0]?.siteNumber ?? null}
+        euCtNumber={study.euCtNumber}
         protocol={
           protocol
             ? {

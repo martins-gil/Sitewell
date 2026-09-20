@@ -48,6 +48,11 @@ export default async function VisitDetailPage({
   // Patients of this study the visit can be repeated for (this one included, if it can take visits).
   const studyPatients = scheduling.subjects.filter((s) => s.studyId === visit.studyId);
   const canRepeat = studyPatients.length > 0;
+  // The I/E form can be printed when the patient has criteria or, failing that, the study does.
+  const studyIe = visit.study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+  const hasIeCriteria =
+    ((visit.subject.ieCriteriaSnapshot as unknown[] | null)?.length ?? 0) > 0 ||
+    (studyIe?.inclusion?.length ?? 0) + (studyIe?.exclusion?.length ?? 0) > 0;
   const nursingSheetUrl = visit.templateId
     ? `/dashboard/studies/${visit.studyId}/templates/${visit.templateId}/nursing-sheet`
     : null;
@@ -129,6 +134,15 @@ export default async function VisitDetailPage({
           items={checklist.map((item) => ({ ...item, performedAt: toDateTimeInput(item.performedAt) }))}
         />
       </PageSection>
+
+      {hasIeCriteria && (
+        <a
+          href={`/api/subjects/${visit.subject.id}/ie-docx?visitId=${visit.id}`}
+          className="block rounded-lg border border-neutral-200 px-4 py-2.5 text-center text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+        >
+          {t("Download I/E criteria form for this visit (.docx)")}
+        </a>
+      )}
 
       <PageSection mode={modes.nursing} title={t("Nursing sheet")}>
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">

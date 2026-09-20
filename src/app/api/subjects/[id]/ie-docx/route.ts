@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { getSubjectIeForm } from "@/lib/queries";
 import { generateIeDocx } from "@/lib/ie-docx";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // ?visitId= fills in the form's VISIT box (it's re-checked at each visit).
+  const visitId = new URL(request.url).searchParams.get("visitId");
 
   let data;
   try {
-    data = await getSubjectIeForm(id);
+    data = await getSubjectIeForm(id, visitId);
   } catch (e) {
     if (e instanceof Error && e.message === "UNAUTHENTICATED") {
       return NextResponse.json({ error: "Sign in first." }, { status: 401 });
@@ -20,7 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const buffer = await generateIeDocx(data);
-  const filename = `${data.subjectCode}-criterios-IE.docx`.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
+  const filename = `${data.subjectCode}${data.visitName ? `-${data.visitName}` : ""}-IE-criteria.docx`.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

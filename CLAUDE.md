@@ -412,13 +412,23 @@ picks this repo up next.
   honours `?callbackUrl=` (same-origin `/dashboard…` only) so those event links
   land on the visit after sign-in.
 - **I/E .docx** (`src/lib/ie-docx.ts`, `/api/subjects/[id]/ie-docx` and
-  `/api/studies/[id]/ie-docx`): same page/header/table look as the checklist,
-  Portuguese wording, Sim / Não boxes per criterion. Sim/Não answers the
-  criterion AS WRITTEN (so Sim on an exclusion = it applies). The patient copy
-  ticks the recorded answers (not assessed = blank); the study copy is blank.
-  The conclusion boxes are never pre-ticked — eligibility is the investigator's
-  call. The layout was built from the checklist's, NOT from a site template —
-  if the site has its own I/E form, match it here.
+  `/api/studies/[id]/ie-docx`): the site's "Checklist for verification of
+  inclusion and exclusion criteria" (a SOURCE DOCUMENT), reproduced from the
+  template the user supplied — IN ENGLISH, unlike the Portuguese checklist and
+  nursing sheet, because that's how the template is: header with PI / Site /
+  Protocol, VISIT + PATIENT box, Table 1 (inclusion) and Table 2 (exclusion) with
+  Yes / No / NA / Comments, the eligibility YES/NO row, the confirmation
+  sentence, a Signature / Date box, and a footer with the NA note, page number
+  and "STUDY … | Version … | EU CT …, release date". Yes/No answers the
+  criterion AS WRITTEN (so Yes on an exclusion = it applies). A patient copy
+  ticks the recorded answers (not assessed = blank; with none recorded it falls
+  back to the study's list, all blank); the study copy is blank. NA, comments,
+  the eligibility row and the signature are NEVER pre-filled — eligibility is
+  the investigator's call. `?visitId=` fills the VISIT box (the form is
+  re-done at each visit; the visit page has the button). `Study.euCtNumber`
+  (edited beside PI name / site number on the study page) feeds the footer. The
+  template's "Subject History"-style category rows aren't supported: criteria
+  are flat strings.
 - **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
   `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
   is an inline `backgroundColor` with light text (`dark` prop on the nav).

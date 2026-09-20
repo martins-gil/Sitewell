@@ -20,7 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const buffer = await generateIeDocx(data);
-  const filename = `${data.protocolId}-criterios-IE.docx`.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
+  const filename = `${data.protocolId}-IE-criteria.docx`.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, "_");
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

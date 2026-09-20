@@ -391,8 +391,8 @@ export async function getVisitById(id: string) {
     tx.visit.findUnique({
       where: { id },
       include: {
-        subject: { select: { id: true, subjectCode: true } },
-        study: { select: { id: true, title: true, protocolId: true } },
+        subject: { select: { id: true, subjectCode: true, ieCriteriaSnapshot: true } },
+        study: { select: { id: true, title: true, protocolId: true, ieCriteria: true } },
         documents: {
           include: { signedBy: { select: { name: true } } },
           orderBy: { createdAt: "desc" },
@@ -556,9 +556,13 @@ export type IeFormData = {
   protocolReleaseDate: Date | null;
   piName: string | null;
   siteNumber: string | null;
+  euCtNumber: string | null;
   // Set for a patient's copy; null for the study's blank form.
   subjectCode: string | null;
   initials: string | null;
+  // The visit the form is for (the criteria are re-checked at each visit);
+  // null when it isn't tied to one, and the field is left to write in.
+  visitName: string | null;
   inclusion: { text: string; met: boolean | null }[];
   exclusion: { text: string; met: boolean | null }[];
 };
@@ -590,6 +594,7 @@ async function ieFormHeader(tx: Prisma.TransactionClient, studyId: string) {
       protocolReleaseDate: protocol?.doc.releaseDate ?? null,
       piName: study.piName,
       siteNumber: study.sites[0]?.siteNumber ?? null,
+      euCtNumber: study.euCtNumber,
     },
   };
 }
@@ -605,13 +610,14 @@ export async function getStudyIeForm(studyId: string): Promise<IeFormData | null
       ...header,
       subjectCode: null,
       initials: null,
+      visitName: null,
       inclusion: (list?.inclusion ?? []).map((text) => ({ text, met: null })),
       exclusion: (list?.exclusion ?? []).map((text) => ({ text, met: null })),
     };
   });
 }
 
-export async function getSubjectIeForm(subjectId: string): Promise<IeFormData | null> {
+export async function getSubjectIeForm(subjectId: string, visitId?: string | null): Promise<IeFormData | null> {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, async (tx) => {
     const subject = await tx.subject.findUnique({
@@ -619,16 +625,28 @@ export async function getSubjectIeForm(subjectId: string): Promise<IeFormData | 
       select: { studyId: true, subjectCode: true, displayName: true, ieCriteriaSnapshot: true },
     });
     if (!subject) return null;
-    const { header } = await ieFormHeader(tx, subject.studyId);
+    // Only this patient's own visit counts; anything else leaves the field blank.
+    const visit = visitId
+      ? await tx.visit.findFirst({ where: { id: visitId, subjectId }, select: { visitType: true } })
+      : null;
+    const { study, header } = await ieFormHeader(tx, subject.studyId);
     const all = (subject.ieCriteriaSnapshot as { criterion: string; met: boolean | null; type?: "I" | "E" }[] | null) ?? [];
     const pick = (type: "I" | "E") =>
       all.filter((c) => (c.type === "E" ? "E" : "I") === type).map((c) => ({ text: c.criterion, met: c.met }));
+
+    // A patient with nothing recorded yet still gets a usable form: the study's
+    // own list, every answer blank, to be ticked by hand.
+    const studyList = study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+    const inclusion = all.length > 0 ? pick("I") : (studyList?.inclusion ?? []).map((text) => ({ text, met: null }));
+    const exclusion = all.length > 0 ? pick("E") : (studyList?.exclusion ?? []).map((text) => ({ text, met: null }));
+
     return {
       ...header,
       subjectCode: subject.subjectCode,
       initials: subject.displayName,
-      inclusion: pick("I"),
-      exclusion: pick("E"),
+      visitName: visit?.visitType ?? null,
+      inclusion,
+      exclusion,
     };
   });
 }

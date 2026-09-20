@@ -4,141 +4,149 @@ import {
   BorderStyle,
   Document,
   Footer,
+  Header,
+  HeightRule,
   Packer,
+  PageNumber,
   Paragraph,
   ShadingType,
+  TabStopType,
   Table,
   TableCell,
   TableLayoutType,
   TableRow,
   TextRun,
+  VerticalAlign,
   WidthType,
 } from "docx";
 
-// Same page, margins, fonts and table look as the checklist ("Documento de
-// apoio para a IP"): A4, 3 cm sides, title over a thin blue rule, a PI / Site /
-// Protocol line, grey banded rows, protocol + version + date in the footer. The
-// wording is Portuguese like the site's other paper forms.
+// The site's "Checklist for verification of inclusion and exclusion criteria"
+// (a SOURCE DOCUMENT), reproduced from its template: a "Source Document"
+// header with the PI / Site / Protocol line; the visit and patient box;
+// Table 1 (inclusion) and Table 2 (exclusion) with Yes / No / NA / Comments;
+// the "is the patient eligible" line; the investigator's confirmation with a
+// Signature / Date box; and a footer with the NA note, page number and
+// "STUDY … | Version … | EU CT …, date". In English, like the template.
+
 const PAGE_WIDTH = 11906;
 const PAGE_HEIGHT = 16838;
-const SIDE_MARGIN = 1701;
+const SIDE_MARGIN = 1418;
 const TEXT_WIDTH = PAGE_WIDTH - 2 * SIDE_MARGIN;
-const NUMBER_COLUMN = 850;
-const ANSWER_COLUMN = 900;
-const COLUMN_WIDTHS = [NUMBER_COLUMN, TEXT_WIDTH - NUMBER_COLUMN - 2 * ANSWER_COLUMN, ANSWER_COLUMN, ANSWER_COLUMN];
 
-const GRID = { style: BorderStyle.SINGLE, size: 4, color: "BFBFBF" };
-const NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-const SHADED = { type: ShadingType.CLEAR, color: "auto", fill: "F2F2F2" };
+// Nº | criterion | Yes | No | NA | Comments
+const COLUMNS = [600, 4693, 720, 590, 567, 1900];
+const ID_COLUMNS = [1900, 2500];
+const ELIGIBLE_COLUMNS = [TEXT_WIDTH - 2 * 1835, 1835, 1835];
+const SIGNATURE_COLUMNS = [5700, TEXT_WIDTH - 5700];
 
-const BODY = 22;
-const HEADING_ROW = 24;
-const TITLE = 32;
-const SECTION_HEADING = 28;
-const PI_COLUMN = 2200;
-const SYMBOL_FONT = "Segoe UI Symbol";
+const LINE = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+const GREY_TEXT = "7F7F7F";
+const HEADER_FILL = { type: ShadingType.CLEAR, color: "auto", fill: "D9D9D9" };
 
-function cell(width: number, paragraphs: Paragraph[], shaded: boolean) {
+// Half-points (20 = 10pt).
+const BODY = 20;
+const SMALL = 16;
+
+const CENTER = AlignmentType.CENTER;
+
+function cell(
+  width: number,
+  children: Paragraph[],
+  options: { fill?: typeof HEADER_FILL; middle?: boolean } = {},
+) {
   return new TableCell({
     width: { size: width, type: WidthType.DXA },
-    borders: { top: GRID, bottom: GRID, left: GRID, right: GRID },
-    shading: shaded ? SHADED : undefined,
-    children: paragraphs,
+    borders: { top: LINE, bottom: LINE, left: LINE, right: LINE },
+    shading: options.fill,
+    verticalAlign: options.middle ? VerticalAlign.CENTER : undefined,
+    children,
   });
 }
 
-function headerCell(width: number, text: string, centered = false) {
-  return cell(
-    width,
-    [
-      new Paragraph({
-        alignment: centered ? AlignmentType.CENTER : undefined,
-        children: [new TextRun({ text, bold: true, size: HEADING_ROW })],
-      }),
+function text(value: string, options: { bold?: boolean; smallCaps?: boolean; size?: number; center?: boolean } = {}) {
+  return new Paragraph({
+    alignment: options.center ? CENTER : undefined,
+    children: [new TextRun({ text: value, bold: options.bold, smallCaps: options.smallCaps, size: options.size ?? BODY })],
+  });
+}
+
+const blank = () => new Paragraph({ children: [] });
+
+/** A tick for the recorded answer's column, empty otherwise. */
+function tick(on: boolean) {
+  return new Paragraph({ alignment: CENTER, children: [new TextRun({ text: on ? "✓" : "", bold: true, size: BODY })] });
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function criteriaTable(title: string, naHeader: string, list: IeFormData["inclusion"]) {
+  const header = new TableRow({
+    tableHeader: true,
+    cantSplit: true,
+    children: [
+      cell(COLUMNS[0], [text("Nº", { bold: true })]),
+      cell(COLUMNS[1], [text(title, { bold: true })]),
+      cell(COLUMNS[2], [text("Yes", { bold: true, center: true })]),
+      cell(COLUMNS[3], [text("No", { bold: true, center: true })]),
+      cell(COLUMNS[4], [text(naHeader, { bold: true, center: true })]),
+      cell(COLUMNS[5], [text("Comments", { bold: true })]),
     ],
-    false,
-  );
-}
+  });
 
-/** A ticked or empty box. `true` = this column is the recorded answer. */
-function box(checked: boolean) {
-  return new TextRun({ text: checked ? "☒" : "☐", font: SYMBOL_FONT, size: 26 });
-}
-
-function answerCell(width: number, checked: boolean, shaded: boolean) {
-  return cell(width, [new Paragraph({ alignment: AlignmentType.CENTER, children: [box(checked)] })], shaded);
-}
-
-function formatReleaseDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-}
-
-function criteriaTable(title: string, prefix: string, list: IeFormData["inclusion"]) {
-  return new Table({
-    width: { size: TEXT_WIDTH, type: WidthType.DXA },
-    columnWidths: COLUMN_WIDTHS,
-    layout: TableLayoutType.FIXED,
-    rows: [
-      new TableRow({
-        tableHeader: true,
-        cantSplit: true,
-        children: [
-          headerCell(COLUMN_WIDTHS[0], "Nº"),
-          headerCell(COLUMN_WIDTHS[1], title),
-          headerCell(COLUMN_WIDTHS[2], "Sim", true),
-          headerCell(COLUMN_WIDTHS[3], "Não", true),
-        ],
-      }),
-      ...(list.length === 0
-        ? [
+  // With no criteria yet, one empty row keeps the printout usable by hand.
+  const rows =
+    list.length === 0
+      ? [
+          new TableRow({
+            cantSplit: true,
+            children: COLUMNS.map((width) => cell(width, [blank()])),
+          }),
+        ]
+      : list.map(
+          (item, i) =>
             new TableRow({
-              children: [
-                cell(COLUMN_WIDTHS[0], [new Paragraph({ children: [] })], false),
-                cell(COLUMN_WIDTHS[1], [new Paragraph({ children: [new TextRun({ text: "—" })] })], false),
-                cell(COLUMN_WIDTHS[2], [new Paragraph({ children: [] })], false),
-                cell(COLUMN_WIDTHS[3], [new Paragraph({ children: [] })], false),
-              ],
-            }),
-          ]
-        : list.map((item, i) => {
-            const shaded = i % 2 === 0;
-            return new TableRow({
               cantSplit: true,
               children: [
-                cell(
-                  COLUMN_WIDTHS[0],
-                  [new Paragraph({ children: [new TextRun({ text: `${prefix}${i + 1}`, bold: true })] })],
-                  shaded,
-                ),
-                cell(
-                  COLUMN_WIDTHS[1],
-                  [new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: item.text })] })],
-                  shaded,
-                ),
-                answerCell(COLUMN_WIDTHS[2], item.met === true, shaded),
-                answerCell(COLUMN_WIDTHS[3], item.met === false, shaded),
+                cell(COLUMNS[0], [text(String(i + 1), { center: true })]),
+                cell(COLUMNS[1], [
+                  new Paragraph({ alignment: AlignmentType.JUSTIFIED, children: [new TextRun({ text: item.text, size: BODY })] }),
+                ]),
+                cell(COLUMNS[2], [tick(item.met === true)]),
+                cell(COLUMNS[3], [tick(item.met === false)]),
+                cell(COLUMNS[4], [blank()]),
+                cell(COLUMNS[5], [blank()]),
               ],
-            });
-          })),
-    ],
+            }),
+        );
+
+  return new Table({
+    width: { size: TEXT_WIDTH, type: WidthType.DXA },
+    columnWidths: COLUMNS,
+    layout: TableLayoutType.FIXED,
+    rows: [header, ...rows],
   });
 }
 
 /**
- * The eligibility (I/E) criteria as a paper source document: an inclusion table
- * and an exclusion table, each row with Sim / Não boxes, then the investigator's
- * conclusion, date and signature. A patient's copy has the recorded answers
- * ticked (a criterion not yet assessed is left blank); the study's copy is a
- * blank form. Sim / Não always answers the criterion as written, so on an
- * exclusion criterion "Sim" means it applies to the subject. The conclusion
- * boxes are never pre-ticked — eligibility is the investigator's call.
+ * Yes / No answer the criterion as written, so on an exclusion criterion "Yes"
+ * means it applies to the patient. A patient's copy ticks what was recorded in
+ * the app (a criterion not yet assessed stays blank); NA, the comments, the
+ * eligibility line and the signature are always left for the investigator.
  */
 export async function generateIeDocx(data: IeFormData): Promise<Buffer> {
-  const protocolWithVersion = `${data.protocolId}${data.protocolVersion ? `, ${data.protocolVersion}` : ""}`;
-  const footerText = `Protocol ${protocolWithVersion}${
-    data.protocolReleaseDate ? `, ${formatReleaseDate(data.protocolReleaseDate)}` : ""
-  }`;
-  const subjectLine = `Sujeito Nº: ${data.subjectCode ?? "_______________"}   Iniciais: ${data.initials ?? "________"}`;
+  const blankLine = "________";
+  const version = data.protocolVersion?.trim();
+  const footerStudy = [
+    `STUDY ${data.protocolId}`,
+    ...(version ? [/^\d/.test(version) ? `Version ${version}` : version] : []),
+    `${data.euCtNumber ? `EU CT ${data.euCtNumber}` : ""}${
+      data.euCtNumber && data.protocolReleaseDate ? ", " : ""
+    }${data.protocolReleaseDate ? formatDate(data.protocolReleaseDate) : ""}`,
+  ]
+    .filter((part) => part.trim() !== "")
+    .join(" | ");
 
   const doc = new Document({
     styles: { default: { document: { run: { font: "Calibri", size: BODY } } } },
@@ -147,100 +155,161 @@ export async function generateIeDocx(data: IeFormData): Promise<Buffer> {
         properties: {
           page: {
             size: { width: PAGE_WIDTH, height: PAGE_HEIGHT },
-            margin: { top: 567, bottom: 1134, left: SIDE_MARGIN, right: SIDE_MARGIN, footer: 850 },
+            margin: { top: 1701, bottom: 1418, left: SIDE_MARGIN, right: SIDE_MARGIN, header: 567, footer: 567 },
           },
+        },
+        headers: {
+          default: new Header({
+            children: [
+              new Paragraph({
+                alignment: CENTER,
+                children: [new TextRun({ text: "Source Document", bold: true, smallCaps: true, size: 26 })],
+              }),
+              new Paragraph({
+                alignment: CENTER,
+                border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "A6A6A6", space: 4 } },
+                spacing: { after: 120 },
+                children: [
+                  new TextRun({
+                    text: `PI: ${data.piName ?? blankLine}   Site Nº: ${data.siteNumber ?? blankLine}   Protocol Nº: ${data.protocolId}`,
+                    color: GREY_TEXT,
+                    size: 18,
+                  }),
+                ],
+              }),
+            ],
+          }),
         },
         footers: {
           default: new Footer({
             children: [
-              new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: footerText })] }),
+              new Paragraph({
+                tabStops: [{ type: TabStopType.RIGHT, position: TEXT_WIDTH }],
+                children: [
+                  new TextRun({
+                    text: "* When not applicable (NA) justify in the comments column if relevant",
+                    bold: true,
+                    color: GREY_TEXT,
+                    size: SMALL,
+                  }),
+                  new TextRun({ text: "\t", size: SMALL }),
+                  new TextRun({ children: [PageNumber.CURRENT], color: GREY_TEXT, size: SMALL }),
+                ],
+              }),
+              new Paragraph({
+                alignment: CENTER,
+                border: { top: { style: BorderStyle.SINGLE, size: 4, color: "9DC3E6", space: 4 } },
+                spacing: { before: 80 },
+                children: [new TextRun({ text: footerStudy, color: GREY_TEXT, size: SMALL })],
+              }),
             ],
           }),
         },
         children: [
           new Paragraph({
-            alignment: AlignmentType.CENTER,
-            border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "5B9BD5", space: 4 } },
-            spacing: { after: 120 },
+            alignment: CENTER,
+            spacing: { before: 120, after: 160 },
             children: [
-              new TextRun({ text: "Documento de apoio para a IP", bold: true, smallCaps: true, size: TITLE }),
+              new TextRun({
+                text: "Checklist for verification of inclusion and exclusion criteria",
+                bold: true,
+                smallCaps: true,
+                size: 18,
+              }),
             ],
           }),
 
           new Table({
-            width: { size: TEXT_WIDTH, type: WidthType.DXA },
-            columnWidths: [PI_COLUMN, TEXT_WIDTH - PI_COLUMN],
+            width: { size: ID_COLUMNS[0] + ID_COLUMNS[1], type: WidthType.DXA },
+            columnWidths: ID_COLUMNS,
+            alignment: CENTER,
             layout: TableLayoutType.FIXED,
-            borders: {
-              top: NONE,
-              bottom: NONE,
-              left: NONE,
-              right: NONE,
-              insideHorizontal: NONE,
-              insideVertical: NONE,
-            },
+            rows: [
+              ["Visit:", data.visitName],
+              ["Patient Nº:", data.subjectCode],
+              ["Patient initials:", data.initials],
+            ].map(
+              ([label, value]) =>
+                new TableRow({
+                  cantSplit: true,
+                  children: [
+                    cell(ID_COLUMNS[0], [text(label ?? "", { bold: true, smallCaps: true, size: 18 })]),
+                    cell(ID_COLUMNS[1], [text(value ?? "", { smallCaps: true, center: true, size: 18 })]),
+                  ],
+                }),
+            ),
+          }),
+
+          new Paragraph({
+            spacing: { before: 360, after: 120 },
+            children: [
+              new TextRun({
+                text: "Table 1: Inclusion criteria. To be enrolled into the study, subjects must meet all of the following inclusion criteria.",
+                bold: true,
+                size: BODY,
+              }),
+            ],
+          }),
+          criteriaTable("Inclusion Criteria:", "NA*", data.inclusion),
+
+          new Paragraph({
+            spacing: { before: 360, after: 120 },
+            children: [
+              new TextRun({
+                text: "Table 2: Exclusion criteria. The presence of any of the following criteria excludes a participant from participating in the study:",
+                bold: true,
+                size: BODY,
+              }),
+            ],
+          }),
+          criteriaTable("Exclusion Criteria:", "NA", data.exclusion),
+
+          new Paragraph({ spacing: { before: 240 }, children: [] }),
+          new Table({
+            width: { size: TEXT_WIDTH, type: WidthType.DXA },
+            columnWidths: ELIGIBLE_COLUMNS,
+            layout: TableLayoutType.FIXED,
             rows: [
               new TableRow({
+                cantSplit: true,
+                height: { value: 400, rule: HeightRule.ATLEAST },
                 children: [
-                  new TableCell({
-                    width: { size: PI_COLUMN, type: WidthType.DXA },
-                    borders: { top: NONE, bottom: NONE, left: NONE, right: NONE },
-                    children: [
-                      new Paragraph({
-                        indent: { left: 425 },
-                        children: [new TextRun({ text: `PI: ${data.piName ?? "____________"}`, size: HEADING_ROW })],
-                      }),
-                    ],
-                  }),
-                  new TableCell({
-                    width: { size: TEXT_WIDTH - PI_COLUMN, type: WidthType.DXA },
-                    borders: { top: NONE, bottom: NONE, left: NONE, right: NONE },
-                    children: [
-                      new Paragraph({
-                        children: [
-                          new TextRun({
-                            text: `Site Nº: ${data.siteNumber ?? "_____"}   Protocol Nº: ${protocolWithVersion}`,
-                            size: HEADING_ROW,
-                          }),
-                        ],
-                      }),
-                    ],
-                  }),
+                  cell(ELIGIBLE_COLUMNS[0], [text("Is the patient eligible for study participation at this visit:")], { middle: true }),
+                  cell(ELIGIBLE_COLUMNS[1], [text("YES", { center: true })], { middle: true }),
+                  cell(ELIGIBLE_COLUMNS[2], [text("NO", { center: true })], { middle: true }),
                 ],
               }),
             ],
           }),
 
           new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 360, after: 120 },
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { before: 360, after: 240 },
             children: [
-              new TextRun({ text: "Critérios de elegibilidade", bold: true, smallCaps: true, size: SECTION_HEADING }),
+              new TextRun({
+                text: "Herein I confirm that I checked the inclusion and exclusion criteria as specified above and I verified the criteria assessable at today's visit against the source documents of the patient.",
+                size: BODY,
+              }),
             ],
           }),
-          new Paragraph({
-            spacing: { after: 200 },
-            children: [new TextRun({ text: subjectLine, size: HEADING_ROW })],
-          }),
 
-          criteriaTable("Critérios de inclusão", "I", data.inclusion),
-          new Paragraph({ spacing: { before: 240 }, children: [] }),
-          criteriaTable("Critérios de exclusão", "E", data.exclusion),
-
-          new Paragraph({
-            spacing: { before: 360, after: 120 },
-            children: [
-              new TextRun({ text: "O sujeito cumpre todos os critérios de inclusão e nenhum de exclusão:   " }),
-              box(false),
-              new TextRun({ text: " Sim    " }),
-              box(false),
-              new TextRun({ text: " Não" }),
-            ],
-          }),
-          new Paragraph({
-            spacing: { before: 360 },
-            children: [
-              new TextRun({ text: "Data: ____/____/________     Assinatura do investigador: ______________________________" }),
+          new Table({
+            width: { size: TEXT_WIDTH, type: WidthType.DXA },
+            columnWidths: SIGNATURE_COLUMNS,
+            layout: TableLayoutType.FIXED,
+            rows: [
+              new TableRow({
+                cantSplit: true,
+                children: [
+                  cell(SIGNATURE_COLUMNS[0], [text("Signature", { bold: true, center: true })], { fill: HEADER_FILL }),
+                  cell(SIGNATURE_COLUMNS[1], [text("Date", { bold: true, center: true })], { fill: HEADER_FILL }),
+                ],
+              }),
+              new TableRow({
+                cantSplit: true,
+                height: { value: 700, rule: HeightRule.ATLEAST },
+                children: [cell(SIGNATURE_COLUMNS[0], [blank()]), cell(SIGNATURE_COLUMNS[1], [blank()])],
+              }),
             ],
           }),
         ],

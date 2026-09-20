@@ -159,6 +159,9 @@ model Study {
   // from the study's active PROTOCOL document (Document.version /
   // Document.releaseDate), see src/lib/protocol-document.ts.
   piName            String?   @map("pi_name")
+  // The study's EU CT number (e.g. 2023-000000-00), printed in the footer of
+  // the I/E criteria form (src/lib/ie-docx.ts).
+  euCtNumber        String?   @map("eu_ct_number")
   // A palette id from src/lib/study-colors.ts (e.g. "blue"); null = one is
   // picked automatically. The calendar shows the study in this colour and each
   // of its patients in a different tone of it.

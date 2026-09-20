@@ -83,8 +83,13 @@ export async function updateStudyPiAndSite(studyId: string, formData: FormData) 
   const ctx = await requireTenantContext();
   const piName = String(formData.get("piName") ?? "").trim() || null;
   const siteNumber = String(formData.get("siteNumber") ?? "").trim() || null;
+  // Printed only on the I/E form. Left alone when the form didn't send it.
+  const euCtNumber = formData.has("euCtNumber") ? String(formData.get("euCtNumber") ?? "").trim().slice(0, 60) || null : undefined;
 
-  await withTenantContext(ctx, (tx) => setStudyPiAndSite(tx, studyId, piName, siteNumber));
+  await withTenantContext(ctx, async (tx) => {
+    await setStudyPiAndSite(tx, studyId, piName, siteNumber);
+    if (euCtNumber !== undefined) await tx.study.update({ where: { id: studyId }, data: { euCtNumber } });
+  });
 
   revalidatePath(`/dashboard/studies/${studyId}`);
   revalidatePath("/dashboard/visits/[id]", "page");
