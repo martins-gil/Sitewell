@@ -197,8 +197,15 @@ picks this repo up next.
   copies the TEXT only, never the source's answers, so a new patient is never
   recorded as meeting a criterion nobody assessed. `addSubject` also takes the
   visit list the form sent (`visitPlan`, zod-validated): rows the coordinator
-  edited/left out, with `templateId` checked against the study and the visit
-  name taken from the template, not the client.
+  edited/left out, with `templateId` checked against the study. The visit NAME
+  is the form's (a repeated visit keeps "Week 8" while sharing Week 4's
+  `templateId`); the template's name is only the fallback for a blank one.
+  In the form, entering the **Baseline / Day 0 date** places every visit that
+  IS the protocol's own (its name equals its visit type's) on Baseline + the
+  visit type's `targetDayOffset` with the protocol window — the strict plan —
+  while a repeat or custom visit keeps its gap from the copied patient's
+  Baseline. A source with no Baseline visit falls back to "start the schedule
+  on" (shift everything by the same number of days).
 - **The document details are shown and editable on each visit's page**
   (`visit-doc-header.tsx`) but they're not visit data: saving there
   (`updateVisitDocumentDetails`) writes each field to its real home — study,
@@ -386,6 +393,32 @@ picks this repo up next.
   `src/lib/help/articles.ts` — when a screen or a button name changes, update
   the matching article (and its catalog rows), or the assistant will keep
   teaching the old steps. Article `keywords` are English-only search aids.
+- **Calendar sharing** (`src/lib/calendar-feed.ts`; UI `visits/calendar-share.tsx`;
+  routes `/api/calendar/[token]` and `/api/calendar-download`). The
+  subscription URL is fetched by Apple/Google/Microsoft with NO login, so its
+  credential is the token: `org.user.version.HMAC-SHA256(AUTH_SECRET)`. Nothing
+  secret is stored — `User.calendarFeedEnabled` + `calendarFeedVersion` are the
+  only state; "Make a new link" bumps the version (old links die), "Turn sharing
+  off" blocks them all. Every failure answers the same 404. The route reads
+  through `withTenantContext` with an explicit context for the token's
+  organization (like the kit cron) — never `prisma-auth.ts`. Events are all-day
+  (dates are noon UTC, so the UTC day is the visit's day), carry study, patient,
+  window, kits (linked to the visit; else the ones set aside for its visit type)
+  and a link to `/dashboard/visits/<id>`; scope is the whole organization,
+  SCHEDULED/RESCHEDULED/COMPLETED from 60 days back. Changing `AUTH_SECRET`
+  invalidates every link. Patient codes end up on Google's/Microsoft's servers
+  once someone subscribes — think about that before Phase 5 (real data): a
+  "hide patient codes" option would be the first thing to add. The login form
+  honours `?callbackUrl=` (same-origin `/dashboard…` only) so those event links
+  land on the visit after sign-in.
+- **I/E .docx** (`src/lib/ie-docx.ts`, `/api/subjects/[id]/ie-docx` and
+  `/api/studies/[id]/ie-docx`): same page/header/table look as the checklist,
+  Portuguese wording, Sim / Não boxes per criterion. Sim/Não answers the
+  criterion AS WRITTEN (so Sim on an exclusion = it applies). The patient copy
+  ticks the recorded answers (not assessed = blank); the study copy is blank.
+  The conclusion boxes are never pre-ticked — eligibility is the investigator's
+  call. The layout was built from the checklist's, NOT from a site template —
+  if the site has its own I/E form, match it here.
 - **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
   `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
   is an inline `backgroundColor` with light text (`dark` prop on the nav).

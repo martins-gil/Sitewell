@@ -88,6 +88,14 @@ export function StudyCriteriaCard({ studyId, initial }: { studyId: string; initi
         >
           {importing ? t("Hide the paste box") : t("Paste from the protocol →")}
         </button>
+        {count > 0 && !dirty && (
+          <a
+            href={`/api/studies/${studyId}/ie-docx`}
+            className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+          >
+            {t("Download blank I/E form (.docx)")}
+          </a>
+        )}
         {message && <span className="text-sm text-green-700 dark:text-green-400">{message}</span>}
         {dirty && !message && <span className="text-xs text-neutral-500">{t("Unsaved changes")}</span>}
         {!dirty && !message && count > 0 && (

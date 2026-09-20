@@ -1,10 +1,11 @@
-import type { SubjectStatus } from "@prisma/client";
+import type { Prisma, SubjectStatus } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
 import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
 import { pickProtocolDocument } from "@/lib/protocol-document";
 import { parseNursingSheet, defaultNursingSheet } from "@/lib/nursing-sheet";
+import { makeFeedToken } from "@/lib/calendar-feed";
 
 export async function getCurrentUser() {
   const ctx = await requireTenantContext();
@@ -23,6 +24,22 @@ export async function getMustChangePassword() {
     tx.user.findUnique({ where: { id: ctx.userId }, select: { mustChangePassword: true } }),
   );
   return user?.mustChangePassword ?? false;
+}
+
+/** The path of the signed-in user's calendar subscription link, or null if
+ * they haven't turned it on (the page adds the site's address in front). */
+export async function getCalendarFeedPath(): Promise<string | null> {
+  const ctx = await requireTenantContext();
+  if (!ctx.organizationId) return null;
+  const user = await withTenantContext(ctx, (tx) =>
+    tx.user.findUnique({
+      where: { id: ctx.userId },
+      select: { calendarFeedEnabled: true, calendarFeedVersion: true },
+    }),
+  );
+  if (!user?.calendarFeedEnabled || user.calendarFeedVersion < 1) return null;
+  const token = makeFeedToken(ctx.organizationId, ctx.userId, user.calendarFeedVersion);
+  return token ? `/api/calendar/${token}.ics` : null;
 }
 
 export async function getStudies() {
@@ -173,6 +190,12 @@ export type DuplicationSource = {
     targetDate: string; // YYYY-MM-DD
     windowBeforeDays: number;
     windowAfterDays: number;
+    // The protocol's plan for this visit's type: its day offset from Baseline
+    // (Day 0) and its window. Null for a custom visit with no visit type. A
+    // REPEATED visit (Week 4 → Week 8) shares its source's visit type but not
+    // its name — the form tells them apart by `name` and doesn't put those on
+    // the protocol's days.
+    protocol: { name: string; dayOffset: number; windowBeforeDays: number; windowAfterDays: number } | null;
   }[];
 };
 
@@ -199,6 +222,9 @@ export async function getDuplicationSources(): Promise<DuplicationSource[]> {
             targetDate: true,
             windowStart: true,
             windowEnd: true,
+            template: {
+              select: { name: true, targetDayOffset: true, windowBeforeDays: true, windowAfterDays: true },
+            },
           },
         },
       },
@@ -220,6 +246,14 @@ export async function getDuplicationSources(): Promise<DuplicationSource[]> {
       targetDate: v.targetDate.toISOString().slice(0, 10),
       windowBeforeDays: Math.round((v.targetDate.getTime() - v.windowStart.getTime()) / dayMs),
       windowAfterDays: Math.round((v.windowEnd.getTime() - v.targetDate.getTime()) / dayMs),
+      protocol: v.template
+        ? {
+            name: v.template.name,
+            dayOffset: v.template.targetDayOffset,
+            windowBeforeDays: v.template.windowBeforeDays,
+            windowAfterDays: v.template.windowAfterDays,
+          }
+        : null,
     })),
   }));
 }
@@ -508,6 +542,93 @@ export async function getVisitChecklistHeader(visitId: string) {
       // For the nursing record's identification box.
       initials: visit.subject.displayName,
       actualDate: visit.actualDate,
+    };
+  });
+}
+
+/** What the eligibility-criteria (I/E) document prints: the same PI / site /
+ * protocol block as the checklists, and the criteria in two lists. For a
+ * patient, each criterion carries the recorded answer (null = not assessed);
+ * for the study it's the protocol's own list, every answer blank. */
+export type IeFormData = {
+  protocolId: string;
+  protocolVersion: string | null;
+  protocolReleaseDate: Date | null;
+  piName: string | null;
+  siteNumber: string | null;
+  // Set for a patient's copy; null for the study's blank form.
+  subjectCode: string | null;
+  initials: string | null;
+  inclusion: { text: string; met: boolean | null }[];
+  exclusion: { text: string; met: boolean | null }[];
+};
+
+async function ieFormHeader(tx: Prisma.TransactionClient, studyId: string) {
+  const study = await tx.study.findUniqueOrThrow({
+    where: { id: studyId },
+    include: { sites: { select: { siteNumber: true }, take: 1 } },
+  });
+  const protocolDocs = await tx.document.findMany({
+    where: { studyId, type: "PROTOCOL" },
+    select: {
+      id: true,
+      title: true,
+      version: true,
+      releaseDate: true,
+      status: true,
+      expiryDate: true,
+      signedAt: true,
+      createdAt: true,
+    },
+  });
+  const protocol = pickProtocolDocument(protocolDocs);
+  return {
+    study,
+    header: {
+      protocolId: study.protocolId,
+      protocolVersion: protocol?.doc.version ?? null,
+      protocolReleaseDate: protocol?.doc.releaseDate ?? null,
+      piName: study.piName,
+      siteNumber: study.sites[0]?.siteNumber ?? null,
+    },
+  };
+}
+
+export async function getStudyIeForm(studyId: string): Promise<IeFormData | null> {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const found = await tx.study.findUnique({ where: { id: studyId }, select: { id: true } });
+    if (!found) return null;
+    const { study, header } = await ieFormHeader(tx, studyId);
+    const list = study.ieCriteria as { inclusion?: string[]; exclusion?: string[] } | null;
+    return {
+      ...header,
+      subjectCode: null,
+      initials: null,
+      inclusion: (list?.inclusion ?? []).map((text) => ({ text, met: null })),
+      exclusion: (list?.exclusion ?? []).map((text) => ({ text, met: null })),
+    };
+  });
+}
+
+export async function getSubjectIeForm(subjectId: string): Promise<IeFormData | null> {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const subject = await tx.subject.findUnique({
+      where: { id: subjectId },
+      select: { studyId: true, subjectCode: true, displayName: true, ieCriteriaSnapshot: true },
+    });
+    if (!subject) return null;
+    const { header } = await ieFormHeader(tx, subject.studyId);
+    const all = (subject.ieCriteriaSnapshot as { criterion: string; met: boolean | null; type?: "I" | "E" }[] | null) ?? [];
+    const pick = (type: "I" | "E") =>
+      all.filter((c) => (c.type === "E" ? "E" : "I") === type).map((c) => ({ text: c.criterion, met: c.met }));
+    return {
+      ...header,
+      subjectCode: subject.subjectCode,
+      initials: subject.displayName,
+      inclusion: pick("I"),
+      exclusion: pick("E"),
     };
   });
 }

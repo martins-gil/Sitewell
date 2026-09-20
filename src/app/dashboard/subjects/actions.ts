@@ -122,11 +122,16 @@ export async function addSubject(formData: FormData) {
 
       await tx.visit.createMany({
         data: plan.map((row) => {
-          let visitType = row.visitType.trim();
+          // The visit type link is what gives a visit its checklist and
+          // documents, and it's checked against the study. The NAME is just this
+          // patient's label for it: a repeated visit (Week 4 → Week 8) keeps its
+          // own name while sharing its source's visit type. Falls back to the
+          // visit type's name when the form sent none.
+          let visitType = row.visitType.trim().slice(0, 120);
           if (row.templateId) {
             const template = templateById.get(row.templateId);
             if (!template) throw new Error("A copied visit refers to a visit type from a different study.");
-            visitType = template.name;
+            if (!visitType) visitType = template.name;
           }
           if (!visitType) throw new Error("Every copied visit needs a name.");
 

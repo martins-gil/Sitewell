@@ -128,6 +128,7 @@ export function helpArticles(t: TFunction): HelpArticle[] {
         t("Open Patients and press “Add patient”."),
         t("Choose the study and enter the code (and initials, if you want)."),
         t("Optionally pick “Copy from an existing patient” to reuse their visits and criteria."),
+        t("When you copy a patient, enter the “Baseline / Day 0 date”: every protocol visit is placed on its day counted from Baseline automatically, and a repeated visit keeps its spacing."),
         t("Check the list of visits, change or remove rows if needed, and save."),
       ],
       href: "/dashboard/subjects",
@@ -156,6 +157,18 @@ export function helpArticles(t: TFunction): HelpArticle[] {
       ],
     },
     {
+      id: "print-ie",
+      category: patients,
+      question: t("How do I print the inclusion and exclusion criteria?"),
+      answer: t("The criteria download as a Word document in the same style as the checklist, with Sim / Não boxes and a line for the investigator's date and signature."),
+      steps: [
+        t("For one patient: open the patient and press “Download I/E criteria (.docx)” under the criteria — the answers you recorded come ticked."),
+        t("For a blank form of the whole study: open the study and press “Download blank I/E form (.docx)”."),
+        t("Sim / Não answers the criterion as written, so on an exclusion criterion “Sim” means it applies to the patient."),
+      ],
+      keywords: "print export word docx eligibility form source document",
+    },
+    {
       id: "add-visit",
       category: visits,
       question: t("How do I add visits to a patient?"),
@@ -178,6 +191,20 @@ export function helpArticles(t: TFunction): HelpArticle[] {
         t("Press “Repeat visit”. The new visit starts with an empty, unticked checklist."),
       ],
       keywords: "copy duplicate clone same again another week rename similar",
+    },
+    {
+      id: "share-calendar",
+      category: visits,
+      question: t("How do I put the visits in my phone, Google or Outlook calendar?"),
+      answer: t("Use “Share this calendar” on Visits Schedule to get a private link. Your calendar app subscribes to it and keeps itself up to date; each visit shows the study, the patient, the visit and its kits, and opens that exact visit here."),
+      steps: [
+        t("Open Visits Schedule and press “Share this calendar (Apple, Google, Outlook) →”."),
+        t("Press “Create my calendar link”, then “Copy link” — or, on an iPhone or Mac, press “Add to Apple Calendar”."),
+        t("In Google Calendar choose Other calendars (+) → From URL; in Outlook choose Add calendar → Subscribe from web. Paste the link."),
+        t("If the link gets out, press “Make a new link” — the old one stops working. “Turn sharing off” stops it altogether."),
+      ],
+      href: "/dashboard/visits",
+      keywords: "ics ical export sync phone iphone android google outlook apple subscribe link",
     },
     {
       id: "reschedule",

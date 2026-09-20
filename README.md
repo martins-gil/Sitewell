@@ -252,6 +252,20 @@ to org A, and a cross-tenant insert is rejected).
     and Help questions are sent (`src/lib/ai.ts`); the screens say so. Model:
     `claude-opus-5`, or whatever `ANTHROPIC_MODEL` names. It costs money per
     use, so both features are throttled per user.
+- ✅ Calendar sharing, I/E document, Baseline-driven copy:
+  - **Share the calendar** (Visits Schedule → "Share this calendar"): a private
+    subscription link that Apple Calendar, Google Calendar and Outlook keep in
+    sync, plus a one-time .ics download. Each visit shows the study, patient,
+    visit, window, kits, and a link that opens that exact visit (signing in
+    first if needed). The link can be replaced or switched off at any time.
+    Needs the deployed site to be reachable from the internet, so it can't be
+    subscribed to from `localhost`.
+  - **I/E criteria as a Word document**: "Download I/E criteria (.docx)" on a
+    patient (recorded answers ticked) and "Download blank I/E form (.docx)" on
+    a study, in the same style as the checklist.
+  - **Copying a patient**: entering the Baseline / Day 0 date places every
+    protocol visit on its day from Baseline with the protocol's window (a
+    repeated visit keeps its spacing).
 - ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
   redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin

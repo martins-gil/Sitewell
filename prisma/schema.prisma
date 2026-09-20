@@ -119,6 +119,12 @@ model User {
   // minutes (src/auth.ts). Reset by a correct sign-in or an admin password reset.
   failedLoginCount Int       @default(0) @map("failed_login_count")
   lockedUntil      DateTime? @map("locked_until")
+  // The user's private calendar link (Apple / Google / Outlook subscription,
+  // src/lib/calendar-feed.ts). The link itself isn't stored: it's signed with
+  // AUTH_SECRET and carries this version, so making a new link bumps the
+  // version and the old one stops working, and turning it off blocks them all.
+  calendarFeedEnabled Boolean @default(false) @map("calendar_feed_enabled")
+  calendarFeedVersion Int     @default(0) @map("calendar_feed_version")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

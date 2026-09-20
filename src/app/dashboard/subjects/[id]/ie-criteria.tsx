@@ -247,6 +247,15 @@ export function IeCriteriaEditor({
         )}
       </div>
 
+      {initialCriteria.length > 0 && (
+        <a
+          href={`/api/subjects/${subjectId}/ie-docx`}
+          className="inline-block text-sm font-medium text-neutral-700 hover:underline dark:text-neutral-300"
+        >
+          {t("Download I/E criteria (.docx)")}
+        </a>
+      )}
+
       {notice && <p className="text-xs text-green-700 dark:text-green-400">{notice}</p>}
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>

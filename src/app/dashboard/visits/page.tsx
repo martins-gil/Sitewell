@@ -1,4 +1,6 @@
-import { getAllVisits, getStudies, getVisitSchedulingData } from "@/lib/queries";
+import { headers } from "next/headers";
+import { getAllVisits, getCalendarFeedPath, getStudies, getVisitSchedulingData } from "@/lib/queries";
+import { CalendarShare } from "./calendar-share";
 import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
 import type { CalendarVisit } from "./visits-calendar";
@@ -7,11 +9,19 @@ import { resolveStudyColors } from "@/lib/study-colors";
 
 export default async function VisitsPage() {
   const t = await getT();
-  const [visits, studies, scheduling] = await Promise.all([
+  const [visits, studies, scheduling, feedPath] = await Promise.all([
     getAllVisits(),
     getStudies(),
     getVisitSchedulingData(),
+    getCalendarFeedPath(),
   ]);
+
+  // The link has to be absolute for a calendar app; build it from how this
+  // page was reached (behind Vercel that's the forwarded host).
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  const feedUrl = feedPath && host ? `${protocol}://${host}${feedPath}` : null;
 
   const calendarVisits: CalendarVisit[] = visits.map((v) => ({
     id: v.id,
@@ -35,6 +45,8 @@ export default async function VisitsPage() {
         </div>
         <SendRemindersButton />
       </div>
+
+      <CalendarShare feedUrl={feedUrl} />
 
       <VisitsView
         tableVisits={visits}

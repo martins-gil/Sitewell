@@ -17,6 +17,15 @@ type PlanRow = {
   windowBeforeDays: number;
   windowAfterDays: number;
   include: boolean;
+  // The protocol's own plan for this visit type (day offset from Baseline and
+  // window); null for a custom visit.
+  // Only set for a visit that IS the protocol's own (its name is the visit
+  // type's); a repeat of one (Week 4 → Week 8) or a custom visit is null and
+  // keeps its gap from Baseline instead.
+  protocol: { dayOffset: number; windowBeforeDays: number; windowAfterDays: number } | null;
+  // The copied patient's date, kept to work out a custom visit's gap from
+  // their Baseline.
+  sourceDate: string;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -41,6 +50,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
   const [rows, setRows] = useState<PlanRow[]>([]);
   const [copyCriteria, setCopyCriteria] = useState(true);
   const [shiftTo, setShiftTo] = useState("");
+  const [baselineDate, setBaselineDate] = useState("");
 
   const sourcesForStudy = sources.filter(
     (s) => s.studyId === studyId && (s.visits.length > 0 || s.criteria.length > 0),
@@ -52,6 +62,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
     setSourceId(id);
     setCopyCriteria(true);
     setShiftTo("");
+    setBaselineDate("");
     setRows(
       next
         ? next.visits.map((v) => ({
@@ -62,8 +73,45 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
             windowBeforeDays: v.windowBeforeDays,
             windowAfterDays: v.windowAfterDays,
             include: true,
+            protocol:
+              v.protocol && v.protocol.name === v.visitType
+                ? {
+                    dayOffset: v.protocol.dayOffset,
+                    windowBeforeDays: v.protocol.windowBeforeDays,
+                    windowAfterDays: v.protocol.windowAfterDays,
+                  }
+                : null,
+            sourceDate: v.targetDate,
           }))
         : [],
+    );
+  }
+
+  // The protocol's Baseline (Day 0) visit among the copied ones, if there is one.
+  const baselineRow = rows.find((r) => r.protocol?.dayOffset === 0);
+
+  // The protocol is a strict plan counted from Baseline: once Baseline has a
+  // date, every protocol visit lands on its day (Baseline + its offset) with its
+  // protocol window, and a custom visit keeps the gap it had from the copied
+  // patient's Baseline.
+  function applyBaseline(date: string) {
+    setBaselineDate(date);
+    if (!date || !baselineRow) return;
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.protocol) {
+          return {
+            ...r,
+            targetDate: shiftDate(date, r.protocol.dayOffset),
+            windowBeforeDays: r.protocol.windowBeforeDays,
+            windowAfterDays: r.protocol.windowAfterDays,
+          };
+        }
+        const gap = Math.round(
+          (Date.parse(`${r.sourceDate}T00:00:00Z`) - Date.parse(`${baselineRow.sourceDate}T00:00:00Z`)) / DAY_MS,
+        );
+        return { ...r, targetDate: shiftDate(date, gap) };
+      }),
     );
   }
 
@@ -195,26 +243,45 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
               <div className="col-span-2 space-y-2">
                 <p className="text-xs font-medium">{t("Visits to copy — set this patient's dates and windows")}</p>
 
-                <div className="flex flex-wrap items-end gap-2">
-                  <div>
-                    <label className="block text-xs text-neutral-500">{t("Start the schedule on")}</label>
-                    <input
-                      type="date"
-                      value={shiftTo}
-                      onChange={(e) => setShiftTo(e.target.value)}
-                      className="mt-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
-                    />
+                {baselineRow ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div>
+                      <label className="block text-xs font-medium">{t("Baseline / Day 0 date")}</label>
+                      <input
+                        type="date"
+                        value={baselineDate}
+                        onChange={(e) => applyBaseline(e.target.value)}
+                        className="mt-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+                      />
+                    </div>
+                    <span className="max-w-md text-xs text-neutral-500">
+                      {baselineDate
+                        ? t("Every protocol visit is placed on its day counted from Baseline (for example Week 4 = Day 28), with the protocol's window. Changing this date recalculates all of them; you can still adjust each one afterwards.")
+                        : t("Pick the Baseline date to set every visit's date from the protocol. Until then the dates below are the copied patient's.")}
+                    </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={applyShift}
-                    disabled={!shiftTo}
-                    className="rounded-md border border-neutral-300 px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                  >
-                    {t("Shift all dates")}</button>
-                  <span className="text-xs text-neutral-500">
-                    {t("The earliest visit moves there; the others keep the same gaps. You can still adjust each one.")}</span>
-                </div>
+                ) : (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <div>
+                      <label className="block text-xs text-neutral-500">{t("Start the schedule on")}</label>
+                      <input
+                        type="date"
+                        value={shiftTo}
+                        onChange={(e) => setShiftTo(e.target.value)}
+                        className="mt-1 rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={applyShift}
+                      disabled={!shiftTo}
+                      className="rounded-md border border-neutral-300 px-2 py-1 text-sm hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                    >
+                      {t("Shift all dates")}</button>
+                    <span className="text-xs text-neutral-500">
+                      {t("The earliest visit moves there; the others keep the same gaps. You can still adjust each one.")}</span>
+                  </div>
+                )}
 
                 <div className="overflow-x-auto rounded-md border border-neutral-200 dark:border-neutral-800">
                   <table className="min-w-full text-sm">
@@ -238,7 +305,12 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
                               aria-label={t("Include {0}", [r.visitType])}
                             />
                           </td>
-                          <td className="whitespace-nowrap px-2 py-1.5">{r.visitType}</td>
+                          <td className="whitespace-nowrap px-2 py-1.5">
+                            {r.visitType}
+                            {r.protocol && (
+                              <span className="ml-1.5 text-xs text-neutral-400">{t("Day {0}", [r.protocol.dayOffset])}</span>
+                            )}
+                          </td>
                           <td className="px-2 py-1.5">
                             <input
                               type="date"

@@ -5,6 +5,28 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useT } from "@/lib/i18n/client";
 
+/**
+ * Where to go after signing in. Someone who followed a link into the app (a
+ * visit in their calendar, say) is sent to `?callbackUrl=` by the middleware;
+ * honour it so they land on that page. Only a same-origin /dashboard address is
+ * accepted — anything else falls back to the dashboard, so this can't be used
+ * as an open redirect.
+ */
+function afterSignInPath(): string {
+  try {
+    const raw = new URLSearchParams(window.location.search).get("callbackUrl");
+    if (raw) {
+      const wanted = new URL(raw, window.location.origin);
+      if (wanted.origin === window.location.origin && /^\/dashboard(\/|$)/.test(wanted.pathname)) {
+        return wanted.pathname + wanted.search;
+      }
+    }
+  } catch {
+    // Malformed address: use the default.
+  }
+  return "/dashboard";
+}
+
 export function LoginForm() {
   const t = useT();
   const router = useRouter();
@@ -49,7 +71,7 @@ export function LoginForm() {
         return;
       }
 
-      router.push("/dashboard");
+      router.push(afterSignInPath());
       router.refresh();
     } catch {
       setError(t("Something went wrong. Please try again."));
