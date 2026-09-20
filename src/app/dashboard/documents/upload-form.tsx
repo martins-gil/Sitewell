@@ -21,7 +21,11 @@ export function UploadDocumentForm({
     setError(null);
     startTransition(async () => {
       try {
-        await uploadDocument(formData);
+        const result = await uploadDocument(formData);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
         formRef.current?.reset();
         setFormKey((k) => k + 1);
       } catch (e) {

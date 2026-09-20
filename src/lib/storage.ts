@@ -33,6 +33,11 @@ function r2Client(settings: R2Settings): S3Client {
     endpoint: settings.endpoint,
     // Bucket in the path, not the hostname: works with the EU-jurisdiction endpoint too.
     forcePathStyle: true,
+    // Recent AWS SDK versions add checksum headers and a streaming trailer to
+    // every request by default, which R2 doesn't handle; only send them when an
+    // operation requires it (Cloudflare's documented setting for R2).
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     credentials: { accessKeyId: settings.accessKeyId, secretAccessKey: settings.secretAccessKey },
   });
   return client;

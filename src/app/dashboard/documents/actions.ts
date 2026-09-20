@@ -6,20 +6,46 @@ import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { saveUploadedFile } from "@/lib/storage";
 import { parseDisplayStatus, toStoredStatus, type DocumentDisplayStatus } from "@/lib/document-status";
 
-const STORAGE_UNAVAILABLE =
-  "The file couldn't be saved. Try again, or leave the file empty to log the document without one and attach it later.";
+// What the document forms get back. Problems with the FILE are returned, not
+// thrown: a thrown server-action error is masked in production, so the form
+// could only show "something went wrong".
+export type DocumentSaveResult = { ok: true } | { ok: false; message: string };
+
+// What went wrong with the storage, in words someone setting the site up can
+// act on. Only an error CODE is ever shown (never a message that could carry a
+// key or an address).
+const STORAGE_HINTS: Record<string, string> = {
+  NoSuchBucket: "the bucket name (R2_BUCKET) isn't right",
+  InvalidAccessKeyId: "the access key (R2_ACCESS_KEY_ID) isn't right",
+  SignatureDoesNotMatch: "the secret key (R2_SECRET_ACCESS_KEY) isn't right, or the endpoint (R2_ENDPOINT) is",
+  AccessDenied: "the API token isn't allowed to write to this bucket",
+  Forbidden: "the API token isn't allowed to write to this bucket",
+  ENOTFOUND: "the endpoint address (R2_ENDPOINT) can't be reached",
+  ECONNREFUSED: "the endpoint address (R2_ENDPOINT) can't be reached",
+};
+
+function storageFailure(error: unknown): string {
+  const rawCode = (error as { code?: unknown } | null)?.code;
+  const reason = typeof rawCode === "string" && rawCode ? rawCode : error instanceof Error ? error.name : "";
+  const safe = /^[A-Za-z0-9_.-]{1,60}$/.test(reason) ? reason : "unknown";
+  const hint = STORAGE_HINTS[safe];
+  return `The file couldn't be saved (${safe}${hint ? ` — ${hint}` : ""}). Try again, or leave the file empty to log the document without one and attach it later.`;
+}
 
 // A file is optional: a document can be logged (title, type, version, dates)
-// with nothing attached and get a file later (attachDocumentFile). Returns null
-// when no file was chosen.
-async function saveOptionalFile(organizationId: string, file: FormDataEntryValue | null) {
-  if (!(file instanceof File) || file.size === 0) return null;
+// with nothing attached and get a file later (attachDocumentFile). `path` is
+// null when no file was chosen.
+async function saveOptionalFile(
+  organizationId: string,
+  file: FormDataEntryValue | null,
+): Promise<{ ok: true; path: string | null } | { ok: false; message: string }> {
+  if (!(file instanceof File) || file.size === 0) return { ok: true, path: null };
   try {
-    return (await saveUploadedFile(organizationId, file)).relativePath;
+    return { ok: true, path: (await saveUploadedFile(organizationId, file)).relativePath };
   } catch (error) {
-    // Logged for whoever runs the site; the user gets the plain message.
-    console.error("[storage] saving a file failed:", error instanceof Error ? error.message : error);
-    throw new Error(STORAGE_UNAVAILABLE);
+    // Logged for whoever runs the site (Vercel's function logs).
+    console.error("[storage] saving a file failed:", error);
+    return { ok: false, message: storageFailure(error) };
   }
 }
 
@@ -72,7 +98,7 @@ function refreshDocuments(visitId?: string | null) {
   if (visitId) revalidatePath(`/dashboard/visits/${visitId}`);
 }
 
-export async function uploadDocument(formData: FormData) {
+export async function uploadDocument(formData: FormData): Promise<DocumentSaveResult> {
   const ctx = await requireTenantContext();
 
   const studyId = String(formData.get("studyId") ?? "");
@@ -96,9 +122,10 @@ export async function uploadDocument(formData: FormData) {
   if (!status) throw new Error("Pick a valid status.");
   assertCanBeActive(status, expiryDate);
 
-  await withTenantContext(ctx, async (tx) => {
+  const outcome = await withTenantContext(ctx, async (tx): Promise<DocumentSaveResult> => {
     const study = await tx.study.findUniqueOrThrow({ where: { id: studyId } });
-    const relativePath = await saveOptionalFile(study.organizationId, file);
+    const saved = await saveOptionalFile(study.organizationId, file);
+    if (!saved.ok) return saved; // nothing has been written yet
 
     const created = await tx.document.create({
       data: {
@@ -110,7 +137,7 @@ export async function uploadDocument(formData: FormData) {
         typeLabel,
         title,
         version,
-        fileUrl: relativePath,
+        fileUrl: saved.path,
         releaseDate,
         expiryDate,
         status: toStoredStatus(status),
@@ -118,9 +145,11 @@ export async function uploadDocument(formData: FormData) {
     });
 
     if (status === "ACTIVE") await supersedeOlderVersions(tx, created);
+    return { ok: true };
   });
 
-  refreshDocuments(visitId);
+  if (outcome.ok) refreshDocuments(visitId);
+  return outcome;
 }
 
 // Changes a document's status by hand — e.g. marking it Active as soon as it's
@@ -144,18 +173,21 @@ export async function setDocumentStatus(documentId: string, requested: DocumentD
 }
 
 // Attach (or replace) the file on a document that was logged without one.
-export async function attachDocumentFile(documentId: string, formData: FormData) {
+export async function attachDocumentFile(documentId: string, formData: FormData): Promise<DocumentSaveResult> {
   const ctx = await requireTenantContext();
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) throw new Error("Choose a file to attach.");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose a file to attach." };
 
-  await withTenantContext(ctx, async (tx) => {
+  const outcome = await withTenantContext(ctx, async (tx): Promise<DocumentSaveResult> => {
     const document = await tx.document.findUniqueOrThrow({ where: { id: documentId } });
-    const relativePath = await saveOptionalFile(document.organizationId, file);
-    await tx.document.update({ where: { id: documentId }, data: { fileUrl: relativePath } });
+    const saved = await saveOptionalFile(document.organizationId, file);
+    if (!saved.ok) return saved;
+    await tx.document.update({ where: { id: documentId }, data: { fileUrl: saved.path } });
+    return { ok: true };
   });
 
-  refreshDocuments();
+  if (outcome.ok) refreshDocuments();
+  return outcome;
 }
 
 // Fix a document's version label, release date or expiry date after the fact

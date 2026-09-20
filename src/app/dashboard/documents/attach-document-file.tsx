@@ -15,7 +15,11 @@ export function AttachDocumentFile({ documentId }: { documentId: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        await attachDocumentFile(documentId, formData);
+        const result = await attachDocumentFile(documentId, formData);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
         setOpen(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : t("Failed to attach the file."));

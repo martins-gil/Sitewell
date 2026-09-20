@@ -41,6 +41,13 @@ picks this repo up next.
   `uploads/`, for development). Vercel functions have no persistent disk, so the
   deployed site needs the R2 settings — without them an upload fails with the
   "couldn't be saved" message and the document can still be logged with no file.
+  `uploadDocument`/`attachDocumentFile` RETURN `{ok:false, message}` for a file
+  problem (a thrown error would be masked in production); the message carries
+  only an error CODE plus a hint (`NoSuchBucket`, `InvalidAccessKeyId`,
+  `SignatureDoesNotMatch`, `AccessDenied`…) so whoever sets the site up can fix
+  a wrong setting, and the full error goes to the server log. The S3 client is
+  built with `requestChecksumCalculation`/`responseChecksumValidation` =
+  `WHEN_REQUIRED` — recent AWS SDKs add checksum trailers R2 doesn't take.
   The bucket must stay PRIVATE and have no public URL: every download goes
   through `/api/documents/[id]/file`, which re-checks org access via
   `withTenantContext` before `readStoredFile` is called — don't add a route or
