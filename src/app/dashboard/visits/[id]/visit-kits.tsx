@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { assignKitToVisit, markKitUsed } from "@/app/dashboard/kits/actions";
+import { assignKitToVisit, markKitUsed, type KitResult } from "@/app/dashboard/kits/actions";
+import { kitProblemText } from "@/app/dashboard/kits/kit-problems";
 import { useT } from "@/lib/i18n/client";
 
 export type VisitKit = { id: string; name: string; expiryLabel: string; used: boolean };
@@ -23,14 +24,15 @@ export function VisitKits({
   const [error, setError] = useState<string | null>(null);
   const [pickedKitId, setPickedKitId] = useState("");
 
-  function run(fn: () => Promise<void>) {
+  function run(fn: () => Promise<KitResult>) {
     setError(null);
     startTransition(async () => {
       try {
-        await fn();
-        setPickedKitId("");
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Something went wrong."));
+        const result = await fn();
+        if (result.ok) setPickedKitId("");
+        else setError(kitProblemText(t, result.problem));
+      } catch {
+        setError(t("Something went wrong."));
       }
     });
   }
@@ -59,13 +61,17 @@ export function VisitKits({
                     >
                       {t("Remove from inventory (used)")}</button>
                   )}
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => assignKitToVisit(kit.id, null))}
-                    className="text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
-                  >
-                    {t("Unassign")}</button>
+                  {visitOccurred ? (
+                    <span className="text-xs text-neutral-500">{t("Locked — the visit has taken place")}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => run(() => assignKitToVisit(kit.id, null))}
+                      className="text-xs text-red-700 hover:underline disabled:opacity-60 dark:text-red-400"
+                    >
+                      {t("Release")}</button>
+                  )}
                 </span>
               )}
             </li>

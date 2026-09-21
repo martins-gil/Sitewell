@@ -2,6 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { addKit } from "./actions";
+import { kitProblemText } from "./kit-problems";
+import { MAX_KITS_PER_ADD } from "@/lib/kit-stock";
 import { useT } from "@/lib/i18n/client";
 
 type Study = { id: string; protocolId: string; templates: { id: string; name: string }[] };
@@ -16,15 +18,23 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
 
   const selectedStudy = studies.find((s) => s.id === studyId);
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React resets an action's form afterwards, which
+  // would wipe what was typed whenever the answer is a problem to fix.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
       try {
-        await addKit(formData);
-        formRef.current?.reset();
-        setStudyId(studies[0]?.id ?? "");
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to add kit."));
+        const result = await addKit(formData);
+        if (result.ok) {
+          formRef.current?.reset();
+          setStudyId(studies[0]?.id ?? "");
+        } else {
+          setError(kitProblemText(t, result.problem));
+        }
+      } catch {
+        setError(t("Failed to add kit."));
       }
     });
   }
@@ -32,7 +42,7 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
   return (
     <form
       ref={formRef}
-      action={handleSubmit}
+      onSubmit={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <h2 className="text-sm font-medium text-neutral-500">{t("Add a kit to inventory")}</h2>
@@ -100,6 +110,17 @@ export function AddKitForm({ studies, visitOptions }: { studies: Study[]; visitO
           <input
             type="date"
             name="expiryDate"
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium">{t("Quantity")}</label>
+          <input
+            type="number"
+            name="quantity"
+            min={1}
+            max={MAX_KITS_PER_ADD}
+            defaultValue={1}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>

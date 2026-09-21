@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
-import { getExpiringKitAlerts, getMustChangePassword, getStudies, getUpcomingWeeks } from "@/lib/queries";
+import { getExpiringKitAlerts, getKitStockAlerts, getMustChangePassword, getStudies, getUpcomingWeeks } from "@/lib/queries";
 import { daysUntil, formatDate, formatDayShort } from "@/lib/format";
 import { resolveStudyColors } from "@/lib/study-colors";
 import { SignOutButton } from "./sign-out-button";
@@ -22,6 +22,7 @@ const NAV = [
   { href: "/dashboard/visits", label: "Visits Schedule" },
   { href: "/dashboard/monitoring", label: "Monitoring visits" },
   { href: "/dashboard/kits", label: "Kits Inventory" },
+  { href: "/dashboard/samples", label: "Lab samples" },
   { href: "/dashboard/documents", label: "Documents" },
   { href: "/dashboard/help", label: "Help" },
   { href: "/dashboard/feedback", label: "Feedback" },
@@ -39,9 +40,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // A platform admin has no organization of their own, so there's no "their"
   // kits or visits to warn about.
   const hasOrg = Boolean(session?.user?.organizationId);
-  const [kitAlerts, weeks, studies, mustChangePassword] = hasOrg
-    ? await Promise.all([getExpiringKitAlerts(), getUpcomingWeeks(), getStudies(), getMustChangePassword()])
-    : [[], { thisWeek: [], nextWeek: [] }, [], false];
+  const [kitAlerts, stockAlerts, weeks, studies, mustChangePassword] = hasOrg
+    ? await Promise.all([getExpiringKitAlerts(), getKitStockAlerts(), getUpcomingWeeks(), getStudies(), getMustChangePassword()])
+    : [[], [], { thisWeek: [], nextWeek: [] }, [], false];
 
   const expiringKits = kitAlerts.map((k) => ({
     id: k.id,
@@ -73,7 +74,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </Link>
         </div>
       )}
-      <KitExpiryBanner kits={expiringKits} />
+      <KitExpiryBanner
+        kits={expiringKits}
+        outOfStock={stockAlerts.map((s) => ({ studyId: s.studyId, protocolId: s.protocolId, assigned: s.assigned }))}
+      />
       <UpcomingVisitsBanner thisWeek={weeks.thisWeek.map(toWeekVisit)} nextWeek={weeks.nextWeek.map(toWeekVisit)} />
       <div className="flex flex-1">
       <aside

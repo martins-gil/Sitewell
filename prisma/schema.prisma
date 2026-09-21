@@ -100,6 +100,7 @@ model Organization {
   departments          Department[]
   monitoringVisits     MonitoringVisit[]
   monitoringItems      MonitoringVisitItem[]
+  labShipments         LabShipment[]
 
   @@map("organizations")
 }
@@ -156,41 +157,47 @@ model User {
 }
 
 model Study {
-  id                String    @id @default(cuid())
-  organizationId    String    @map("organization_id")
-  protocolId        String    @map("protocol_id")
-  title             String
-  phase             String?
-  status            String    @default("active")
-  sponsor           String?
+  id                    String    @id @default(cuid())
+  organizationId        String    @map("organization_id")
+  protocolId            String    @map("protocol_id")
+  title                 String
+  phase                 String?
+  status                String    @default("active")
+  sponsor               String?
   // DEPRECATED, unused: the protocol version/date now live on the study's
   // PROTOCOL document (see below). Kept only so the previous deploy keeps
   // working while the new one rolls out; drop in a follow-up migration once
   // that's done.
-  protocolAmendment String?   @map("protocol_amendment")
-  protocolDate      DateTime? @map("protocol_date")
+  protocolAmendment     String?   @map("protocol_amendment")
+  protocolDate          DateTime? @map("protocol_date")
   // Printed on the generated checklist .docx (see src/lib/checklist-docx.ts).
   // Set directly on the study rather than derived from study_assignments —
   // it's a fixed fact about the study, not whoever's logged in. The protocol
   // VERSION and RELEASE DATE printed there are not stored here: they come
   // from the study's active PROTOCOL document (Document.version /
   // Document.releaseDate), see src/lib/protocol-document.ts.
-  piName            String?   @map("pi_name")
+  piName                String?   @map("pi_name")
   // The study's EU CT number (e.g. 2023-000000-00), printed in the footer of
   // the I/E criteria form (src/lib/ie-docx.ts).
-  euCtNumber        String?   @map("eu_ct_number")
+  euCtNumber            String?   @map("eu_ct_number")
   // A palette id from src/lib/study-colors.ts (e.g. "blue"); null = one is
   // picked automatically. The calendar shows the study in this colour and each
   // of its patients in a different tone of it.
-  color             String?
+  color                 String?
   // The department (e.g. Oncology) the study belongs to; null = none set.
-  departmentId      String?   @map("department_id")
+  departmentId          String?   @map("department_id")
   // The protocol's eligibility criteria, split into inclusion and exclusion:
   // { inclusion: string[], exclusion: string[] }. New patients of the study
   // can start from this list (each one "not assessed"). Null = none entered.
-  ieCriteria        Json?     @map("ie_criteria")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  ieCriteria            Json?     @map("ie_criteria")
+  // Kit stock alert (src/lib/kit-stock.ts): when every kit of the study is assigned,
+  // used or expired, the banner and the every-3-days email ask for more kits until
+  // someone marks them as requested (kitRestockRequestedAt). Adding a kit clears it,
+  // so the next time the stock runs out the alert comes back.
+  kitRestockRequestedAt DateTime? @map("kit_restock_requested_at")
+  lastKitStockEmailAt   DateTime? @map("last_kit_stock_email_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   organization     Organization            @relation(fields: [organizationId], references: [id])
   department       Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
@@ -202,6 +209,7 @@ model Study {
   visits           Visit[]
   kits             Kit[]
   monitoringVisits MonitoringVisit[]
+  labShipments     LabShipment[]
 
   @@unique([organizationId, protocolId])
   @@index([organizationId])
@@ -381,6 +389,8 @@ model Kit {
   studyId                 String    @map("study_id")
   visitScheduleTemplateId String?   @map("visit_schedule_template_id")
   visitId                 String?   @map("visit_id")
+  // The lab shipment this kit's samples went out in (Lab samples); null = not shipped.
+  shipmentId              String?   @map("shipment_id")
   name                    String
   expiryDate              DateTime? @map("expiry_date")
   orderedAt               DateTime? @map("ordered_at")
@@ -393,11 +403,42 @@ model Kit {
   study                 Study                  @relation(fields: [studyId], references: [id])
   visitScheduleTemplate VisitScheduleTemplate? @relation(fields: [visitScheduleTemplateId], references: [id])
   visit                 Visit?                 @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  shipment              LabShipment?           @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([studyId])
   @@index([visitId])
+  @@index([shipmentId])
   @@map("kits")
+}
+
+// A shipment of laboratory samples sent out under an airway bill (AWB), with how many
+// samples went at each temperature. The samples come from the kits used at patient
+// visits, so a shipment can list those kits (Kit.shipmentId). The counts are typed in,
+// not derived from the kits. Tenant-scoped: RLS + the audit trigger (see its migration).
+model LabShipment {
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  studyId           String   @map("study_id")
+  // Upper-case, one per organization.
+  awb               String
+  // The day it went out — noon UTC, like every date-only value here.
+  shipDate          DateTime @map("ship_date")
+  ambientCount      Int      @default(0) @map("ambient_count")
+  refrigeratedCount Int      @default(0) @map("refrigerated_count")
+  frozenCount       Int      @default(0) @map("frozen_count")
+  notes             String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  study        Study        @relation(fields: [studyId], references: [id])
+  kits         Kit[]
+
+  @@unique([organizationId, awb])
+  @@index([organizationId])
+  @@index([studyId, shipDate])
+  @@map("lab_shipments")
 }
 
 model Visit {

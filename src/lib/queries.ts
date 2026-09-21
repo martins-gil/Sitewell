@@ -2,6 +2,7 @@ import type { Prisma, SubjectStatus } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { formatDate } from "@/lib/format";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_OVERVIEW_WINDOW_DAYS } from "@/lib/kits";
+import { summarizeStock } from "@/lib/kit-stock";
 import { SCHEDULABLE_STATUSES } from "@/lib/visit-scheduling";
 import { pickProtocolDocument } from "@/lib/protocol-document";
 import { parseNursingSheet, defaultNursingSheet } from "@/lib/nursing-sheet";
@@ -758,18 +759,41 @@ export async function getFeedbackSubmissions() {
   );
 }
 
-/** Kits inventory. Used kits (usedAt set) are hidden unless showUsed. */
-export async function getKits(filters: { studyId?: string; showUsed?: boolean } = {}) {
+/** Which kits the Kits Inventory list shows: "" = everything still in stock (not used);
+ * "all" adds the used ones; the others are one state each (see kit-stock.ts). */
+export type KitListFilter = "" | "available" | "assigned" | "expired" | "used" | "all";
+export const KIT_LIST_FILTERS: KitListFilter[] = ["", "available", "assigned", "expired", "used", "all"];
+
+function kitFilterWhere(filter: KitListFilter, now: Date): Prisma.KitWhereInput {
+  switch (filter) {
+    case "available":
+      return { usedAt: null, visitId: null, OR: [{ expiryDate: null }, { expiryDate: { gte: now } }] };
+    case "assigned":
+      return { usedAt: null, visitId: { not: null } };
+    case "expired":
+      return { usedAt: null, visitId: null, expiryDate: { lt: now } };
+    case "used":
+      return { usedAt: { not: null } };
+    case "all":
+      return {};
+    default:
+      return { usedAt: null };
+  }
+}
+
+/** Kits inventory: one study or all, and one status (default: everything still in stock). */
+export async function getKits(filters: { studyId?: string; status?: KitListFilter } = {}) {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
     tx.kit.findMany({
       where: {
         studyId: filters.studyId || undefined,
-        usedAt: filters.showUsed ? undefined : null,
+        ...kitFilterWhere(filters.status ?? "", new Date()),
       },
       include: {
         study: { select: { protocolId: true } },
         visitScheduleTemplate: { select: { name: true } },
+        shipment: { select: { awb: true } },
         visit: {
           select: {
             id: true,
@@ -786,7 +810,8 @@ export async function getKits(filters: { studyId?: string; showUsed?: boolean } 
 }
 
 /** Kits that need the orange banner: expiring within the warning window or
- * already expired, and not yet marked ordered or used. */
+ * already expired, and not yet marked ordered or used. (A kit locked to a visit still
+ * counts: it may expire before that visit happens.) */
 export async function getExpiringKitAlerts() {
   const ctx = await requireTenantContext();
   const warnBy = new Date(Date.now() + KIT_EXPIRY_WARNING_DAYS * 24 * 60 * 60 * 1000);
@@ -844,13 +869,38 @@ export async function getLinkableVisits(locale: string = "en") {
   }));
 }
 
-/** Kits of a visit's study that aren't assigned to any visit yet and haven't
- * been used — what the visit page's "assign a kit" picker offers. */
+/** How many kits each study (that has kits) has available, assigned, expired and used. */
+export async function getKitStock(studyId?: string) {
+  const ctx = await requireTenantContext();
+  return withTenantContext(ctx, async (tx) => {
+    const [studies, kits] = await Promise.all([
+      tx.study.findMany({
+        where: { id: studyId || undefined },
+        select: { id: true, protocolId: true, title: true, kitRestockRequestedAt: true },
+      }),
+      tx.kit.findMany({
+        where: { studyId: studyId || undefined },
+        select: { studyId: true, visitId: true, usedAt: true, expiryDate: true },
+      }),
+    ]);
+    return summarizeStock(studies, kits);
+  });
+}
+
+/** Studies whose kits have run out (none available) and where nobody has said more were
+ * requested — the ones the banner and the email ask about. */
+export async function getKitStockAlerts() {
+  return (await getKitStock()).filter((s) => s.needsAlert);
+}
+
+/** Kits of a visit's study that aren't assigned to any visit yet, haven't
+ * been used and haven't expired — what the visit page's "assign a kit" picker offers. */
 export async function getAssignableKitsForStudy(studyId: string) {
   const ctx = await requireTenantContext();
+  const now = new Date();
   return withTenantContext(ctx, (tx) =>
     tx.kit.findMany({
-      where: { studyId, visitId: null, usedAt: null },
+      where: { studyId, visitId: null, usedAt: null, OR: [{ expiryDate: null }, { expiryDate: { gte: now } }] },
       select: { id: true, name: true, expiryDate: true },
       orderBy: [{ expiryDate: "asc" }, { name: "asc" }],
     }),

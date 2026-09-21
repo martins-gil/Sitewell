@@ -270,6 +270,16 @@ to org A, and a cross-tenant insert is rejected).
   - **Copying a patient**: entering the Baseline / Day 0 date places every
     protocol visit on its day from Baseline with the protocol's window (a
     repeated visit keeps its spacing).
+- ✅ Kit stock and lab samples:
+  - **Kits Inventory** now opens with a table of how many kits each study has
+    available, assigned, expired and used, filterable by study and by status. Giving a
+    kit to a patient's visit locks it (it no longer counts as available; it can be
+    released until the visit happens). When a study has no kits left an orange bar and
+    an email every 3 days ask for more, until someone marks them as requested. Kits can
+    be added several at a time.
+  - **Lab samples** (sidebar): one record per shipment with the airway bill (AWB), the
+    date and how many samples went ambient, refrigerated and frozen, optionally listing
+    the kits the samples were collected with; filter by study and dates, with totals.
 - ✅ Visit times, monitoring visits, weekly messages, and a friendlier sign-in:
   - **Visit time**: each visit can have a time; it shows on the calendar and in
     lists, and the shared calendar (Apple / Google / Outlook) gets a timed event

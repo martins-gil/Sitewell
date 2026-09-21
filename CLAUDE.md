@@ -343,6 +343,29 @@ picks this repo up next.
   already-expired ones. "Daily" is just that: it renders on every visit, and
   "Dismiss for today" is a per-browser `localStorage` date, so it returns
   tomorrow. Constants live in `src/lib/kits.ts`.
+- **Kit states, locking and the "no kits left" alert** (`src/lib/kit-stock.ts`).
+  A kit is exactly one of USED (`usedAt`), ASSIGNED (`visitId` set — LOCKED to that
+  patient's visit), EXPIRED (past `expiryDate`, unassigned) or AVAILABLE — always ask
+  `kitState()`, don't re-derive it. The lock is enforced in `assignKitToVisit`, not
+  just by hiding buttons: a kit already on another visit, expired or used can't be
+  assigned; releasing (`visitId` null) is refused once the visit has an `actualDate`;
+  `deleteKit` refuses an assigned kit. A study is OUT OF STOCK when it has kits on
+  record and none AVAILABLE; that raises the bar in `kit-expiry-banner.tsx`
+  (`getKitStockAlerts`) and, from the same daily cron as the expiry email
+  (`runKitStockEmails`, every 3 days via `Study.lastKitStockEmailAt`), an email to
+  every user of the organisation — until someone presses "Mark as requested"
+  (`Study.kitRestockRequestedAt`). `addKit` (which now takes a quantity, max 500)
+  clears that mark so the next stock-out alerts again. Expiry alerts deliberately
+  still include assigned-but-unused kits (one may expire before its visit). The
+  kit actions RETURN `KitResult` codes (words in `kit-problems.ts`), never throw.
+- **Lab samples** (`/dashboard/samples`, `LabShipment`, tenant table with RLS +
+  audit in `20260929100000_…`): one row per shipment — AWB (upper-cased, spaces
+  collapsed, unique per organisation), ship date (noon UTC), and typed-in ambient /
+  refrigerated / frozen counts (not derived from kits; at least one sample). A
+  shipment can list the kits its samples came from (`Kit.shipmentId`, `ON DELETE SET
+  NULL`): only kits of the same study that are assigned to a visit, one shipment per
+  kit — a refused kit rolls the whole save back (`KitRefused` thrown inside the
+  transaction). Actions return `ShipmentResult` codes (`shipment-problems.ts`).
 - **The kit-expiry email job is the one place with no logged-in user.**
   `/api/cron/kit-expiry` (Vercel Cron, `vercel.json`) authenticates with
   `CRON_SECRET` as a Bearer token and refuses to run at all if that env var

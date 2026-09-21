@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runKitExpiryEmails } from "@/lib/kit-reminders";
+import { runKitExpiryEmails, runKitStockEmails } from "@/lib/kit-reminders";
 
 // Hit daily by Vercel Cron (see vercel.json). Vercel sends
 // `Authorization: Bearer <CRON_SECRET>` when the CRON_SECRET env var is set
@@ -15,6 +15,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Two reminders from one daily job: kits about to expire, and studies with no kits left.
   const result = await runKitExpiryEmails();
-  return NextResponse.json(result);
+  const stock = await runKitStockEmails();
+  return NextResponse.json({ ...result, stock });
 }

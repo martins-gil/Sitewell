@@ -1,6 +1,7 @@
 import { withTenantContext, type TenantContext } from "@/lib/db-context";
 import { sendEmail } from "@/lib/email";
 import { KIT_EXPIRY_WARNING_DAYS, KIT_EMAIL_INTERVAL_DAYS } from "@/lib/kits";
+import { summarizeStock } from "@/lib/kit-stock";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -119,4 +120,88 @@ export async function runKitExpiryEmails(): Promise<{ kits: number; emails: numb
   }
 
   return { kits: notifiedKitIds.length, emails };
+}
+
+/**
+ * Emails every user of an organization about its studies that have no kits left (every
+ * kit assigned to a patient, used or expired) and where nobody has marked more as
+ * requested — the email twin of the orange "No kits left" bar. Same rhythm as the expiry
+ * email: meant to run daily, repeating every KIT_EMAIL_INTERVAL_DAYS days
+ * (lastKitStockEmailAt, with half a day of slack) until someone marks the kits as
+ * requested in Kits Inventory. Like the job above, it runs without a signed-in user, so
+ * it uses the platform-admin context and sends between two short transactions.
+ */
+export async function runKitStockEmails(): Promise<{ studies: number; emails: number }> {
+  const now = new Date();
+  const resendBefore = new Date(now.getTime() - (KIT_EMAIL_INTERVAL_DAYS * DAY_MS - DAY_MS / 2));
+
+  const due = await withTenantContext(SYSTEM_CONTEXT, async (tx) => {
+    const studies = await tx.study.findMany({
+      where: {
+        kitRestockRequestedAt: null,
+        OR: [{ lastKitStockEmailAt: null }, { lastKitStockEmailAt: { lte: resendBefore } }],
+      },
+      select: { id: true, protocolId: true, title: true, organizationId: true, kitRestockRequestedAt: true },
+    });
+    if (studies.length === 0) return { alerts: [], emailsByOrg: new Map<string, string[]>() };
+
+    const kits = await tx.kit.findMany({
+      where: { studyId: { in: studies.map((s) => s.id) } },
+      select: { studyId: true, visitId: true, usedAt: true, expiryDate: true },
+    });
+    const orgOf = new Map(studies.map((s) => [s.id, s.organizationId]));
+    const alerts = summarizeStock(studies, kits, now)
+      .filter((s) => s.needsAlert)
+      .map((s) => ({ ...s, organizationId: orgOf.get(s.studyId)! }));
+    if (alerts.length === 0) return { alerts: [], emailsByOrg: new Map<string, string[]>() };
+
+    const users = await tx.user.findMany({
+      where: { organizationId: { in: [...new Set(alerts.map((a) => a.organizationId))] } },
+      select: { email: true, organizationId: true },
+    });
+    const emailsByOrg = new Map<string, string[]>();
+    for (const u of users) {
+      if (!u.organizationId) continue;
+      emailsByOrg.set(u.organizationId, [...(emailsByOrg.get(u.organizationId) ?? []), u.email]);
+    }
+    return { alerts, emailsByOrg };
+  });
+
+  if (due.alerts.length === 0) return { studies: 0, emails: 0 };
+
+  const appUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, "");
+  let emails = 0;
+  const notifiedStudyIds: string[] = [];
+
+  for (const [orgId, recipients] of due.emailsByOrg) {
+    const orgAlerts = due.alerts.filter((a) => a.organizationId === orgId);
+    if (orgAlerts.length === 0) continue;
+
+    const text = [
+      `${orgAlerts.length === 1 ? "This study has" : "These studies have"} no kits left — every kit is assigned to a patient's visit, used or expired:`,
+      ``,
+      ...orgAlerts.map((a) => `- ${a.protocolId} (${a.title}) — ${a.assigned} assigned to patients, ${a.expired} expired`),
+      ``,
+      `Request more kits, then mark them as requested in Kits Inventory${appUrl ? ` (${appUrl}/dashboard/kits)` : ""} to stop these reminders.`,
+      `You'll keep getting this email every ${KIT_EMAIL_INTERVAL_DAYS} days until then.`,
+      ``,
+      `This is an automated reminder from SiteWell-ct.`,
+    ].join("\n");
+    const subject = `No kits left: ${orgAlerts.map((a) => a.protocolId).join(", ")}`;
+
+    for (const to of recipients) {
+      await sendEmail({ to: [to], subject, text });
+      emails++;
+    }
+    // Only studies whose organization actually had someone to notify count as notified.
+    if (recipients.length > 0) notifiedStudyIds.push(...orgAlerts.map((a) => a.studyId));
+  }
+
+  if (notifiedStudyIds.length > 0) {
+    await withTenantContext(SYSTEM_CONTEXT, (tx) =>
+      tx.study.updateMany({ where: { id: { in: notifiedStudyIds } }, data: { lastKitStockEmailAt: now } }),
+    );
+  }
+
+  return { studies: notifiedStudyIds.length, emails };
 }
