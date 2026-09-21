@@ -2,11 +2,12 @@ import { LOGO_SRC } from "@/lib/brand";
 
 /**
  * The SiteWell-ct logo (public/brand/, set in src/lib/brand.ts) — or the plain
- * wordmark until a logo file has been added. On the coloured sidebar the logo sits
- * on a small light chip, so a logo drawn in dark colours stays readable.
+ * wordmark until a logo file has been added. The logo is drawn in dark blues, so
+ * wherever the page behind it is dark (a coloured sidebar, dark mode) it sits on a
+ * small light chip to stay readable.
  */
 export function BrandLogo({ size, onDark = false }: { size: "login" | "sidebar"; onDark?: boolean }) {
-  const height = size === "login" ? "h-14" : "h-8";
+  const height = size === "login" ? "h-20" : "h-9";
 
   if (!LOGO_SRC) {
     return (
@@ -20,13 +21,11 @@ export function BrandLogo({ size, onDark = false }: { size: "login" | "sidebar";
     );
   }
 
+  const chip = onDark ? "rounded bg-white/95 p-1" : "dark:rounded dark:bg-white/95 dark:p-1";
+
   return (
     // A plain <img>: the file is a fixed asset in public/, of a size we don't control.
     // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={LOGO_SRC}
-      alt="SiteWell-ct"
-      className={`${height} w-auto max-w-full ${onDark ? "rounded bg-white/95 p-1" : ""}`}
-    />
+    <img src={LOGO_SRC} alt="SiteWell-ct" className={`${height} w-auto max-w-full ${chip}`} />
   );
 }

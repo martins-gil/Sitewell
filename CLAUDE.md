@@ -317,7 +317,7 @@ picks this repo up next.
   change-password form (`changePassword` RETURNS a result code — a thrown
   server-action error is masked in production, so a form couldn't show it).
   A password an admin sets (new team member, or `resetTeamMemberPassword` —
-  also the way to unlock someone, there's no "forgot password" email yet)
+  also the way to unlock someone; people can also use "Forgot your password?")
   sets `mustChangePassword`, which shows an amber bar until they change it;
   it's a nudge, not a forced redirect. Other sessions of the same user are
   NOT ended when a password changes (JWT sessions).
@@ -482,8 +482,11 @@ picks this repo up next.
   pre-filled (`?name=&email=&role=&phone=`); it never emails the requester. Both
   have a honeypot field and per-IP throttling (in-memory, `throttle.ts`).
 - **Sign-in look and brand assets.** `src/lib/brand.ts` lists `LOGO_SRC` and
-  `LOGIN_IMAGES` (files in `public/brand/`, which the middleware matcher exempts);
-  empty until the assets are supplied. Each sign-in page load shows the picture
+  `LOGIN_IMAGES` (files in `public/brand/`, which the middleware matcher exempts):
+  `sitewell-logo.png` (the supplied logo with its baked-in grid background removed
+  — colour-to-alpha against white, so it's transparent and dark-blue; it needs a
+  light chip on any dark surface, which `BrandLogo` adds for a coloured bar and
+  in dark mode) and three login pictures, 1600 px wide. Each sign-in page load shows the picture
   after the one this browser saw last (`sw_login_seq` cookie, written by
   `LoginArt`); the logo shows on the sign-in pages and, when set, at the bottom of
   the sidebar above the user's name (on a light chip over a coloured bar).

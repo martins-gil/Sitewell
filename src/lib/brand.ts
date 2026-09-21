@@ -7,6 +7,6 @@
 //   LOGIN_IMAGES   the pictures for the sign-in page. Each sign-in page load shows the
 //                  next one in turn. Empty = a plain coloured panel.
 
-export const LOGO_SRC: string | null = null;
+export const LOGO_SRC: string | null = "/brand/sitewell-logo.png";
 
-export const LOGIN_IMAGES: string[] = [];
+export const LOGIN_IMAGES: string[] = ["/brand/login-1.jpg", "/brand/login-2.jpg", "/brand/login-3.jpg"];
