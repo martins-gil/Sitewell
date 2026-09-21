@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { DuplicationSource } from "@/lib/queries";
 import { addSubject } from "./actions";
 import { useT } from "@/lib/i18n/client";
+import { studyLabel } from "@/lib/study-label";
 
 type Study = { id: string; protocolId: string; title: string };
 
@@ -187,7 +188,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
           >
             {studies.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.protocolId} — {s.title}
+                {studyLabel(s.protocolId, s.title)}
               </option>
             ))}
           </select>
@@ -196,12 +197,8 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
           <label className="block text-xs font-medium">{t("Subject code (optional)")}</label>
           <input name="subjectCode" placeholder={t("Auto-generated if left blank")} className={inputClass} />
         </div>
-        <div className="col-span-2">
-          <label className="block text-xs font-medium">{t("Initials / name (optional)")}</label>
-          <input name="displayName" placeholder={t("e.g. M.C.")} className={inputClass} />
-          <p className="mt-1 text-xs text-neutral-500">
-            {t("Test data only for now — don't enter a real patient's name or initials until the Phase 5 compliance work is done.")}</p>
-        </div>
+        <p className="col-span-2 text-xs text-neutral-500">
+          {t("Patients are identified by their code only — never enter a name or initials. Test data only until the compliance work is done.")}</p>
 
         <div className="col-span-2 border-t border-neutral-200 pt-3 dark:border-neutral-800">
           <label className="block text-xs font-medium">{t("Copy from an existing patient (optional)")}</label>
@@ -209,8 +206,7 @@ export function AddPatientForm({ studies, sources }: { studies: Study[]; sources
             <option value="">{t("Start empty — don't copy anything")}</option>
             {sourcesForStudy.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.subjectCode}
-                {s.displayName ? ` (${s.displayName})` : ""} — {t("{0} visit|{0} visits", [s.visits.length])},{" "}
+                {s.subjectCode} — {t("{0} visit|{0} visits", [s.visits.length])},{" "}
                 {t("{0} eligibility criterion|{0} eligibility criteria", [s.criteria.length])}
               </option>
             ))}

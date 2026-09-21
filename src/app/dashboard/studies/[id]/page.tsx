@@ -45,7 +45,7 @@ export default async function StudyOverviewPage({
           <h1 className="text-2xl font-semibold tracking-tight">{study.protocolId}</h1>
           <Badge value={study.status} />
         </div>
-        <p className="mt-1 text-sm text-neutral-500">{study.title}</p>
+        {study.title !== study.protocolId && <p className="mt-1 text-sm text-neutral-500">{study.title}</p>}
         <p className="mt-1 text-xs text-neutral-500">
           {study.phase && <>{study.phase} · </>}
           {study.sponsor ?? t("Sponsor not set")} · {departmentName ?? t("No department")}
@@ -107,7 +107,6 @@ export default async function StudyOverviewPage({
           <thead className="bg-neutral-50 dark:bg-neutral-900">
             <tr>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Subject")}</th>
-              <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Initials / name")}</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Stage")}</th>
               <th className="px-4 py-2 text-left font-medium text-neutral-500">{t("Added")}</th>
             </tr>
@@ -120,7 +119,6 @@ export default async function StudyOverviewPage({
                     {p.subjectCode}
                   </Link>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2">{p.displayName ?? "—"}</td>
                 <td className="whitespace-nowrap px-4 py-2">
                   <Badge value={p.status} />
                 </td>
@@ -129,7 +127,7 @@ export default async function StudyOverviewPage({
             ))}
             {patients.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-4 text-center text-neutral-400">
+                <td colSpan={3} className="px-4 py-4 text-center text-neutral-400">
                   {t("No patients in this study yet.")}</td>
               </tr>
             )}

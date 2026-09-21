@@ -181,7 +181,6 @@ export async function getStudyProtocolDocument(studyId: string) {
 export type DuplicationSource = {
   id: string;
   subjectCode: string;
-  displayName: string | null;
   studyId: string;
   criteria: string[];
   visits: {
@@ -211,7 +210,6 @@ export async function getDuplicationSources(): Promise<DuplicationSource[]> {
       select: {
         id: true,
         subjectCode: true,
-        displayName: true,
         studyId: true,
         ieCriteriaSnapshot: true,
         visits: {
@@ -237,7 +235,6 @@ export async function getDuplicationSources(): Promise<DuplicationSource[]> {
   return subjects.map((s) => ({
     id: s.id,
     subjectCode: s.subjectCode,
-    displayName: s.displayName,
     studyId: s.studyId,
     criteria: ((s.ieCriteriaSnapshot as { criterion: string }[] | null) ?? []).map((c) => c.criterion),
     visits: s.visits.map((v) => ({
@@ -340,7 +337,6 @@ export async function getVisitSchedulingData() {
           id: true,
           studyId: true,
           subjectCode: true,
-          displayName: true,
           status: true,
           visits: { select: { templateId: true } },
         },
@@ -353,7 +349,6 @@ export async function getVisitSchedulingData() {
         id: s.id,
         studyId: s.studyId,
         subjectCode: s.subjectCode,
-        displayName: s.displayName,
         status: s.status as string,
         scheduledTemplateIds: s.visits.flatMap((v) => (v.templateId ? [v.templateId] : [])),
       })),
@@ -487,7 +482,7 @@ export async function getVisitChecklistHeader(visitId: string) {
       where: { id: visitId },
       include: {
         study: { include: { sites: { select: { siteNumber: true }, take: 1 } } },
-        subject: { select: { subjectCode: true, displayName: true } },
+        subject: { select: { subjectCode: true } },
         template: {
           select: {
             checklistVersion: true,
@@ -540,8 +535,9 @@ export async function getVisitChecklistHeader(visitId: string) {
       // Kits linked to this visit — listed on both documents.
       kits: visit.kits.map((k) => k.name),
       notes: visit.notes,
-      // For the nursing record's identification box.
-      initials: visit.subject.displayName,
+      // The nursing record's "initials" box is part of the paper form and is left
+      // blank to be written by hand: no initials are stored anywhere.
+      initials: null as string | null,
       actualDate: visit.actualDate,
     };
   });
@@ -626,7 +622,7 @@ export async function getSubjectIeForm(subjectId: string, visitId?: string | nul
   return withTenantContext(ctx, async (tx) => {
     const subject = await tx.subject.findUnique({
       where: { id: subjectId },
-      select: { studyId: true, subjectCode: true, displayName: true, ieCriteriaSnapshot: true },
+      select: { studyId: true, subjectCode: true, ieCriteriaSnapshot: true },
     });
     if (!subject) return null;
     // Only this patient's own visit counts; anything else leaves the field blank.
@@ -647,7 +643,7 @@ export async function getSubjectIeForm(subjectId: string, visitId?: string | nul
     return {
       ...header,
       subjectCode: subject.subjectCode,
-      initials: subject.displayName,
+      initials: null,
       visitName: visit?.visitType ?? null,
       inclusion,
       exclusion,

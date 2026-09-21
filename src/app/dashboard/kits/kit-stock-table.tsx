@@ -45,7 +45,7 @@ export function KitStockTable({ rows }: { rows: StockRow[] }) {
             <tr key={row.studyId}>
               <td className="px-4 py-2">
                 <span className="font-medium">{row.protocolId}</span>
-                <span className="ml-2 text-xs text-neutral-500">{row.title}</span>
+                {row.title !== row.protocolId && <span className="ml-2 text-xs text-neutral-500">{row.title}</span>}
               </td>
               <td
                 className={`${number} font-semibold ${

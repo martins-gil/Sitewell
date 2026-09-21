@@ -5,9 +5,9 @@ import { formatDate } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { StatusControl } from "./status-control";
 import { IeCriteriaEditor } from "./ie-criteria";
-import { EditDisplayName } from "./edit-display-name";
 import { VisitScheduler } from "./visit-scheduler";
 import { PatientVisitsTable } from "./patient-visits-table";
+import { studyLabel } from "@/lib/study-label";
 import { canScheduleVisits, DAY_MS } from "@/lib/visit-scheduling";
 import { getT } from "@/lib/i18n/server";
 import { getSectionModes } from "@/lib/preferences-server";
@@ -43,11 +43,8 @@ export default async function SubjectDetailPage({
           <Badge value={subject.status} />
         </div>
         <p className="mt-1 text-sm text-neutral-500">
-          {subject.study.protocolId} — {subject.study.title}
+          {studyLabel(subject.study.protocolId, subject.study.title)}
         </p>
-        <div className="mt-1">
-          <EditDisplayName subjectId={subject.id} initial={subject.displayName} />
-        </div>
       </div>
 
       <div className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
@@ -82,7 +79,6 @@ export default async function SubjectDetailPage({
                 id: subject.id,
                 studyId: subject.studyId,
                 subjectCode: subject.subjectCode,
-                displayName: subject.displayName,
                 status: subject.status,
                 scheduledTemplateIds: subject.visits.flatMap((v) => (v.templateId ? [v.templateId] : [])),
               }}

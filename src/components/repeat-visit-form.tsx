@@ -33,7 +33,7 @@ export function RepeatVisitForm({
   windowAfterDays: number;
   subjectId: string;
   // Patients of the same study the copy can go to (the current one included).
-  patients: { id: string; subjectCode: string; displayName: string | null }[];
+  patients: { id: string; subjectCode: string }[];
   onClose: () => void;
 }) {
   const t = useT();
@@ -90,7 +90,6 @@ export function RepeatVisitForm({
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.subjectCode}
-                  {p.displayName ? ` (${p.displayName})` : ""}
                 </option>
               ))}
             </select>

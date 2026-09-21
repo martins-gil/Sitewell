@@ -390,8 +390,6 @@ async function main() {
           studyId: study.id,
           subjectCode: `${def.protocolId}-${String(i).padStart(4, "0")}`,
           status,
-          // Synthetic initials only (faker), never a real person's.
-          displayName: `${faker.person.firstName()[0]}.${faker.person.lastName()[0]}.`,
           ieCriteriaSnapshot: IE_CRITERIA.map((criterion) => ({
             criterion,
             met: faker.datatype.boolean({ probability: 0.85 }),

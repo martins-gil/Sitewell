@@ -150,7 +150,7 @@ export function helpArticles(t: TFunction): HelpArticle[] {
       answer: t("Patients are added with an invented code during the pilot. You can copy the visits and criteria of a similar patient to save typing."),
       steps: [
         t("Open Patients and press “Add patient”."),
-        t("Choose the study and enter the code (and initials, if you want)."),
+        t("Choose the study and enter the code — patients are identified by the code only, never a name or initials."),
         t("Optionally pick “Copy from an existing patient” to reuse their visits and criteria."),
         t("When you copy a patient, enter the “Baseline / Day 0 date”: every protocol visit is placed on its day counted from Baseline automatically, and a repeated visit keeps its spacing."),
         t("Check the list of visits, change or remove rows if needed, and save."),

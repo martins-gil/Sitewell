@@ -7,6 +7,7 @@ import { EditDocumentDetails } from "./edit-document-details";
 import { DocumentStatusControl } from "./document-status-control";
 import { AttachDocumentFile } from "./attach-document-file";
 import { getT } from "@/lib/i18n/server";
+import { studyLabel } from "@/lib/study-label";
 
 export default async function DocumentsPage({
   searchParams,
@@ -41,7 +42,7 @@ export default async function DocumentsPage({
           <option value="">{t("All studies")}</option>
           {studies.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.protocolId} — {s.title}
+              {studyLabel(s.protocolId, s.title)}
             </option>
           ))}
         </select>

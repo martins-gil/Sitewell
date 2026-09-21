@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { addVisit } from "@/app/dashboard/visits/actions";
 import { humanizeEnum } from "@/lib/format";
 import { useT } from "@/lib/i18n/client";
+import { studyLabel } from "@/lib/study-label";
 
 export type SchedulingStudy = { id: string; protocolId: string; title: string };
 export type SchedulingTemplate = {
@@ -18,7 +19,6 @@ export type SchedulingSubject = {
   id: string;
   studyId: string;
   subjectCode: string;
-  displayName: string | null;
   status: string;
   scheduledTemplateIds: string[];
 };
@@ -121,7 +121,7 @@ export function AddVisitForm({
               >
                 {studies.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.protocolId} — {s.title}
+                    {studyLabel(s.protocolId, s.title)}
                   </option>
                 ))}
               </select>
@@ -140,8 +140,7 @@ export function AddVisitForm({
                 {subjectsForStudy.length === 0 && <option value="">{t("No eligible patients")}</option>}
                 {subjectsForStudy.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.subjectCode}
-                    {s.displayName ? ` (${s.displayName})` : ""} · {t(humanizeEnum(s.status))}
+                    {s.subjectCode} · {t(humanizeEnum(s.status))}
                   </option>
                 ))}
               </select>

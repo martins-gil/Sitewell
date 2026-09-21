@@ -13,19 +13,32 @@ function requireOrgAdmin(ctx: { role: string; isPlatformAdmin: boolean }) {
   }
 }
 
+// What the study forms get back. A thrown error would reach the browser as a masked
+// "Server Components render" message in production, so anything a person can fix is a
+// code here and the form words it (translated) itself — see study-problems.ts.
+export type StudyProblem = "MISSING" | "DUPLICATE" | "DEPARTMENT_NAME" | "DEPARTMENT_GONE";
+export type StudyResult = { ok: true } | { ok: false; problem: StudyProblem };
+
+// Thrown from inside a transaction so a refusal undoes the whole save.
+class StudyRefused extends Error {
+  constructor(public problem: StudyProblem) {
+    super(problem);
+  }
+}
+
 // Value of the department picker meaning "add the department named in newDepartment".
 const NEW_DEPARTMENT = "__new__";
 
 function readStudyFields(formData: FormData) {
   const protocolId = String(formData.get("protocolId") ?? "").trim();
-  const title = String(formData.get("title") ?? "").trim();
+  // The full title is optional: a study is usually known by its acronym (the protocol
+  // ID) alone, and that is what a blank title becomes.
+  const title = String(formData.get("title") ?? "").trim() || protocolId;
   const phase = String(formData.get("phase") ?? "").trim() || null;
   const sponsor = String(formData.get("sponsor") ?? "").trim() || null;
   const status = String(formData.get("status") ?? "").trim() || "active";
 
-  if (!protocolId || !title) {
-    throw new Error("Protocol ID and title are required.");
-  }
+  if (!protocolId) throw new StudyRefused("MISSING");
   const color = String(formData.get("color") ?? "");
   return { protocolId, title, phase, sponsor, status, color: isStudyColor(color) ? color : null };
 }
@@ -40,7 +53,7 @@ async function resolveDepartmentId(
   const choice = String(formData.get("departmentId") ?? "");
   if (choice === NEW_DEPARTMENT) {
     const name = String(formData.get("newDepartment") ?? "").trim();
-    if (!name) throw new Error("Enter a name for the new department.");
+    if (!name) throw new StudyRefused("DEPARTMENT_NAME");
     const existing = await tx.department.findFirst({
       where: { organizationId, name: { equals: name, mode: "insensitive" } },
     });
@@ -50,30 +63,36 @@ async function resolveDepartmentId(
   if (!choice) return null;
   // Only a department of this organization (row-level security hides others).
   const department = await tx.department.findUnique({ where: { id: choice } });
-  if (!department) throw new Error("That department no longer exists.");
+  if (!department) throw new StudyRefused("DEPARTMENT_GONE");
   return department.id;
 }
 
-export async function addStudy(formData: FormData) {
+/** Turns what a study save threw into a result, or lets a real failure through. */
+function studyFailure(e: unknown): StudyResult {
+  if (e instanceof StudyRefused) return { ok: false, problem: e.problem };
+  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+    return { ok: false, problem: "DUPLICATE" };
+  }
+  throw e;
+}
+
+export async function addStudy(formData: FormData): Promise<StudyResult> {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);
   if (!ctx.organizationId) throw new Error("No organization to add this study to.");
 
-  const fields = readStudyFields(formData);
-
   try {
+    const fields = readStudyFields(formData);
     await withTenantContext(ctx, async (tx) => {
       const departmentId = await resolveDepartmentId(tx, ctx.organizationId!, formData);
       await tx.study.create({ data: { organizationId: ctx.organizationId!, ...fields, departmentId } });
     });
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new Error(`A study with protocol ID "${fields.protocolId}" already exists.`);
-    }
-    throw e;
+    return studyFailure(e);
   }
 
   revalidatePath("/dashboard/studies");
+  return { ok: true };
 }
 
 // The PI name and site number printed on the checklist documents. Not
@@ -96,29 +115,26 @@ export async function updateStudyPiAndSite(studyId: string, formData: FormData) 
 }
 
 // Core study identity/status fields.
-export async function updateStudyCore(studyId: string, formData: FormData) {
+export async function updateStudyCore(studyId: string, formData: FormData): Promise<StudyResult> {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);
 
-  const fields = readStudyFields(formData);
-
   try {
+    const fields = readStudyFields(formData);
     await withTenantContext(ctx, async (tx) => {
       const study = await tx.study.findUniqueOrThrow({ where: { id: studyId }, select: { organizationId: true } });
       const departmentId = await resolveDepartmentId(tx, study.organizationId, formData);
       await tx.study.update({ where: { id: studyId }, data: { ...fields, departmentId } });
     });
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new Error(`A study with protocol ID "${fields.protocolId}" already exists.`);
-    }
-    throw e;
+    return studyFailure(e);
   }
 
   revalidatePath("/dashboard/studies");
   revalidatePath(`/dashboard/studies/${studyId}`);
   revalidatePath(`/dashboard/studies/${studyId}/templates`);
   revalidatePath("/dashboard/visits");
+  return { ok: true };
 }
 
 /** Saves the study's inclusion / exclusion criteria (from pasted text or typed

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { addStudy } from "./actions";
 import { useT } from "@/lib/i18n/client";
 import { ColorField, DepartmentField } from "./study-fields";
+import { studyProblemText } from "./study-problems";
 
 export function AddStudyForm({
   departments,
@@ -18,14 +19,19 @@ export function AddStudyForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React resets an action's form afterwards, which
+  // would wipe what was typed whenever the answer is a problem to fix.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
       try {
-        await addStudy(formData);
-        setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to add study."));
+        const result = await addStudy(formData);
+        if (result.ok) setOpen(false);
+        else setError(studyProblemText(t, result.problem, String(formData.get("protocolId") ?? "")));
+      } catch {
+        setError(t("Failed to add study."));
       }
     });
   }
@@ -42,7 +48,7 @@ export function AddStudyForm({
 
   return (
     <form
-      action={handleSubmit}
+      onSubmit={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <div className="flex items-center justify-between">
@@ -52,7 +58,7 @@ export function AddStudyForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">{t("Protocol ID")}</label>
+          <label className="block text-xs font-medium">{t("Protocol ID (study acronym)")}</label>
           <input
             name="protocolId"
             required
@@ -69,11 +75,10 @@ export function AddStudyForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">{t("Title")}</label>
+          <label className="block text-xs font-medium">{t("Full title (optional)")}</label>
           <input
             name="title"
-            required
-            placeholder={t("e.g. A Phase III Study Evaluating Compound Z vs. Placebo")}
+            placeholder={t("Leave empty to use the acronym")}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>

@@ -99,7 +99,7 @@ export default async function StudiesPage() {
                 </td>
                 <td className="px-4 py-2">
                   <Link href={`/dashboard/studies/${s.id}`} className="hover:underline">
-                    {s.title}
+                    {s.title === s.protocolId ? "—" : s.title}
                   </Link>
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-neutral-500">

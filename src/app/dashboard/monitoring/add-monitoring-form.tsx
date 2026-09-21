@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useT } from "@/lib/i18n/client";
 import { createMonitoringVisit } from "./actions";
+import { studyLabel } from "@/lib/study-label";
 
 const inputClass =
   "mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950";
@@ -74,7 +75,7 @@ export function AddMonitoringForm({
           >
             {studies.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.protocolId} — {s.title}
+                {studyLabel(s.protocolId, s.title)}
               </option>
             ))}
           </select>

@@ -272,9 +272,9 @@ model Subject {
   organizationId     String        @map("organization_id")
   studyId            String        @map("study_id")
   subjectCode        String        @map("subject_code")
-  // Optional initials/name shown next to the subject code. Synthetic test
-  // data only until Phase 5 (see PROJECT_SPEC.md) — the forms say so.
-  displayName        String?       @map("display_name")
+  // A patient is identified by the code alone: no name and no initials are stored
+  // anywhere (there used to be an optional display_name; migration
+  // 20260930090000_drop_patient_initials removed it).
   status             SubjectStatus @default(IDENTIFIED)
   ieCriteriaSnapshot Json?         @map("ie_criteria_snapshot")
   isTestData         Boolean       @default(true) @map("is_test_data")

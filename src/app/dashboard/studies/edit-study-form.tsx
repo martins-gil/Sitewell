@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { updateStudyCore } from "./actions";
 import { useT } from "@/lib/i18n/client";
 import { ColorField, DepartmentField } from "./study-fields";
+import { studyProblemText } from "./study-problems";
 
 export function EditStudyForm({
   studyId,
@@ -27,22 +28,27 @@ export function EditStudyForm({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React resets an action's form afterwards, which
+  // would wipe what was typed whenever the answer is a problem to fix.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
     setSaved(false);
     startTransition(async () => {
       try {
-        await updateStudyCore(studyId, formData);
-        setSaved(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to save study details."));
+        const result = await updateStudyCore(studyId, formData);
+        if (result.ok) setSaved(true);
+        else setError(studyProblemText(t, result.problem, String(formData.get("protocolId") ?? "")));
+      } catch {
+        setError(t("Failed to save study details."));
       }
     });
   }
 
   return (
     <form
-      action={handleSubmit}
+      onSubmit={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <h2 className="text-sm font-medium text-neutral-500">{t("Study details")}</h2>
@@ -50,7 +56,7 @@ export function EditStudyForm({
         {t("Fix a typo or update status — this is the study's core identity, separate from the document header fields below.")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium">{t("Protocol ID")}</label>
+          <label className="block text-xs font-medium">{t("Protocol ID (study acronym)")}</label>
           <input
             name="protocolId"
             required
@@ -67,11 +73,11 @@ export function EditStudyForm({
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-xs font-medium">{t("Title")}</label>
+          <label className="block text-xs font-medium">{t("Full title (optional)")}</label>
           <input
             name="title"
-            required
-            defaultValue={study.title}
+            placeholder={t("Leave empty to use the acronym")}
+            defaultValue={study.title === study.protocolId ? "" : study.title}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useT } from "@/lib/i18n/client";
 import { deleteMonitoringVisit, updateMonitoringVisit } from "../actions";
+import { studyLabel } from "@/lib/study-label";
 
 export type MonitoringDetailsValues = {
   studyId: string;
@@ -98,7 +99,7 @@ export function MonitoringDetails({ id, values }: { id: string; values: Monitori
             <dt className="text-neutral-500">{t("Study")}</dt>
             <dd>
               <Link href={`/dashboard/studies/${values.studyId}`} className="hover:underline">
-                {values.protocolId} — {values.studyTitle}
+                {studyLabel(values.protocolId, values.studyTitle)}
               </Link>
             </dd>
             <dt className="text-neutral-500">{t("Date")}</dt>

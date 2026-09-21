@@ -26,7 +26,7 @@ const inputClass =
 
 export type RepeatOptions = {
   subjectId: string;
-  patients: { id: string; subjectCode: string; displayName: string | null }[];
+  patients: { id: string; subjectCode: string }[];
 };
 
 function VisitRow({ visit, repeat }: { visit: PatientVisit; repeat: RepeatOptions | null }) {

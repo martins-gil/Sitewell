@@ -26,7 +26,6 @@ export async function addSubject(formData: FormData) {
 
   const studyId = String(formData.get("studyId") ?? "");
   const subjectCodeOverride = String(formData.get("subjectCode") ?? "").trim();
-  const displayName = String(formData.get("displayName") ?? "").trim() || null;
   const duplicateFromSubjectId = String(formData.get("duplicateFromSubjectId") ?? "").trim() || null;
   const copyCriteria = formData.get("copyCriteria") === "on";
 
@@ -105,7 +104,6 @@ export async function addSubject(formData: FormData) {
         studyId,
         subjectCode,
         status: "IDENTIFIED",
-        displayName,
         isTestData: true,
         ...(criteria.length > 0 ? { ieCriteriaSnapshot: criteria } : {}),
       },

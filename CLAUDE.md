@@ -379,10 +379,23 @@ picks this repo up next.
   day of slack so a daily cron doesn't drift to every 4 days. Emails are sent
   between two short transactions, not inside one, so a slow provider can't
   hit Prisma's interactive-transaction timeout.
-- **Patients have an optional `displayName` (initials/name) and no referral
-  source** — `referral_source` was dropped in migration
-  `20260919090000_kits_inventory_and_patient_name` at the user's request.
-  Still synthetic-only data until Phase 5; the form says so.
+- **A patient is identified by the CODE ALONE — no name, no initials, no referral
+  source.** `referral_source` went in migration
+  `20260919090000_kits_inventory_and_patient_name`; `display_name` (the optional
+  initials) went in `20260930090000_drop_patient_initials`, at the user's request,
+  because the site only ever needs the code (the code-to-person list stays in the
+  hospital's own records). Don't add a name/initials field back. The printed nursing
+  sheet ("Iniciais:") and I/E form ("Patient initials:") keep their boxes as part of the
+  paper templates and leave them BLANK for handwriting (`initials: null` in
+  `queries.ts`). Deploy order for that migration was code first, migration second
+  (the previous build still selected the column). Still synthetic-only data until
+  Phase 5; the add-patient form says so.
+- **A study is known by its acronym (`Study.protocolId`); the title is optional.** A
+  blank title is stored as the acronym (`readStudyFields`), and every screen that
+  prints "acronym — title" goes through `studyLabel()` (`src/lib/study-label.ts`) so it
+  doesn't show the acronym twice. The EU CT number is edited beside PI name / site number
+  on the study page and only feeds the I/E form footer. `addStudy` / `updateStudyCore`
+  RETURN a `StudyResult` (words in `study-problems.ts`), never throw.
 - **Study and Team management (`/dashboard/studies` add/edit,
   `/dashboard/settings/team`) are gated to `ORG_ADMIN`/platform admin**,
   checked both in the page (hides the UI, and the team page refuses to even

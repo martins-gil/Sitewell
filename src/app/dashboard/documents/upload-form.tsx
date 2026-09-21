@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { uploadDocument } from "./actions";
 import { DocumentTypeField } from "./document-type-field";
 import { useT } from "@/lib/i18n/client";
+import { studyLabel } from "@/lib/study-label";
 
 export function UploadDocumentForm({
   studies,
@@ -51,7 +52,7 @@ export function UploadDocumentForm({
           >
             {studies.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.protocolId} — {s.title}
+                {studyLabel(s.protocolId, s.title)}
               </option>
             ))}
           </select>

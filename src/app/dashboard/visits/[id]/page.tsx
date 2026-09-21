@@ -23,6 +23,7 @@ import { EditVisitForm } from "./edit-visit-form";
 import { DeleteVisitButton } from "./delete-visit-button";
 import { getT } from "@/lib/i18n/server";
 import { getSectionModes } from "@/lib/preferences-server";
+import { studyLabel } from "@/lib/study-label";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -71,7 +72,7 @@ export default async function VisitDetailPage({
           <Link href={`/dashboard/subjects/${visit.subject.id}`} className="font-mono hover:underline">
             {visit.subject.subjectCode}
           </Link>{" "}
-          · {visit.study.protocolId} — {visit.study.title}
+          · {studyLabel(visit.study.protocolId, visit.study.title)}
         </p>
       </div>
 
@@ -158,8 +159,8 @@ export default async function VisitDetailPage({
               docHeader.nursingSheet.sections.reduce((n, s) => n + s.rows.length, 0),
             ])}{" "}
             {visit.kits.length > 0
-              ? t("It downloads with this visit's number, date, subject and initials filled in, plus its kits and notes; the readings are handwritten.")
-              : t("It downloads with this visit's number, date, subject and initials filled in, plus its notes; the readings are handwritten.")}{" "}
+              ? t("It downloads with this visit's number, date and subject filled in, plus its kits and notes; the initials and the readings are handwritten.")
+              : t("It downloads with this visit's number, date and subject filled in, plus its notes; the initials and the readings are handwritten.")}{" "}
             {nursingSheetUrl ? (
               <Link href={nursingSheetUrl} className="underline">
                 {docHeader.nursingSheetIsCustom

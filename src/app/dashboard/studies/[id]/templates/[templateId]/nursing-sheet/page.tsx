@@ -22,7 +22,7 @@ export default async function NursingSheetPage({
           {t("← {0} visit schedule", [template.study.protocolId])}</Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{t("{0} nursing sheet", [template.name])}</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {t("The nursing record for every {0} visit: which vital signs and collections are recorded, and in which columns. Every visit can already download the standard sheet; change it here to give {0} visits their own. Each download has the visit, date, subject initials, kits and notes filled in; the readings themselves are handwritten.", [template.name])}</p>
+          {t("The nursing record for every {0} visit: which vital signs and collections are recorded, and in which columns. Every visit can already download the standard sheet; change it here to give {0} visits their own. Each download has the visit, date, subject, kits and notes filled in; the initials and the readings themselves are handwritten.", [template.name])}</p>
       </div>
 
       <NursingSheetEditor

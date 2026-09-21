@@ -58,12 +58,11 @@ export async function searchAll(query: string, limit: number): Promise<SearchRes
     const [subjects, visits, studies, documents, kits] = await Promise.all([
       tx.subject.findMany({
         where: {
-          OR: [{ subjectCode: contains }, { displayName: contains }, { study: { protocolId: contains } }],
+          OR: [{ subjectCode: contains }, { study: { protocolId: contains } }],
         },
         select: {
           id: true,
           subjectCode: true,
-          displayName: true,
           status: true,
           study: { select: { protocolId: true } },
         },
@@ -75,7 +74,6 @@ export async function searchAll(query: string, limit: number): Promise<SearchRes
           OR: [
             { visitType: contains },
             { subject: { subjectCode: contains } },
-            { subject: { displayName: contains } },
             { study: { protocolId: contains } },
           ],
         },
@@ -84,7 +82,7 @@ export async function searchAll(query: string, limit: number): Promise<SearchRes
           visitType: true,
           status: true,
           targetDate: true,
-          subject: { select: { subjectCode: true, displayName: true } },
+          subject: { select: { subjectCode: true } },
           study: { select: { protocolId: true } },
         },
         orderBy: { targetDate: "asc" },
@@ -134,20 +132,20 @@ export async function searchAll(query: string, limit: number): Promise<SearchRes
     return {
       patients: subjects
         .filter((s) =>
-          matchesAll(`${s.subjectCode} ${s.displayName ?? ""} ${s.study.protocolId} ${humanizeEnum(s.status)}`, terms),
+          matchesAll(`${s.subjectCode} ${s.study.protocolId} ${humanizeEnum(s.status)}`, terms),
         )
         .slice(0, limit)
         .map((s) => ({
           id: s.id,
           href: `/dashboard/subjects/${s.id}`,
           title: s.subjectCode,
-          detail: `${s.study.protocolId}${s.displayName ? ` · ${s.displayName}` : ""}`,
+          detail: s.study.protocolId,
           status: s.status,
         })),
       visits: visits
         .filter((v) =>
           matchesAll(
-            `${v.subject.subjectCode} ${v.subject.displayName ?? ""} ${v.study.protocolId} ${v.visitType} ${humanizeEnum(v.status)}`,
+            `${v.subject.subjectCode} ${v.study.protocolId} ${v.visitType} ${humanizeEnum(v.status)}`,
             terms,
           ),
         )
