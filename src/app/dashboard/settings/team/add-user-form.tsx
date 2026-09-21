@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { humanizeEnum } from "@/lib/format";
 import { addTeamMember } from "./actions";
+import { teamProblemText } from "./team-problems";
 import { useT } from "@/lib/i18n/client";
 
 const ROLES = ["CRC", "PI", "ORG_ADMIN"] as const;
@@ -17,14 +18,19 @@ export function AddUserForm({ prefill }: { prefill?: AddUserPrefill }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React resets an action's form afterwards, which
+  // would wipe what was typed whenever the answer is a problem to fix.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
       try {
-        await addTeamMember(formData);
-        setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to add user."));
+        const result = await addTeamMember(formData);
+        if (result.ok) setOpen(false);
+        else setError(teamProblemText(t, result.problem, String(formData.get("email") ?? "").trim().toLowerCase()));
+      } catch {
+        setError(t("Failed to add user."));
       }
     });
   }
@@ -41,7 +47,7 @@ export function AddUserForm({ prefill }: { prefill?: AddUserPrefill }) {
 
   return (
     <form
-      action={handleSubmit}
+      onSubmit={handleSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800"
     >
       <div className="flex items-center justify-between">

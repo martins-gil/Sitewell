@@ -16,7 +16,21 @@ function requireOrgAdmin(ctx: { role: string; isPlatformAdmin: boolean }) {
   }
 }
 
-export async function addTeamMember(formData: FormData) {
+// What the team forms get back. A thrown error would reach the browser as a masked
+// "Server Components render" message in production, so anything a person can fix is a
+// code here and the form words it (translated) itself.
+export type TeamProblem =
+  | "MISSING"
+  | "INVALID_ROLE"
+  | "BAD_PHONE"
+  | "SMS_NEEDS_PHONE"
+  | "BAD_PASSWORD"
+  | "EMAIL_TAKEN"
+  | "SELF"
+  | "HAS_RECORDS";
+export type TeamResult = { ok: true } | { ok: false; problem: TeamProblem };
+
+export async function addTeamMember(formData: FormData): Promise<TeamResult> {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);
   if (!ctx.organizationId) throw new Error("No organization to add this user to.");
@@ -29,13 +43,11 @@ export async function addTeamMember(formData: FormData) {
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
   const smsAsked = formData.get("smsAsked") === "on";
 
-  if (!name || !email) throw new Error("Name and email are required.");
-  if (!ASSIGNABLE_ROLES.includes(role)) throw new Error("Invalid role.");
-  if (phoneRaw && !phone) throw new Error("That doesn't look like a phone number — use the international format, e.g. +351 912 345 678.");
-  if (smsAsked && !phone) throw new Error("Add a mobile number to send this person text messages.");
-  if (checkNewPassword(password, email)) {
-    throw new Error("The temporary password must be at least 12 characters and not contain the email address.");
-  }
+  if (!name || !email) return { ok: false, problem: "MISSING" };
+  if (!ASSIGNABLE_ROLES.includes(role)) return { ok: false, problem: "INVALID_ROLE" };
+  if (phoneRaw && !phone) return { ok: false, problem: "BAD_PHONE" };
+  if (smsAsked && !phone) return { ok: false, problem: "SMS_NEEDS_PHONE" };
+  if (checkNewPassword(password, email)) return { ok: false, problem: "BAD_PASSWORD" };
 
   const passwordHash = await hashPassword(password);
 
@@ -59,15 +71,16 @@ export async function addTeamMember(formData: FormData) {
     );
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new Error(`A user with email "${email}" already exists.`);
+      return { ok: false, problem: "EMAIL_TAKEN" };
     }
     throw e;
   }
 
   revalidatePath("/dashboard/settings/team");
+  return { ok: true };
 }
 
-export async function updateTeamMember(userId: string, formData: FormData) {
+export async function updateTeamMember(userId: string, formData: FormData): Promise<TeamResult> {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);
 
@@ -75,8 +88,8 @@ export async function updateTeamMember(userId: string, formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "") as UserRole;
 
-  if (!name || !email) throw new Error("Name and email are required.");
-  if (!ASSIGNABLE_ROLES.includes(role)) throw new Error("Invalid role.");
+  if (!name || !email) return { ok: false, problem: "MISSING" };
+  if (!ASSIGNABLE_ROLES.includes(role)) return { ok: false, problem: "INVALID_ROLE" };
 
   try {
     await withTenantContext(ctx, (tx) =>
@@ -84,45 +97,53 @@ export async function updateTeamMember(userId: string, formData: FormData) {
     );
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new Error(`A user with email "${email}" already exists.`);
+      return { ok: false, problem: "EMAIL_TAKEN" };
     }
     throw e;
   }
 
   revalidatePath("/dashboard/settings/team");
+  return { ok: true };
 }
 
-export async function deleteTeamMember(userId: string) {
+export async function deleteTeamMember(userId: string): Promise<TeamResult> {
   const ctx = await requireTenantContext();
   requireOrgAdmin(ctx);
 
-  if (userId === ctx.userId) {
-    throw new Error("You cannot delete your own account.");
+  if (userId === ctx.userId) return { ok: false, problem: "SELF" };
+
+  try {
+    const blocked = await withTenantContext(ctx, async (tx) => {
+      // StudyAssignment has no cascade, but it's just an assignment link — safe
+      // to clear. Signed documents and feedback submissions are left alone
+      // (their FKs have no cascade either) since deleting those would erase
+      // part of the record they belong to; block instead.
+      const [signedDocs, feedback] = await Promise.all([
+        tx.document.count({ where: { signedById: userId } }),
+        tx.feedbackSubmission.count({ where: { submittedById: userId } }),
+      ]);
+      if (signedDocs > 0 || feedback > 0) return true;
+      await tx.studyAssignment.deleteMany({ where: { userId } });
+      await tx.user.delete({ where: { id: userId } });
+      return false;
+    });
+    if (blocked) return { ok: false, problem: "HAS_RECORDS" };
+  } catch (e) {
+    // Some other record still points at this person (a foreign key with no cascade).
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+      return { ok: false, problem: "HAS_RECORDS" };
+    }
+    throw e;
   }
 
-  await withTenantContext(ctx, async (tx) => {
-    // StudyAssignment has no cascade, but it's just an assignment link — safe
-    // to clear. Signed documents and feedback submissions are left alone
-    // (their FKs have no cascade either) since deleting those would erase
-    // part of the record they belong to; block instead.
-    const [signedDocs, feedback] = await Promise.all([
-      tx.document.count({ where: { signedById: userId } }),
-      tx.feedbackSubmission.count({ where: { submittedById: userId } }),
-    ]);
-    if (signedDocs > 0 || feedback > 0) {
-      throw new Error("This user has signed documents or submitted feedback and can't be deleted.");
-    }
-    await tx.studyAssignment.deleteMany({ where: { userId } });
-    await tx.user.delete({ where: { id: userId } });
-  });
-
   revalidatePath("/dashboard/settings/team");
+  return { ok: true };
 }
 
 export type ResetPasswordResult = { ok: true } | { ok: false; problem: PasswordProblem | "SELF" };
 
-// For a member who forgot their password or is locked out (there's no
-// "forgot password" email yet): the admin sets a new temporary password, which
+// For a member who can't use "Forgot your password?" (no email service yet, a wrong
+// address) or is locked out: the admin sets a new temporary password, which
 // also lifts a sign-in lock. The member is asked to change it after signing in.
 export async function resetTeamMemberPassword(userId: string, temporaryPassword: string): Promise<ResetPasswordResult> {
   const ctx = await requireTenantContext();

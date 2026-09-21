@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { formatDate, humanizeEnum } from "@/lib/format";
 import { Badge } from "@/components/badge";
 import { updateTeamMember, deleteTeamMember, resetTeamMemberPassword } from "./actions";
+import { teamProblemText } from "./team-problems";
 import { useT } from "@/lib/i18n/client";
 
 const ROLES = ["CRC", "PI", "ORG_ADMIN"] as const;
@@ -52,14 +53,19 @@ export function TeamMemberRow({ member, isSelf }: { member: Member; isSelf: bool
     });
   }
 
-  function handleSave(formData: FormData) {
+  // onSubmit rather than <form action>: React resets an action's form afterwards,
+  // which would wipe what was typed whenever the answer is a problem.
+  function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
       try {
-        await updateTeamMember(member.id, formData);
-        setEditing(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to save."));
+        const result = await updateTeamMember(member.id, formData);
+        if (result.ok) setEditing(false);
+        else setError(teamProblemText(t, result.problem, String(formData.get("email") ?? "").trim().toLowerCase()));
+      } catch {
+        setError(t("Failed to save."));
       }
     });
   }
@@ -69,9 +75,10 @@ export function TeamMemberRow({ member, isSelf }: { member: Member; isSelf: bool
     setError(null);
     startTransition(async () => {
       try {
-        await deleteTeamMember(member.id);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t("Failed to delete."));
+        const result = await deleteTeamMember(member.id);
+        if (!result.ok) setError(teamProblemText(t, result.problem, member.email));
+      } catch {
+        setError(t("Failed to delete."));
       }
     });
   }
@@ -80,7 +87,7 @@ export function TeamMemberRow({ member, isSelf }: { member: Member; isSelf: bool
     return (
       <tr>
         <td colSpan={6} className="px-4 py-3">
-          <form action={handleSave} className="flex flex-wrap items-end gap-3">
+          <form onSubmit={handleSave} className="flex flex-wrap items-end gap-3">
             <div>
               <label className="block text-xs font-medium">{t("Name")}</label>
               <input

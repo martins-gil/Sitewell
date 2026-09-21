@@ -373,7 +373,12 @@ picks this repo up next.
   The action clears the user's own `StudyAssignment` rows first (safe, just
   a link) but blocks the whole delete with a friendly error if the user has
   signed documents or feedback, rather than letting a raw FK violation
-  reach the client. Self-deletion is blocked outright. `PLATFORM_ADMIN` is
+  reach the client. Self-deletion is blocked outright. Add / edit / delete RETURN
+  a `TeamResult` (`{ok:false, problem}`; the words are in `team-problems.ts`,
+  translated) — they used to throw, and in production that shows as "Minified
+  React error #441" (the masked "Server Components render" error) instead of the
+  message, which is how a blocked delete of a PI with signed documents looked
+  like a crash. `PLATFORM_ADMIN` is
   deliberately not an assignable role from this page — it's cross-org, not
   something one org's admin should be able to grant.
 
