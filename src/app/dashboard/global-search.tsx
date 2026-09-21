@@ -111,7 +111,7 @@ export function GlobalSearch() {
   let index = -1;
   return (
     <div
-      className="relative w-full max-w-xl"
+      className="relative mx-auto w-full max-w-3xl"
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
       }}
@@ -129,7 +129,7 @@ export function GlobalSearch() {
         onKeyDown={onKeyDown}
         placeholder={t("Search… e.g. RCN-101-0009, week 4")}
         aria-label={t("Search")}
-        className="w-full rounded-full border border-transparent bg-neutral-100 px-4 py-2 text-sm placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white dark:bg-neutral-900 dark:focus:border-neutral-700 dark:focus:bg-neutral-950"
+        className="w-full rounded-full border border-transparent bg-neutral-100 px-5 py-2.5 text-sm placeholder:text-neutral-400 focus:border-neutral-300 focus:bg-white dark:bg-neutral-900 dark:focus:border-neutral-700 dark:focus:bg-neutral-950"
       />
 
       {open && trimmed && (

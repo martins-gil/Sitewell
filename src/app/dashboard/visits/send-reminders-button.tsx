@@ -25,7 +25,7 @@ export function SendRemindersButton() {
       <button
         onClick={handleClick}
         disabled={busy}
-        className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        className="rounded-md border border-neutral-200 px-4 py-2 text-sm hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800"
       >
         {busy ? t("Sending…") : t("Send due reminders")}
       </button>

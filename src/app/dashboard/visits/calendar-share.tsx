@@ -41,18 +41,20 @@ export function CalendarShare({ feedUrl }: { feedUrl: string | null }) {
   const button =
     "rounded-md border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100 disabled:opacity-60 dark:border-neutral-700 dark:hover:bg-neutral-800";
 
+  // A fragment: the toggle sits in the page header's row (beside "Send due reminders") and
+  // the panel it opens takes a full row of its own underneath (`order-last basis-full`).
   return (
-    <div className="space-y-3">
+    <>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+        className="rounded-full border border-neutral-200 px-4 py-2 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
       >
         {open ? t("Hide calendar sharing") : t("Share this calendar (Apple, Google, Outlook) →")}
       </button>
 
       {open && (
-        <div className="space-y-4 rounded-lg border border-neutral-200 p-5 text-sm dark:border-neutral-800">
+        <div className="order-last w-full basis-full space-y-4 rounded-lg border border-neutral-200 p-5 text-sm dark:border-neutral-800">
           <p className="text-neutral-600 dark:text-neutral-400">
             {t("Add the visits to your own calendar app. Each one shows the study, the patient, the visit, its kits, and a link that opens that exact visit here. Your calendar app keeps itself up to date.")}
           </p>
@@ -138,6 +140,6 @@ export function CalendarShare({ feedUrl }: { feedUrl: string | null }) {
           {message && <p className="text-xs text-green-700 dark:text-green-400">{message}</p>}
         </div>
       )}
-    </div>
+    </>
   );
 }

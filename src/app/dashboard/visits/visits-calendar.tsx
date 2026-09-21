@@ -99,37 +99,42 @@ function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; color
           <span className="text-xs text-neutral-400">{t("All day")}</span>
         )}
       </div>
-      <div className="min-w-0 flex-1">
+      {/* Two columns side by side: what the visit is (and its kits) | who, which study, when. */}
+      <div className="grid min-w-0 flex-1 gap-x-6 gap-y-1.5 md:grid-cols-2">
         {entry.kind === "visit" ? (
           <>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Link href={`/dashboard/visits/${entry.id}`} className="font-medium hover:underline">
-                {entry.visitType}
-              </Link>
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLE[entry.status] ?? "bg-neutral-100 text-neutral-700"}`}>
-                {t(humanizeEnum(entry.status))}
-              </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Link href={`/dashboard/visits/${entry.id}`} className="font-medium hover:underline">
+                  {entry.visitType}
+                </Link>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLE[entry.status] ?? "bg-neutral-100 text-neutral-700"}`}>
+                  {t(humanizeEnum(entry.status))}
+                </span>
+              </div>
+              {entry.kits.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {entry.kits.map((k, i) => (
+                    <span key={i} className="rounded-full bg-white px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500">
-              <Link href={`/dashboard/subjects/${entry.subjectId}`} className="font-mono hover:underline">
-                {entry.subjectCode}
-              </Link>
-              <span>{entry.protocolId}</span>
-              <span>
+            <div className="min-w-0 space-y-0.5 text-xs text-neutral-500">
+              <div className="flex flex-wrap items-center gap-x-3">
+                <Link href={`/dashboard/subjects/${entry.subjectId}`} className="font-mono text-neutral-700 hover:underline dark:text-neutral-300">
+                  {entry.subjectCode}
+                </Link>
+                <span>{entry.protocolId}</span>
+              </div>
+              <div>
                 {t("Window")}:{" "}
                 {new Date(entry.windowStart).toLocaleDateString(dateLocale, { month: "short", day: "numeric", timeZone: "UTC" })} –{" "}
                 {new Date(entry.windowEnd).toLocaleDateString(dateLocale, { month: "short", day: "numeric", timeZone: "UTC" })}
-              </span>
-            </div>
-            {entry.kits.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {entry.kits.map((k, i) => (
-                  <span key={i} className="rounded-full bg-white px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                    {k}
-                  </span>
-                ))}
               </div>
-            )}
+            </div>
           </>
         ) : (
           <>
@@ -141,10 +146,12 @@ function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; color
                 {t("Monitoring")}
               </span>
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500">
-              <span>{entry.protocolId}</span>
-              {entry.room && <span>{entry.room}</span>}
-              {entry.pointCount > 0 && <span>{t("{0}/{1} points checked", [entry.verifiedCount, entry.pointCount])}</span>}
+            <div className="min-w-0 space-y-0.5 text-xs text-neutral-500">
+              <div className="flex flex-wrap items-center gap-x-3">
+                <span className="text-neutral-700 dark:text-neutral-300">{entry.protocolId}</span>
+                {entry.room && <span>{entry.room}</span>}
+              </div>
+              {entry.pointCount > 0 && <div>{t("{0}/{1} points checked", [entry.verifiedCount, entry.pointCount])}</div>}
             </div>
           </>
         )}
@@ -228,8 +235,8 @@ export function VisitsCalendar({
       : `${fmt(weekDays[0], { month: "short", day: "numeric" })} – ${fmt(weekDays[6], { month: "short", day: "numeric", year: "numeric" })}`;
 
   return (
-    <div className="space-y-4">
-      {/* The details of the selected day or week, above the month. */}
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_23rem]">
+      {/* The details of the selected day or week: above the month on a narrow screen, beside it on a wide one. */}
       <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -332,7 +339,7 @@ export function VisitsCalendar({
       </section>
 
       {/* The month, to pick a day or a week from. */}
-      <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800 sm:p-6">
+      <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800 xl:sticky xl:top-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold capitalize">{fmt(monthCursor, { month: "long", year: "numeric" })}</h2>
           <div className="flex gap-2">
@@ -353,7 +360,7 @@ export function VisitsCalendar({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
+        <div className="mt-4 grid grid-cols-7 gap-1.5">
           {weekdayNames.map((name) => (
             <div key={name} className="pb-1 text-center text-xs font-medium uppercase tracking-wide text-neutral-400">
               {name}
@@ -373,7 +380,7 @@ export function VisitsCalendar({
                 onClick={() => select(date)}
                 aria-pressed={isSelected}
                 aria-label={`${fmt(date, { weekday: "long", month: "long", day: "numeric" })}${list.length > 0 ? ` — ${t("{0} visit|{0} visits", [list.length])}` : ""}`}
-                className={`relative flex h-14 flex-col items-center justify-between rounded-xl px-1 py-1.5 text-sm sm:h-16 ${
+                className={`relative flex h-12 flex-col items-center justify-between rounded-xl px-1 py-1.5 text-sm sm:h-14 xl:h-12 ${
                   isSelected
                     ? "bg-accent font-semibold text-white shadow-sm"
                     : inSelectedWeek
@@ -401,7 +408,7 @@ export function VisitsCalendar({
                 {list.length > 0 && (
                   <span
                     aria-hidden
-                    className={`absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+                    className={`absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ring-2 ring-surface ${
                       isSelected ? "bg-white text-accent" : "bg-accent text-white"
                     }`}
                   >

@@ -79,25 +79,27 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           darkBar ? "text-white" : "bg-surface"
         }`}
       >
-        <div className="mb-5 flex items-center justify-center gap-2.5 px-1 pt-1 lg:mb-6 lg:justify-start lg:px-2">
+        {/* The logo tops the sidebar (a small mark stands in for it on the icon rail). */}
+        <div className="mb-5 flex items-center justify-center px-1 pt-1 lg:mb-6 lg:justify-start lg:px-2">
           <span
             aria-hidden
-            className={`relative inline-block h-8 w-8 shrink-0 rounded-full ${darkBar ? "bg-white/15" : "bg-accent-soft"}`}
+            className={`relative inline-block h-8 w-8 shrink-0 rounded-full ${LOGO_SRC ? "lg:hidden" : ""} ${darkBar ? "bg-white/15" : "bg-accent-soft"}`}
           >
             <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-[#a78bfa]" />
             <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-[#38bdf8]" />
           </span>
-          <span className="hidden text-lg font-semibold tracking-tight lg:inline">{t("SiteWell-ct")}</span>
+          {LOGO_SRC ? (
+            <span className="hidden lg:block">
+              <BrandLogo size="sidebar" onDark={darkBar} />
+            </span>
+          ) : (
+            <span className="ml-2.5 hidden text-lg font-semibold tracking-tight lg:inline">{t("SiteWell-ct")}</span>
+          )}
         </div>
 
         <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label), icon: item.icon }))} dark={darkBar} />
 
         <div className="mt-3 hidden lg:block">
-          {LOGO_SRC && (
-            <div className="mb-3 px-1">
-              <BrandLogo size="sidebar" onDark={darkBar} />
-            </div>
-          )}
           <div className={`flex items-center gap-3 rounded-full p-2 ${darkBar ? "bg-white/10" : "bg-neutral-50 dark:bg-neutral-900"}`}>
             <span
               aria-hidden
@@ -144,20 +146,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </div>
         )}
 
-        <header className="flex items-center gap-3 rounded-xl bg-surface px-4 py-3 shadow-[var(--shadow-card)] lg:rounded-2xl">
+        {/* Just the search, centred and wide; who is signed in lives in the sidebar. */}
+        <header className="flex items-center justify-center gap-3 rounded-xl bg-surface px-4 py-3 shadow-[var(--shadow-card)] lg:rounded-2xl lg:py-3.5">
           <GlobalSearch />
-          <div className="ml-auto hidden items-center gap-3 md:flex">
-            <div className="text-right leading-tight">
-              <div className="text-sm font-medium">{userName}</div>
-              <div className="text-xs text-neutral-500">{session?.user?.role}</div>
-            </div>
-            <span
-              aria-hidden
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent"
-            >
-              {initialsOf(userName)}
-            </span>
-          </div>
           {/* The sidebar's user card is hidden on small screens, so sign-out lives here. */}
           <div className="shrink-0 lg:hidden">
             <SignOutButton dark={false} />

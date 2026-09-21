@@ -7,7 +7,7 @@ import { LOGO_SRC } from "@/lib/brand";
  * small light chip to stay readable.
  */
 export function BrandLogo({ size, onDark = false }: { size: "login" | "sidebar"; onDark?: boolean }) {
-  const height = size === "login" ? "h-20" : "h-9";
+  const height = size === "login" ? "h-20" : "h-11";
 
   if (!LOGO_SRC) {
     return (

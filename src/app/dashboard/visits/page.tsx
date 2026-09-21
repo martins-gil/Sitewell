@@ -41,18 +41,18 @@ export default async function VisitsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+    <div className="space-y-5">
+      {/* Title on the left; calendar sharing and reminders side by side on the right. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="mr-auto">
           <h1 className="text-2xl font-semibold tracking-tight">{t("Visits Schedule")}</h1>
           <p className="mt-1 text-sm text-neutral-500">
             {t("{0} visit across all studies.|{0} visits across all studies.", [visits.length])}
           </p>
         </div>
+        <CalendarShare feedUrl={feedUrl} />
         <SendRemindersButton />
       </div>
-
-      <CalendarShare feedUrl={feedUrl} />
 
       <VisitsView
         tableVisits={visits}

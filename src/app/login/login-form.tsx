@@ -80,7 +80,7 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="email" className="block text-sm font-medium">
           {t("Email")}</label>
@@ -91,7 +91,7 @@ export function LoginForm() {
           disabled={mfaRequired}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
+          className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
         />
       </div>
       <div>
@@ -104,7 +104,7 @@ export function LoginForm() {
           disabled={mfaRequired}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
+          className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
         />
       </div>
       {mfaRequired && (
@@ -119,7 +119,7 @@ export function LoginForm() {
             required
             value={mfaCode}
             onChange={(e) => setMfaCode(e.target.value)}
-            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+            className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
       )}
@@ -127,7 +127,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
+        className="w-full rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-neutral-900"
       >
         {mfaRequired ? t("Verify") : t("Sign in")}
       </button>
