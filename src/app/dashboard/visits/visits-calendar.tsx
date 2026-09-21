@@ -166,6 +166,7 @@ export function VisitsCalendar({
   studyColors,
   studies,
   onAddOnDay,
+  onAddMonitoringOnDay,
 }: {
   visits: CalendarVisit[];
   monitoring?: CalendarMonitoring[];
@@ -173,6 +174,7 @@ export function VisitsCalendar({
   studyColors: Record<string, string>;
   studies: { id: string; protocolId: string }[];
   onAddOnDay?: (dateKey: string) => void;
+  onAddMonitoringOnDay?: (dateKey: string) => void;
 }) {
   const t = useT();
   const [mode, setMode] = useState<Mode>("week");
@@ -283,6 +285,15 @@ export function VisitsCalendar({
                 className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:brightness-110"
               >
                 {t("+ Add visit")}
+              </button>
+            )}
+            {onAddMonitoringOnDay && (
+              <button
+                type="button"
+                onClick={() => onAddMonitoringOnDay(selectedKey)}
+                className="rounded-full border border-accent px-4 py-1.5 text-sm font-medium text-accent hover:bg-accent-soft"
+              >
+                {t("+ Monitoring visit")}
               </button>
             )}
           </div>

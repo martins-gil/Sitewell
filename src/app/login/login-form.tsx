@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -106,6 +107,11 @@ export function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
         />
+        {!mfaRequired && (
+          <Link href="/forgot-password" className="mt-2 inline-block text-sm font-medium text-accent hover:underline">
+            {t("Forgot your password?")}
+          </Link>
+        )}
       </div>
       {mfaRequired && (
         <div>
@@ -131,6 +137,12 @@ export function LoginForm() {
       >
         {mfaRequired ? t("Verify") : t("Sign in")}
       </button>
+      <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        {t("Don't have an account?")}{" "}
+        <Link href="/request-access" className="font-medium text-accent hover:underline">
+          {t("Request access")}
+        </Link>
+      </p>
     </form>
   );
 }

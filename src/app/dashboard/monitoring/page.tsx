@@ -44,7 +44,7 @@ export default async function MonitoringVisitsPage() {
               <tr key={v.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900">
                 <td className="whitespace-nowrap px-4 py-2">
                   <Link href={`/dashboard/monitoring/${v.id}`} className="font-medium text-blue-700 hover:underline dark:text-blue-400">
-                    {formatDate(v.visitDate, t.locale)} →
+                    {formatDate(v.visitDate, t.locale)}
                   </Link>
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-neutral-600 dark:text-neutral-400">{v.startTime ?? "—"}</td>

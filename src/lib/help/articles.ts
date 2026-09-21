@@ -186,8 +186,8 @@ export function helpArticles(t: TFunction): HelpArticle[] {
       question: t("How do I plan a monitoring visit and its checklist?"),
       answer: t("Monitoring visits have their own section. Each has a study, a date, a time and a room, and shows on the visit calendar; you can list the points to verify and print them like a procedure checklist."),
       steps: [
-        t("Open Monitoring visits and press “+ Add monitoring visit”; choose the study, date, time and room."),
-        t("On the visit, add the points to verify one by one, or press “Paste a list of points →”. To reuse an earlier visit's points, copy them from the list."),
+        t("Open Monitoring visits and press “+ Add monitoring visit” — or press “+ Monitoring visit” on the Visits Schedule, which fills in the day you are looking at — then choose the study, date, time and room."),
+        t("On the visit, add the points to verify one by one, or press “Paste a list of points”. To reuse an earlier visit's points, copy them from the list."),
         t("Tick each point as it is checked, and press “Download points to verify (.docx)” to print the document."),
       ],
       href: "/dashboard/monitoring",

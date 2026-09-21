@@ -17,7 +17,7 @@ export default async function MonitoringVisitPage({ params }: { params: Promise<
     <div className="max-w-2xl space-y-6">
       <div>
         <Link href="/dashboard/monitoring" className="text-sm text-neutral-500 hover:underline">
-          {t("← Monitoring visits")}
+          {t("Monitoring visits")}
         </Link>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
           {t("Monitoring visit")} · {visit.study.protocolId}

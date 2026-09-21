@@ -159,7 +159,7 @@ export function MonitoringPoints({
             <ChecklistTextImport
               saveLabel={t("Add these points")}
               texts={{
-                open: t("Paste a list of points →"),
+                open: t("Paste a list of points"),
                 heading: t("Paste the points to verify"),
                 placeholder: t("Paste the points here, one per line or as a list — for example from the monitoring plan."),
                 none: t("No points were found in that text."),

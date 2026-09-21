@@ -11,18 +11,30 @@ const inputClass =
 
 export type CopySource = { id: string; studyId: string; label: string; points: number };
 
-/** "+ Add monitoring visit": study, date, time, room — and optionally the points of an earlier visit to start from. */
-export function AddMonitoringForm({
+/**
+ * The "add a monitoring visit" form: study, date, time, room — and optionally the points of
+ * an earlier visit to start from. Used by the Monitoring visits page (behind a button) and
+ * by the Visits Schedule (with the day being looked at already filled in).
+ */
+export function MonitoringVisitForm({
   studies,
   sources,
+  initialStudyId,
+  initialDate,
+  onClose,
 }: {
   studies: { id: string; protocolId: string; title: string }[];
   sources: CopySource[];
+  initialStudyId?: string;
+  /** yyyy-mm-dd */
+  initialDate?: string;
+  onClose: () => void;
 }) {
   const t = useT();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [studyId, setStudyId] = useState(studies[0]?.id ?? "");
+  const [studyId, setStudyId] = useState(
+    studies.some((s) => s.id === initialStudyId) ? (initialStudyId as string) : (studies[0]?.id ?? ""),
+  );
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -43,23 +55,11 @@ export function AddMonitoringForm({
     });
   }
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
-      >
-        {t("+ Add monitoring visit")}
-      </button>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-medium text-neutral-500">{t("Add a monitoring visit")}</h2>
-        <button type="button" onClick={() => setOpen(false)} className="text-xs text-neutral-500 hover:underline">
+        <button type="button" onClick={onClose} className="text-xs text-neutral-500 hover:underline">
           {t("Cancel")}
         </button>
       </div>
@@ -82,7 +82,7 @@ export function AddMonitoringForm({
         </div>
         <div>
           <label className="block text-xs font-medium">{t("Date")}</label>
-          <input type="date" name="visitDate" required className={inputClass} />
+          <input type="date" name="visitDate" required defaultValue={initialDate} className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-medium">{t("Time (optional)")}</label>
@@ -120,4 +120,30 @@ export function AddMonitoringForm({
       </button>
     </form>
   );
+}
+
+/** "+ Add monitoring visit": a button that opens the form. */
+export function AddMonitoringForm({
+  studies,
+  sources,
+}: {
+  studies: { id: string; protocolId: string; title: string }[];
+  sources: CopySource[];
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+      >
+        {t("+ Add monitoring visit")}
+      </button>
+    );
+  }
+
+  return <MonitoringVisitForm studies={studies} sources={sources} onClose={() => setOpen(false)} />;
 }

@@ -530,7 +530,7 @@ picks this repo up next.
   in dark mode) and three login pictures, 1600 px wide. Each sign-in page load shows the picture
   after the one this browser saw last (`sw_login_seq` cookie, written by
   `LoginArt`); the logo shows on the sign-in pages and, when set, at the bottom of
-  the TOP of the sidebar, where the wordmark used to be (a small mark stands in on the icon rail; on a light chip over a coloured bar). The sign-in pages are the app's look: a floating rounded picture with a caption, and one white card (uth-shell.tsx).
+  the TOP of the sidebar, where the wordmark used to be (a small mark stands in on the icon rail; on a light chip over a coloured bar). The sign-in pages (`auth-shell.tsx`): the picture fills the whole page (rotating), one white card is centred over it with the logo, the title and the form, and the language picker sits in the corner. No marketing text on them — the user asked for none.
 - **Forms that validate must use `onSubmit`, not `<form action={fn}>`.** React 19
   resets an uncontrolled form after an action, which wipes what the person typed
   when a validation error comes back. The new forms read `new FormData(e.currentTarget)`
@@ -549,7 +549,7 @@ picks this repo up next.
   colour default is now `light`; a colour someone picked keeps working (white active pill).
 - **Visits calendar** (`visits/visits-calendar.tsx`): the details of the SELECTED DAY or
   WEEK are a panel that sits above a compact month grid on a narrow screen and BESIDE it (grid in a 23rem column) from xl up (Day / Week switch, prev / today / next, the
-  date-aware "+ Add visit"); each entry card shows time, visit, patient, study, status,
+  date-aware "+ Add visit" and "+ Monitoring visit" (the latter opens MonitoringVisitForm, shared with the Monitoring visits page, with the day filled in); each entry card shows time, visit, patient, study, status,
   window, kits (monitoring visits: room and points checked). Weeks run Monday–Sunday
   everywhere (the digest, the banner, this grid). Clicking a grid day selects it; in Week
   mode its week is the highlighted band. The old Year view was dropped. `CalendarVisit` /
