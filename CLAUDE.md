@@ -535,6 +535,25 @@ picks this repo up next.
   resets an uncontrolled form after an action, which wipes what the person typed
   when a validation error comes back. The new forms read `new FormData(e.currentTarget)`
   in an `onSubmit` handler instead.
+- **The look is done with tokens, not per-page classes** (`src/app/globals.css`): the
+  neutral greys are re-tinted violet by overriding `--color-neutral-*` in `@theme`, the
+  radii are rounder, and anything that is `rounded-lg border` is a CARD (surface colour +
+  shadow, via a `@layer base` rule — a `bg-*` utility on it still wins), form controls sit
+  on the surface colour, and buttons are pills (`button.rounded-md` is deliberately
+  UNLAYERED so it beats the utility every button carries). Accent = `--accent` /
+  `bg-accent` / `bg-accent-soft`. So a new screen looks right by using the usual
+  `rounded-lg border border-neutral-200` card. The shell is `dashboard/layout.tsx`: a
+  floating white sidebar (icons from `components/nav-icons.tsx`, the current page a dark
+  pill; below `lg` it collapses to an icon rail and sign-out moves to the top bar), a
+  rounded top bar with search, and the banners as rounded strips above it. The sidebar
+  colour default is now `light`; a colour someone picked keeps working (white active pill).
+- **Visits calendar** (`visits/visits-calendar.tsx`): the details of the SELECTED DAY or
+  WEEK are a panel ABOVE a compact month grid (Day / Week switch, prev / today / next, the
+  date-aware "+ Add visit"); each entry card shows time, visit, patient, study, status,
+  window, kits (monitoring visits: room and points checked). Weeks run Monday–Sunday
+  everywhere (the digest, the banner, this grid). Clicking a grid day selects it; in Week
+  mode its week is the highlighted band. The old Year view was dropped. `CalendarVisit` /
+  `CalendarMonitoring` carry the extra fields (window, kits, point counts).
 - **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
   `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
   is an inline `backgroundColor` with light text (`dark` prop on the nav).

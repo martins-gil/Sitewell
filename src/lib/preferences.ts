@@ -15,7 +15,8 @@ export const SIDEBAR_COLORS = [
 ] as const;
 
 export type SidebarColorId = (typeof SIDEBAR_COLORS)[number]["id"];
-export const DEFAULT_SIDEBAR_COLOR: SidebarColorId = "navy";
+// The new look is a light, floating sidebar; a colour someone picked in Settings is kept.
+export const DEFAULT_SIDEBAR_COLOR: SidebarColorId = "light";
 
 export function isSidebarColor(value: unknown): value is SidebarColorId {
   return SIDEBAR_COLORS.some((c) => c.id === value);

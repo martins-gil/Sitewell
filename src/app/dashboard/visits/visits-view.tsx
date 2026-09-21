@@ -52,16 +52,18 @@ export function VisitsView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex gap-1">
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <div role="tablist" className="flex rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
           {(["calendar", "list"] as const).map((v) => (
             <button
               key={v}
+              role="tab"
+              aria-selected={view === v}
               onClick={() => setView(v)}
-              className={`rounded-md px-3 py-1 capitalize ${
+              className={`rounded-full px-4 py-1.5 ${
                 view === v
-                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                  : "border border-neutral-300 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  ? "bg-neutral-900 font-medium text-white shadow-sm dark:bg-white dark:text-neutral-900"
+                  : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
               }`}
             >
               {v === "calendar" ? t("Calendar") : t("List")}
@@ -71,7 +73,8 @@ export function VisitsView({
         <select
           value={studyId}
           onChange={(e) => setStudyId(e.target.value)}
-          className="rounded-md border border-neutral-300 px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          aria-label={t("Study")}
+          className="min-w-0 max-w-full rounded-full border border-neutral-200 px-4 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-950"
         >
           <option value="">{t("All studies")}</option>
           {studies.map((s) => (
@@ -80,11 +83,14 @@ export function VisitsView({
             </option>
           ))}
         </select>
-        <button
-          onClick={() => setAdding({ date: null })}
-          className="ml-auto rounded-md bg-neutral-900 px-3 py-1 font-medium text-white dark:bg-white dark:text-neutral-900"
-        >
-          {t("+ Add visit")}</button>
+        {/* In the calendar the panel's own button adds a visit on the day being looked at. */}
+        {view === "list" && (
+          <button
+            onClick={() => setAdding({ date: null })}
+            className="ml-auto rounded-full bg-accent px-4 py-2 font-medium text-white hover:brightness-110"
+          >
+            {t("+ Add visit")}</button>
+        )}
       </div>
 
       {adding && (

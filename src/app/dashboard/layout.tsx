@@ -10,25 +10,32 @@ import { UpcomingVisitsBanner, type WeekVisit } from "./upcoming-visits-banner";
 import { SidebarNav } from "./sidebar-nav";
 import { GlobalSearch } from "./global-search";
 import { BrandLogo } from "@/components/brand-logo";
+import type { NavIconName } from "@/components/nav-icons";
 import { LOGO_SRC } from "@/lib/brand";
 import { getT } from "@/lib/i18n/server";
 import { getSidebarColor } from "@/lib/preferences-server";
 import { SIDEBAR_COLORS } from "@/lib/preferences";
 
-const NAV = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/subjects", label: "Patients" },
-  { href: "/dashboard/studies", label: "Studies" },
-  { href: "/dashboard/visits", label: "Visits Schedule" },
-  { href: "/dashboard/monitoring", label: "Monitoring visits" },
-  { href: "/dashboard/kits", label: "Kits Inventory" },
-  { href: "/dashboard/samples", label: "Lab samples" },
-  { href: "/dashboard/documents", label: "Documents" },
-  { href: "/dashboard/help", label: "Help" },
-  { href: "/dashboard/feedback", label: "Feedback" },
+const NAV: { href: string; label: string; icon: NavIconName }[] = [
+  { href: "/dashboard", label: "Overview", icon: "overview" },
+  { href: "/dashboard/subjects", label: "Patients", icon: "patients" },
+  { href: "/dashboard/studies", label: "Studies", icon: "studies" },
+  { href: "/dashboard/visits", label: "Visits Schedule", icon: "calendar" },
+  { href: "/dashboard/monitoring", label: "Monitoring visits", icon: "monitoring" },
+  { href: "/dashboard/kits", label: "Kits Inventory", icon: "kits" },
+  { href: "/dashboard/samples", label: "Lab samples", icon: "samples" },
+  { href: "/dashboard/documents", label: "Documents", icon: "documents" },
+  { href: "/dashboard/help", label: "Help", icon: "help" },
+  { href: "/dashboard/feedback", label: "Feedback", icon: "feedback" },
   // Display preferences, Team and Security all live under Settings.
-  { href: "/dashboard/settings", label: "Settings" },
+  { href: "/dashboard/settings", label: "Settings", icon: "settings" },
 ];
+
+/** "Dana Okafor" -> "DO" */
+function initialsOf(name: string | null | undefined): string {
+  const words = (name ?? "").split(/\s+/).filter(Boolean);
+  return ((words[0]?.[0] ?? "") + (words.length > 1 ? (words[words.length - 1][0] ?? "") : "")).toUpperCase() || "?";
+}
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const t = await getT();
@@ -61,60 +68,103 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     colorId: colors[v.studyId] ?? "blue",
   });
 
+  const userName = session?.user?.name ?? "";
+
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      {mustChangePassword && (
-        <div
-          role="alert"
-          className="border-b border-amber-300 bg-amber-100 px-6 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
-        >
-          {t("You're using a temporary password. Choose your own now to keep your account safe.")}{" "}
-          <Link href="/dashboard/settings/security" className="font-medium underline">
-            {t("Change password →")}
-          </Link>
-        </div>
-      )}
-      <KitExpiryBanner
-        kits={expiringKits}
-        outOfStock={stockAlerts.map((s) => ({ studyId: s.studyId, protocolId: s.protocolId, assigned: s.assigned }))}
-      />
-      <UpcomingVisitsBanner thisWeek={weeks.thisWeek.map(toWeekVisit)} nextWeek={weeks.nextWeek.map(toWeekVisit)} />
-      <div className="flex flex-1">
+    <div className="flex min-h-screen items-start gap-3 p-3 lg:gap-4 lg:p-4">
+      {/* A floating panel: labels below the lg breakpoint collapse to icons. */}
       <aside
         style={sidebar.bg ? { backgroundColor: sidebar.bg } : undefined}
-        className={`flex w-56 shrink-0 flex-col border-r p-4 ${
-          darkBar
-            ? "border-white/10 text-white"
-            : "border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950"
+        className={`sticky top-3 flex h-[calc(100vh-1.5rem)] w-[4.5rem] shrink-0 flex-col rounded-xl p-3 shadow-[var(--shadow-card)] lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:rounded-2xl lg:p-4 ${
+          darkBar ? "text-white" : "bg-surface"
         }`}
       >
-        <div className="mb-6 px-2 text-lg font-semibold tracking-tight">{t("SiteWell-ct")}</div>
-        <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label) }))} dark={darkBar} />
-        <div
-          className={`border-t pt-3 text-xs ${
-            darkBar ? "border-white/10 text-white/60" : "border-neutral-200 text-neutral-500 dark:border-neutral-800"
-          }`}
-        >
+        <div className="mb-5 flex items-center justify-center gap-2.5 px-1 pt-1 lg:mb-6 lg:justify-start lg:px-2">
+          <span
+            aria-hidden
+            className={`relative inline-block h-8 w-8 shrink-0 rounded-full ${darkBar ? "bg-white/15" : "bg-accent-soft"}`}
+          >
+            <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-[#a78bfa]" />
+            <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-[#38bdf8]" />
+          </span>
+          <span className="hidden text-lg font-semibold tracking-tight lg:inline">{t("SiteWell-ct")}</span>
+        </div>
+
+        <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label), icon: item.icon }))} dark={darkBar} />
+
+        <div className="mt-3 hidden lg:block">
           {LOGO_SRC && (
-            <div className="mb-3">
+            <div className="mb-3 px-1">
               <BrandLogo size="sidebar" onDark={darkBar} />
             </div>
           )}
-          <div
-            className={`truncate font-medium ${darkBar ? "text-white" : "text-neutral-700 dark:text-neutral-300"}`}
-          >
-            {session?.user?.name}
+          <div className={`flex items-center gap-3 rounded-full p-2 ${darkBar ? "bg-white/10" : "bg-neutral-50 dark:bg-neutral-900"}`}>
+            <span
+              aria-hidden
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                darkBar ? "bg-white text-neutral-900" : "bg-accent-soft text-accent"
+              }`}
+            >
+              {initialsOf(userName)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className={`truncate text-sm font-medium ${darkBar ? "text-white" : ""}`}>{userName}</div>
+              <div className={`truncate text-xs ${darkBar ? "text-white/60" : "text-neutral-500"}`}>{session?.user?.role}</div>
+            </div>
           </div>
-          <div className="truncate">{session?.user?.role}</div>
-          <SignOutButton dark={darkBar} />
+          <div className="mt-2 flex justify-end px-1">
+            <SignOutButton dark={darkBar} />
+          </div>
         </div>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-neutral-200 px-8 py-3 dark:border-neutral-800">
+
+      <div className="flex min-w-0 flex-1 flex-col gap-3 lg:gap-4">
+        {(mustChangePassword || kitAlerts.length > 0 || stockAlerts.length > 0 || weeks.thisWeek.length > 0 || weeks.nextWeek.length > 0) && (
+          <div className="space-y-3 lg:space-y-4">
+            {mustChangePassword && (
+              <div
+                role="alert"
+                className="overflow-hidden rounded-xl border border-amber-300 bg-amber-100 px-5 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100"
+              >
+                {t("You're using a temporary password. Choose your own now to keep your account safe.")}{" "}
+                <Link href="/dashboard/settings/security" className="font-medium underline">
+                  {t("Change password →")}
+                </Link>
+              </div>
+            )}
+            <div className="overflow-hidden rounded-xl empty:hidden">
+              <KitExpiryBanner
+                kits={expiringKits}
+                outOfStock={stockAlerts.map((s) => ({ studyId: s.studyId, protocolId: s.protocolId, assigned: s.assigned }))}
+              />
+            </div>
+            <div className="overflow-hidden rounded-xl empty:hidden">
+              <UpcomingVisitsBanner thisWeek={weeks.thisWeek.map(toWeekVisit)} nextWeek={weeks.nextWeek.map(toWeekVisit)} />
+            </div>
+          </div>
+        )}
+
+        <header className="flex items-center gap-3 rounded-xl bg-surface px-4 py-3 shadow-[var(--shadow-card)] lg:rounded-2xl">
           <GlobalSearch />
+          <div className="ml-auto hidden items-center gap-3 md:flex">
+            <div className="text-right leading-tight">
+              <div className="text-sm font-medium">{userName}</div>
+              <div className="text-xs text-neutral-500">{session?.user?.role}</div>
+            </div>
+            <span
+              aria-hidden
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent"
+            >
+              {initialsOf(userName)}
+            </span>
+          </div>
+          {/* The sidebar's user card is hidden on small screens, so sign-out lives here. */}
+          <div className="shrink-0 lg:hidden">
+            <SignOutButton dark={false} />
+          </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-8">{children}</main>
-      </div>
+
+        <main className="min-w-0 flex-1 pb-8 pt-1">{children}</main>
       </div>
     </div>
   );

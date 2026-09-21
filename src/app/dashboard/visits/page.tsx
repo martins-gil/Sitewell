@@ -34,6 +34,9 @@ export default async function VisitsPage() {
     visitType: v.visitType,
     targetDate: v.targetDate.toISOString(),
     startTime: v.startTime,
+    windowStart: v.windowStart.toISOString(),
+    windowEnd: v.windowEnd.toISOString(),
+    kits: v.kits.map((k) => k.name),
     status: v.status,
   }));
 

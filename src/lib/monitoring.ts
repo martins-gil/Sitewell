@@ -74,6 +74,8 @@ export type CalendarMonitoring = {
   targetDate: string; // ISO date string
   startTime: string | null;
   room: string | null;
+  pointCount: number;
+  verifiedCount: number;
 };
 
 export async function getMonitoringForCalendar(): Promise<CalendarMonitoring[]> {
@@ -85,6 +87,8 @@ export async function getMonitoringForCalendar(): Promise<CalendarMonitoring[]> 
     targetDate: v.visitDate.toISOString(),
     startTime: v.startTime,
     room: v.room,
+    pointCount: v.pointCount,
+    verifiedCount: v.verifiedCount,
   }));
 }
 

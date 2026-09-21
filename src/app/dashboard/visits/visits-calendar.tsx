@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { humanizeEnum } from "@/lib/format";
-import { patientTone, patientWash, studyColor } from "@/lib/study-colors";
+import { patientTone, studyColor } from "@/lib/study-colors";
 import { compareStartTime } from "@/lib/visit-time";
 import type { CalendarMonitoring } from "@/lib/monitoring";
 import { useT } from "@/lib/i18n/client";
@@ -18,6 +17,9 @@ export type CalendarVisit = {
   visitType: string;
   targetDate: string; // ISO date string
   startTime: string | null; // "HH:mm"
+  windowStart: string; // ISO date string
+  windowEnd: string; // ISO date string
+  kits: string[];
   status: string;
 };
 
@@ -26,37 +28,130 @@ type CalendarEntry =
   | ({ kind: "visit" } & CalendarVisit)
   | ({ kind: "monitoring" } & CalendarMonitoring);
 
-const STATUS_DOT: Record<string, string> = {
-  SCHEDULED: "bg-blue-500",
-  COMPLETED: "bg-green-500",
-  MISSED: "bg-red-500",
-  RESCHEDULED: "bg-amber-500",
+type Mode = "day" | "week";
+
+const STATUS_STYLE: Record<string, string> = {
+  SCHEDULED: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
+  COMPLETED: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+  MISSED: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300",
+  RESCHEDULED: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
 };
 
-type Granularity = "month" | "year" | "day";
-
+// Dates are handled as local calendar days (the visit dates are noon UTC, so the day is the
+// same in every time zone that matters here).
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function monthGridCells(monthStart: Date, visitsByDay: Map<string, CalendarEntry[]>) {
-  const gridStart = new Date(monthStart);
-  gridStart.setDate(gridStart.getDate() - monthStart.getDay());
-
-  return Array.from({ length: 42 }, (_, i) => {
-    const date = new Date(gridStart);
-    date.setDate(gridStart.getDate() + i);
-    return {
-      date,
-      inCurrentMonth: date.getMonth() === monthStart.getMonth(),
-      isToday: toDateKey(date) === toDateKey(new Date()),
-      visits: visitsByDay.get(toDateKey(date)) ?? [],
-    };
-  });
+function addDays(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 }
 
-const navButton =
-  "rounded-md border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800";
+/** The Monday of the week a date is in — weeks run Monday to Sunday. */
+function startOfWeek(d: Date): Date {
+  return addDays(d, -((d.getDay() + 6) % 7));
+}
+
+function monthGrid(monthStart: Date): Date[] {
+  const first = startOfWeek(monthStart);
+  const lead = (monthStart.getDay() + 6) % 7;
+  const days = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const rows = Math.ceil((lead + days) / 7);
+  return Array.from({ length: rows * 7 }, (_, i) => addDays(first, i));
+}
+
+function sortEntries(list: CalendarEntry[]): CalendarEntry[] {
+  return [...list].sort(
+    (a, b) =>
+      compareStartTime(a.startTime, b.startTime) ||
+      (a.kind === b.kind ? 0 : a.kind === "monitoring" ? -1 : 1) ||
+      a.protocolId.localeCompare(b.protocolId) ||
+      (a.kind === "visit" && b.kind === "visit" ? a.subjectCode.localeCompare(b.subjectCode) : 0),
+  );
+}
+
+const iconButton =
+  "flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800";
+
+function Chevron({ dir }: { dir: "left" | "right" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+      <path d={dir === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} />
+    </svg>
+  );
+}
+
+function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; colorId: string; dateLocale: string }) {
+  const t = useT();
+  const color = entry.kind === "visit" ? patientTone(colorId, entry.subjectCode) : studyColor(colorId);
+  const time = entry.startTime;
+  return (
+    <div className="flex items-stretch gap-3 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-900">
+      <span
+        aria-hidden
+        className="w-1.5 shrink-0 rounded-full"
+        style={entry.kind === "visit" ? { backgroundColor: color } : { backgroundColor: color, opacity: 0.55 }}
+      />
+      <div className="w-14 shrink-0 pt-0.5">
+        {time ? (
+          <span className="inline-block rounded-full bg-white px-2 py-0.5 font-mono text-xs font-medium dark:bg-neutral-800">{time}</span>
+        ) : (
+          <span className="text-xs text-neutral-400">{t("All day")}</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        {entry.kind === "visit" ? (
+          <>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link href={`/dashboard/visits/${entry.id}`} className="font-medium hover:underline">
+                {entry.visitType}
+              </Link>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLE[entry.status] ?? "bg-neutral-100 text-neutral-700"}`}>
+                {t(humanizeEnum(entry.status))}
+              </span>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500">
+              <Link href={`/dashboard/subjects/${entry.subjectId}`} className="font-mono hover:underline">
+                {entry.subjectCode}
+              </Link>
+              <span>{entry.protocolId}</span>
+              <span>
+                {t("Window")}:{" "}
+                {new Date(entry.windowStart).toLocaleDateString(dateLocale, { month: "short", day: "numeric", timeZone: "UTC" })} –{" "}
+                {new Date(entry.windowEnd).toLocaleDateString(dateLocale, { month: "short", day: "numeric", timeZone: "UTC" })}
+              </span>
+            </div>
+            {entry.kits.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {entry.kits.map((k, i) => (
+                  <span key={i} className="rounded-full bg-white px-2 py-0.5 text-[11px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <Link href={`/dashboard/monitoring/${entry.id}`} className="font-medium hover:underline">
+                {t("Monitoring visit")}
+              </Link>
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-300">
+                {t("Monitoring")}
+              </span>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-500">
+              <span>{entry.protocolId}</span>
+              {entry.room && <span>{entry.room}</span>}
+              {entry.pointCount > 0 && <span>{t("{0}/{1} points checked", [entry.verifiedCount, entry.pointCount])}</span>}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function VisitsCalendar({
   visits,
@@ -73,338 +168,271 @@ export function VisitsCalendar({
   onAddOnDay?: (dateKey: string) => void;
 }) {
   const t = useT();
-  const router = useRouter();
-  const [granularity, setGranularity] = useState<Granularity>("month");
+  const [mode, setMode] = useState<Mode>("week");
+  const [selected, setSelected] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  });
   const [monthCursor, setMonthCursor] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [dayCursor, setDayCursor] = useState(() => new Date());
 
-  const visitsByDay = useMemo(() => {
+  const entriesByDay = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
     const entries: CalendarEntry[] = [
       ...visits.map((v): CalendarEntry => ({ kind: "visit", ...v })),
       ...monitoring.map((m): CalendarEntry => ({ kind: "monitoring", ...m })),
     ];
-    for (const v of entries) {
-      const key = toDateKey(new Date(v.targetDate));
-      const existing = map.get(key);
-      if (existing) existing.push(v);
-      else map.set(key, [v]);
+    for (const e of entries) {
+      const key = toDateKey(new Date(e.targetDate));
+      const list = map.get(key);
+      if (list) list.push(e);
+      else map.set(key, [e]);
     }
-    // Within a day: by time (visits without one last), then monitoring, then by code.
-    for (const list of map.values()) {
-      list.sort(
-        (a, b) =>
-          compareStartTime(a.startTime, b.startTime) ||
-          (a.kind === b.kind ? 0 : a.kind === "monitoring" ? -1 : 1) ||
-          a.protocolId.localeCompare(b.protocolId) ||
-          (a.kind === "visit" && b.kind === "visit" ? a.subjectCode.localeCompare(b.subjectCode) : 0),
-      );
-    }
+    for (const [key, list] of map) map.set(key, sortEntries(list));
     return map;
   }, [visits, monitoring]);
 
-  const cells = useMemo(() => monthGridCells(monthCursor, visitsByDay), [monthCursor, visitsByDay]);
   // Day and month names come from the browser's own locale data for the chosen language.
   const dateLocale = t.locale === "en" ? "en-US" : t.locale;
-  const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
-    new Date(2000, 0, 2 + i).toLocaleDateString(dateLocale, { weekday: "short" }),
-  );
-  const MONTH_NAMES = Array.from({ length: 12 }, (_, m) =>
-    new Date(2000, m, 1).toLocaleDateString(dateLocale, { month: "long" }),
-  );
-  const monthLabel = monthCursor.toLocaleDateString(dateLocale, { month: "long", year: "numeric" });
-  const dayLabel = dayCursor.toLocaleDateString(dateLocale, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-  const dayKey = toDateKey(dayCursor);
-  const dayVisits = useMemo(() => visitsByDay.get(dayKey) ?? [], [visitsByDay, dayKey]);
+  const fmt = (d: Date, options: Intl.DateTimeFormatOptions) => d.toLocaleDateString(dateLocale, options);
+  const todayKey = toDateKey(new Date());
+  const selectedKey = toDateKey(selected);
 
-  function goToMonth(year: number, month: number) {
-    setMonthCursor(new Date(year, month, 1));
-    setGranularity("month");
-  }
+  const weekStart = startOfWeek(selected);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const shownDays = mode === "day" ? [selected] : weekDays;
+  const shownEntries = shownDays.flatMap((d) => entriesByDay.get(toDateKey(d)) ?? []);
+  const visitCount = shownEntries.filter((e) => e.kind === "visit").length;
+  const monitoringCount = shownEntries.length - visitCount;
 
-  function goToDay(date: Date) {
-    setDayCursor(new Date(date.getFullYear(), date.getMonth(), date.getDate()));
-    setMonthCursor(new Date(date.getFullYear(), date.getMonth(), 1));
-    setGranularity("day");
-  }
+  const weekdayNames = Array.from({ length: 7 }, (_, i) => fmt(addDays(weekStart, i), { weekday: "short" }));
+  const cells = monthGrid(monthCursor);
 
-  // Switching to Day from the toggle: today if it's in the month being
-  // looked at, otherwise that month's first day.
-  function openDayView() {
-    const now = new Date();
-    const inVisibleMonth = now.getFullYear() === monthCursor.getFullYear() && now.getMonth() === monthCursor.getMonth();
-    goToDay(inVisibleMonth ? now : monthCursor);
+  const colorOf = (e: CalendarEntry) => studyColors[e.studyId] ?? "blue";
+
+  function select(date: Date) {
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    setSelected(day);
+    setMonthCursor(new Date(day.getFullYear(), day.getMonth(), 1));
   }
 
   function step(direction: -1 | 1) {
-    if (granularity === "day") {
-      goToDay(new Date(dayCursor.getFullYear(), dayCursor.getMonth(), dayCursor.getDate() + direction));
-    } else if (granularity === "month") {
-      setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + direction, 1));
-    } else {
-      setMonthCursor(new Date(monthCursor.getFullYear() + direction, monthCursor.getMonth(), 1));
-    }
+    select(addDays(selected, direction * (mode === "day" ? 1 : 7)));
   }
 
-  function goToToday() {
-    const now = new Date();
-    if (granularity === "day") goToDay(now);
-    else setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
-  }
-
-  const colorOf = (v: CalendarEntry) => studyColors[v.studyId] ?? "blue";
-  // Monitoring visits are drawn in the study's plain colour, with a dashed edge.
-  const monitoringLabel = (m: CalendarMonitoring) =>
-    [t("Monitoring visit"), m.protocolId, m.room].filter(Boolean).join(" · ");
+  const title =
+    mode === "day"
+      ? fmt(selected, { weekday: "long", month: "long", day: "numeric", year: "numeric" })
+      : `${fmt(weekDays[0], { month: "short", day: "numeric" })} – ${fmt(weekDays[6], { month: "short", day: "numeric", year: "numeric" })}`;
 
   return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
-      {studies.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-neutral-200 px-4 py-2 text-xs dark:border-neutral-800">
-          <span className="text-neutral-500">{t("Colour = study, tone = patient")}</span>
-          {studies.map((s) => (
-            <span key={s.id} className="flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className="inline-block h-2.5 w-2.5 rounded-sm"
-                style={{ backgroundColor: studyColor(studyColors[s.id] ?? "blue") }}
-              />
-              {s.protocolId}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-sm font-medium">
-            {granularity === "day" ? dayLabel : granularity === "month" ? monthLabel : monthCursor.getFullYear()}
-          </h2>
-          <div className="flex gap-1 text-sm">
-            {(["day", "month", "year"] as const).map((g) => (
-              <button
-                key={g}
-                onClick={() => (g === "day" ? openDayView() : setGranularity(g))}
-                className={`rounded-md px-2 py-1 capitalize ${
-                  granularity === g
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "border border-neutral-300 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {g === "day" ? t("Day") : g === "month" ? t("Month") : t("Year")}
-              </button>
-            ))}
+    <div className="space-y-4">
+      {/* The details of the selected day or week, above the month. */}
+      <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+            <p className="mt-0.5 text-sm text-neutral-500">
+              {t("{0} visit|{0} visits", [visitCount])}
+              {monitoringCount > 0 && <> · {t("{0} monitoring visit|{0} monitoring visits", [monitoringCount])}</>}
+            </p>
           </div>
-        </div>
-        <div className="flex gap-2 text-sm">
-          <button onClick={() => step(-1)} className={navButton}>
-            {t("← Prev")}</button>
-          <button onClick={goToToday} className={navButton}>
-            {t("Today")}</button>
-          <button onClick={() => step(1)} className={navButton}>
-            {t("Next →")}</button>
-        </div>
-      </div>
-
-      {granularity === "day" ? (
-        <div className="p-4">
-          {dayVisits.length === 0 ? (
-            <p className="text-sm text-neutral-500">{t("No visits on this day.")}</p>
-          ) : (
-            <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {dayVisits.map((v) =>
-                v.kind === "monitoring" ? (
-                  <li key={`m-${v.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span
-                        aria-hidden
-                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                        style={{ backgroundColor: studyColor(colorOf(v)) }}
-                      />
-                      {v.startTime && <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{v.startTime}</span>}
-                      <Link href={`/dashboard/monitoring/${v.id}`} className="font-medium hover:underline">
-                        {t("Monitoring visit")}
-                      </Link>
-                      <span className="text-xs text-neutral-500">{v.protocolId}</span>
-                      {v.room && <span className="text-xs text-neutral-500">{v.room}</span>}
-                    </div>
-                  </li>
-                ) : (
-                  <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span
-                        aria-hidden
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: patientTone(colorOf(v), v.subjectCode) }}
-                      />
-                      {v.startTime && <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{v.startTime}</span>}
-                      <Link href={`/dashboard/visits/${v.id}`} className="font-medium hover:underline">
-                        {v.visitType}
-                      </Link>
-                      <Link href={`/dashboard/subjects/${v.subjectId}`} className="font-mono text-xs hover:underline">
-                        {v.subjectCode}
-                      </Link>
-                      <span className="text-xs text-neutral-500">{v.protocolId}</span>
-                    </div>
-                    <span className="text-xs text-neutral-500">{t(humanizeEnum(v.status))}</span>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
-          {onAddOnDay && (
-            <button
-              type="button"
-              onClick={() => onAddOnDay(dayKey)}
-              className="mt-3 text-sm text-neutral-600 hover:underline dark:text-neutral-400"
-            >
-              {t("+ Add a visit on this day")}</button>
-          )}
-        </div>
-      ) : granularity === "month" ? (
-        <>
-          <div className="grid grid-cols-7 border-b border-neutral-200 text-center text-xs font-medium text-neutral-500 dark:border-neutral-800">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="py-2">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7">
-            {cells.map(({ date, inCurrentMonth, isToday, visits: dayCellVisits }) => (
-              <div
-                key={date.toISOString()}
-                className={`min-h-[6.5rem] border-b border-r border-neutral-100 p-1.5 dark:border-neutral-900 ${
-                  inCurrentMonth ? "" : "bg-neutral-50 dark:bg-neutral-950"
-                }`}
-              >
-                <div className="mb-1 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => goToDay(date)}
-                    title={t("See this day's visits")}
-                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs hover:underline ${
-                      isToday
-                        ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                        : inCurrentMonth
-                          ? "text-neutral-700 dark:text-neutral-300"
-                          : "text-neutral-400"
-                    }`}
-                  >
-                    {date.getDate()}
-                  </button>
-                  {onAddOnDay && (
-                    <button
-                      type="button"
-                      onClick={() => onAddOnDay(toDateKey(date))}
-                      title={t("Add a visit on {0}", [date.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })])}
-                      aria-label={t("Add a visit on {0}", [date.toLocaleDateString(dateLocale, { month: "short", day: "numeric" })])}
-                      className="flex h-5 w-5 items-center justify-center rounded text-sm leading-none text-neutral-300 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
-                    >
-                      +
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-0.5">
-                  {dayCellVisits.slice(0, 3).map((v) =>
-                    v.kind === "monitoring" ? (
-                      <button
-                        key={`m-${v.id}`}
-                        onClick={() => router.push(`/dashboard/monitoring/${v.id}`)}
-                        title={`${monitoringLabel(v)}${v.startTime ? ` · ${v.startTime}` : ""}`}
-                        style={{
-                          border: `1px dashed ${studyColor(colorOf(v))}`,
-                          borderLeft: `3px solid ${studyColor(colorOf(v))}`,
-                        }}
-                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                      >
-                        <span className="truncate">
-                          {v.startTime && <span className="font-mono">{v.startTime} </span>}
-                          <span className="font-medium">{t("Monitoring visit")}</span>{" "}
-                          <span className="text-neutral-500">{v.room ?? v.protocolId}</span>
-                        </span>
-                      </button>
-                    ) : (
-                      <button
-                        key={v.id}
-                        onClick={() => router.push(`/dashboard/visits/${v.id}`)}
-                        title={`${v.startTime ? `${v.startTime} ` : ""}${v.protocolId} ${v.subjectCode} — ${v.visitType} (${t(humanizeEnum(v.status))})`}
-                        style={{
-                          borderLeft: `3px solid ${patientTone(colorOf(v), v.subjectCode)}`,
-                          backgroundColor: patientWash(colorOf(v), v.subjectCode),
-                        }}
-                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:brightness-95 dark:hover:brightness-125"
-                      >
-                        <span className="truncate">
-                          {v.startTime && <span className="font-mono">{v.startTime} </span>}
-                          <span className="font-mono">{v.subjectCode}</span>{" "}
-                          <span className="text-neutral-500">{v.visitType}</span>
-                        </span>
-                        <span
-                          className={`ml-auto h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`}
-                        />
-                      </button>
-                    ),
-                  )}
-                  {dayCellVisits.length > 3 && (
-                    <button
-                      type="button"
-                      onClick={() => goToDay(date)}
-                      className="px-1 text-[11px] text-neutral-400 hover:underline"
-                    >
-                      {t("+{0} more", [dayCellVisits.length - 3])}</button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          {MONTH_NAMES.map((name, monthIndex) => {
-            const monthStart = new Date(monthCursor.getFullYear(), monthIndex, 1);
-            const monthCells = monthGridCells(monthStart, visitsByDay).filter((c) => c.inCurrentMonth);
-            const monthVisitCount = monthCells.reduce((sum, c) => sum + c.visits.length, 0);
-            return (
-              <div key={name} className="rounded-md border border-neutral-200 p-2 dark:border-neutral-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="tablist" className="flex rounded-full bg-neutral-100 p-1 text-sm dark:bg-neutral-800">
+              {(["day", "week"] as const).map((m) => (
                 <button
-                  onClick={() => goToMonth(monthCursor.getFullYear(), monthIndex)}
-                  className="mb-1.5 flex w-full items-center justify-between text-xs font-medium hover:underline"
+                  key={m}
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => setMode(m)}
+                  className={`rounded-full px-4 py-1 ${
+                    mode === m
+                      ? "bg-neutral-900 font-medium text-white shadow-sm dark:bg-white dark:text-neutral-900"
+                      : "text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                  }`}
                 >
-                  <span>{name}</span>
-                  {monthVisitCount > 0 && <span className="text-neutral-400">{monthVisitCount}</span>}
+                  {m === "day" ? t("Day") : t("Week")}
                 </button>
-                <div className="grid grid-cols-7 gap-px text-center">
-                  {monthCells.map((c) => (
+              ))}
+            </div>
+            <button onClick={() => step(-1)} aria-label={t("Previous")} className={iconButton}>
+              <Chevron dir="left" />
+            </button>
+            <button
+              onClick={() => select(new Date())}
+              className="rounded-full border border-neutral-200 px-4 py-1.5 text-sm hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+            >
+              {t("Today")}
+            </button>
+            <button onClick={() => step(1)} aria-label={t("Next")} className={iconButton}>
+              <Chevron dir="right" />
+            </button>
+            {onAddOnDay && (
+              <button
+                type="button"
+                onClick={() => onAddOnDay(selectedKey)}
+                className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:brightness-110"
+              >
+                {t("+ Add visit")}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-5">
+          {mode === "day" ? (
+            shownEntries.length === 0 ? (
+              <p className="rounded-xl bg-neutral-50 px-4 py-6 text-center text-sm text-neutral-500 dark:bg-neutral-900">
+                {t("No visits on this day.")}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {shownEntries.map((e) => (
+                  <EntryCard key={`${e.kind}-${e.id}`} entry={e} colorId={colorOf(e)} dateLocale={dateLocale} />
+                ))}
+              </div>
+            )
+          ) : (
+            <div className="space-y-4">
+              {weekDays.map((d) => {
+                const key = toDateKey(d);
+                const list = entriesByDay.get(key) ?? [];
+                const isToday = key === todayKey;
+                return (
+                  <div key={key} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
                     <button
-                      key={c.date.toISOString()}
-                      disabled={c.visits.length === 0}
-                      onClick={() => goToDay(c.date)}
-                      title={c.visits.length > 0 ? t("{0} visit(s) — open this day", [c.visits.length]) : undefined}
-                      className={`flex h-5 w-5 items-center justify-center rounded-sm text-[9px] ${
-                        c.visits.length > 0
-                          ? "bg-blue-500 font-medium text-white"
-                          : c.isToday
-                            ? "border border-neutral-400 text-neutral-500"
-                            : "text-neutral-300 dark:text-neutral-700"
+                      type="button"
+                      onClick={() => {
+                        select(d);
+                        setMode("day");
+                      }}
+                      title={t("See this day's visits")}
+                      className={`flex h-16 w-full shrink-0 flex-row items-center justify-center gap-2 rounded-xl text-center sm:w-16 sm:flex-col sm:gap-0 ${
+                        isToday ? "bg-accent text-white" : "bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700"
                       }`}
                     >
-                      {c.date.getDate()}
+                      <span className="text-[11px] uppercase tracking-wide opacity-80">{fmt(d, { weekday: "short" })}</span>
+                      <span className="text-xl font-semibold leading-none">{d.getDate()}</span>
                     </button>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      {list.length === 0 ? (
+                        <p className="flex h-full min-h-10 items-center text-sm text-neutral-400">{t("No visits")}</p>
+                      ) : (
+                        list.map((e) => <EntryCard key={`${e.kind}-${e.id}`} entry={e} colorId={colorOf(e)} dateLocale={dateLocale} />)
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* The month, to pick a day or a week from. */}
+      <section className="rounded-lg border border-neutral-200 p-5 dark:border-neutral-800 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold capitalize">{fmt(monthCursor, { month: "long", year: "numeric" })}</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1))}
+              aria-label={t("Previous month")}
+              className={iconButton}
+            >
+              <Chevron dir="left" />
+            </button>
+            <button
+              onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
+              aria-label={t("Next month")}
+              className={iconButton}
+            >
+              <Chevron dir="right" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
+          {weekdayNames.map((name) => (
+            <div key={name} className="pb-1 text-center text-xs font-medium uppercase tracking-wide text-neutral-400">
+              {name}
+            </div>
+          ))}
+          {cells.map((date) => {
+            const key = toDateKey(date);
+            const list = entriesByDay.get(key) ?? [];
+            const inMonth = date.getMonth() === monthCursor.getMonth();
+            const isToday = key === todayKey;
+            const isSelected = key === selectedKey;
+            const inSelectedWeek = mode === "week" && toDateKey(startOfWeek(date)) === toDateKey(weekStart);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => select(date)}
+                aria-pressed={isSelected}
+                aria-label={`${fmt(date, { weekday: "long", month: "long", day: "numeric" })}${list.length > 0 ? ` — ${t("{0} visit|{0} visits", [list.length])}` : ""}`}
+                className={`relative flex h-14 flex-col items-center justify-between rounded-xl px-1 py-1.5 text-sm sm:h-16 ${
+                  isSelected
+                    ? "bg-accent font-semibold text-white shadow-sm"
+                    : inSelectedWeek
+                      ? "bg-accent-soft hover:brightness-95"
+                      : inMonth
+                        ? "bg-neutral-50 hover:bg-neutral-100 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+                        : "text-neutral-300 hover:bg-neutral-50 dark:text-neutral-700 dark:hover:bg-neutral-900"
+                } ${isToday && !isSelected ? "ring-2 ring-accent" : ""}`}
+              >
+                <span className={inMonth || isSelected ? "" : "opacity-60"}>{date.getDate()}</span>
+                <span className="flex h-2 items-center gap-0.5">
+                  {list.slice(0, 4).map((e) => (
+                    <span
+                      key={`${e.kind}-${e.id}`}
+                      aria-hidden
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={
+                        e.kind === "visit"
+                          ? { backgroundColor: isSelected ? "#ffffff" : patientTone(colorOf(e), e.subjectCode) }
+                          : { border: `1.5px solid ${isSelected ? "#ffffff" : studyColor(colorOf(e))}` }
+                      }
+                    />
                   ))}
-                </div>
-              </div>
+                </span>
+                {list.length > 0 && (
+                  <span
+                    aria-hidden
+                    className={`absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold ${
+                      isSelected ? "bg-white text-accent" : "bg-accent text-white"
+                    }`}
+                  >
+                    {list.length}
+                  </span>
+                )}
+              </button>
             );
           })}
         </div>
-      )}
+
+        {studies.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-neutral-100 pt-3 text-xs dark:border-neutral-800">
+            <span className="text-neutral-500">{t("Colour = study, tone = patient")}</span>
+            {studies.map((s) => (
+              <span key={s.id} className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className="inline-block h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: studyColor(studyColors[s.id] ?? "blue") }}
+                />
+                {s.protocolId}
+              </span>
+            ))}
+            <span className="flex items-center gap-1.5 text-neutral-500">
+              <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full border-2 border-neutral-400" />
+              {t("Monitoring visit")}
+            </span>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

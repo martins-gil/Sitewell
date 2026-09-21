@@ -718,6 +718,42 @@ export async function getUpcomingWeeks() {
   };
 }
 
+/**
+ * This week, Monday to Sunday, one entry per day: how many patient visits and
+ * monitoring visits fall on it (any status — it's the week's load, not what's left).
+ * Days are counted in UTC, like the visit dates.
+ */
+export async function getWeekLoad() {
+  const ctx = await requireTenantContext();
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const monday = today - ((new Date(today).getUTCDay() + 6) % 7) * DAY;
+
+  const [visits, monitoring] = await withTenantContext(ctx, (tx) =>
+    Promise.all([
+      tx.visit.findMany({
+        where: { targetDate: { gte: new Date(monday), lt: new Date(monday + 7 * DAY) } },
+        select: { targetDate: true },
+      }),
+      tx.monitoringVisit.findMany({
+        where: { visitDate: { gte: new Date(monday), lt: new Date(monday + 7 * DAY) } },
+        select: { visitDate: true },
+      }),
+    ]),
+  );
+
+  const days = Array.from({ length: 7 }, (_, i) => ({
+    date: new Date(monday + i * DAY),
+    isToday: monday + i * DAY === today,
+    visits: 0,
+    monitoring: 0,
+  }));
+  for (const v of visits) days[Math.floor((Date.UTC(v.targetDate.getUTCFullYear(), v.targetDate.getUTCMonth(), v.targetDate.getUTCDate()) - monday) / DAY)].visits++;
+  for (const m of monitoring) days[Math.floor((Date.UTC(m.visitDate.getUTCFullYear(), m.visitDate.getUTCMonth(), m.visitDate.getUTCDate()) - monday) / DAY)].monitoring++;
+  return days;
+}
+
 export async function getAllVisits() {
   const ctx = await requireTenantContext();
   return withTenantContext(ctx, (tx) =>
@@ -725,6 +761,8 @@ export async function getAllVisits() {
       include: {
         subject: { select: { subjectCode: true } },
         study: { select: { title: true, protocolId: true } },
+        // Shown on the calendar's day / week cards.
+        kits: { select: { name: true }, orderBy: { name: "asc" } },
       },
       orderBy: { targetDate: "asc" },
     }),
