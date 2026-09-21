@@ -68,7 +68,7 @@ export function CalendarShare({ feedUrl }: { feedUrl: string | null }) {
                     readOnly
                     value={feedUrl}
                     onFocus={(e) => e.currentTarget.select()}
-                    className="min-w-[16rem] flex-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 font-mono text-xs dark:border-neutral-700 dark:bg-neutral-900"
+                    className="min-w-[16rem] flex-1 rounded-md border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-900"
                   />
                   <button type="button" onClick={copy} className={button}>
                     {t("Copy link")}

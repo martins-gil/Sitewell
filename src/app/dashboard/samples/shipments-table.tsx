@@ -52,7 +52,7 @@ function ShipmentTableRow({
   return (
     <tr>
       <td className="whitespace-nowrap px-4 py-2">{shipment.dateLabel}</td>
-      <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">{shipment.awb}</td>
+      <td className="whitespace-nowrap px-4 py-2">{shipment.awb}</td>
       <td className="whitespace-nowrap px-4 py-2 text-neutral-500">{shipment.protocolId}</td>
       <td className={number}>{shipment.ambientCount}</td>
       <td className={number}>{shipment.refrigeratedCount}</td>

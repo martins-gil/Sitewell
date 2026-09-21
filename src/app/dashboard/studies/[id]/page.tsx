@@ -114,7 +114,7 @@ export default async function StudyOverviewPage({
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {patients.map((p) => (
               <tr key={p.id}>
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+                <td className="whitespace-nowrap px-4 py-2">
                   <Link href={`/dashboard/subjects/${p.id}`} className="hover:underline">
                     {p.subjectCode}
                   </Link>

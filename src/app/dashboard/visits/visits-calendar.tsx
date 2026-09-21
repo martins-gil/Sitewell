@@ -94,7 +94,7 @@ function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; color
       />
       <div className="w-14 shrink-0 pt-0.5">
         {time ? (
-          <span className="inline-block rounded-full bg-white px-2 py-0.5 font-mono text-xs font-medium dark:bg-neutral-800">{time}</span>
+          <span className="inline-block rounded-full bg-white px-2 py-0.5 text-xs font-medium dark:bg-neutral-800">{time}</span>
         ) : (
           <span className="text-xs text-neutral-400">{t("All day")}</span>
         )}
@@ -124,7 +124,7 @@ function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; color
             </div>
             <div className="min-w-0 space-y-0.5 text-xs text-neutral-500">
               <div className="flex flex-wrap items-center gap-x-3">
-                <Link href={`/dashboard/subjects/${entry.subjectId}`} className="font-mono text-neutral-700 hover:underline dark:text-neutral-300">
+                <Link href={`/dashboard/subjects/${entry.subjectId}`} className="text-neutral-700 hover:underline dark:text-neutral-300">
                   {entry.subjectCode}
                 </Link>
                 <span>{entry.protocolId}</span>
@@ -142,7 +142,7 @@ function EntryCard({ entry, colorId, dateLocale }: { entry: CalendarEntry; color
               <Link href={`/dashboard/monitoring/${entry.id}`} className="font-medium hover:underline">
                 {t("Monitoring visit")}
               </Link>
-              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-800 dark:bg-violet-950 dark:text-violet-300">
+              <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[11px] font-medium text-teal-800 dark:bg-teal-950 dark:text-teal-300">
                 {t("Monitoring")}
               </span>
             </div>

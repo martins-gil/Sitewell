@@ -41,7 +41,7 @@ export function VisitsTable({ visits }: { visits: TableVisit[] }) {
         <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {visits.map((v) => (
             <tr key={v.id}>
-              <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+              <td className="whitespace-nowrap px-4 py-2">
                 <Link href={`/dashboard/subjects/${v.subjectId}`} className="hover:underline">
                   {v.subject.subjectCode}
                 </Link>

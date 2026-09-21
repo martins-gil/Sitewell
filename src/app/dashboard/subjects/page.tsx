@@ -92,7 +92,7 @@ export default async function SubjectsPage({
             {/* The I/E criteria are only shown inside the patient's own file. */}
             {subjects.map((subject) => (
               <tr key={subject.id}>
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+                <td className="whitespace-nowrap px-4 py-2">
                   <Link href={`/dashboard/subjects/${subject.id}`} className="hover:underline">
                     {subject.subjectCode}
                   </Link>

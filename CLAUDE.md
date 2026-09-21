@@ -536,12 +536,12 @@ picks this repo up next.
   when a validation error comes back. The new forms read `new FormData(e.currentTarget)`
   in an `onSubmit` handler instead.
 - **The look is done with tokens, not per-page classes** (`src/app/globals.css`): the
-  neutral greys are re-tinted violet by overriding `--color-neutral-*` in `@theme`, the
+  neutral greys are re-tinted with the LOGO's navy by overriding `--color-neutral-*` in `@theme`, the
   radii are rounder, and anything that is `rounded-lg border` is a CARD (surface colour +
   shadow, via a `@layer base` rule — a `bg-*` utility on it still wins), form controls sit
   on the surface colour, and buttons are pills (`button.rounded-md` is deliberately
   UNLAYERED so it beats the utility every button carries). Accent = `--accent` /
-  `bg-accent` / `bg-accent-soft`. So a new screen looks right by using the usual
+  `bg-accent` / `bg-accent-soft`; the logo's four colours are `bg-brand-navy/-blue/-teal/-green` (charts, marks) — no violet/lavender anywhere. ONE TYPEFACE: `--font-mono` is mapped to Geist sans and `code/kbd/pre` inherit, so patient codes, protocol IDs and times are the regular font — don't put `font-mono` back and don't add a second font. So a new screen looks right by using the usual
   `rounded-lg border border-neutral-200` card. The shell is `dashboard/layout.tsx`: a
   floating white sidebar (icons from `components/nav-icons.tsx`, the current page a dark
   pill; below `lg` it collapses to an icon rail and sign-out moves to the top bar), a

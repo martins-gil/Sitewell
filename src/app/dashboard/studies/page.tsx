@@ -87,7 +87,7 @@ export default async function StudiesPage() {
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {rows.map((s) => (
               <tr key={s.id}>
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">
+                <td className="whitespace-nowrap px-4 py-2">
                   <Link href={`/dashboard/studies/${s.id}`} className="inline-flex items-center gap-2 hover:underline">
                     <span
                       aria-hidden

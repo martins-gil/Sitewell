@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { getI18n } from "@/lib/i18n/server";
@@ -7,11 +7,6 @@ import { getTheme } from "@/lib/preferences-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -56,7 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-theme={theme}
       // The system-theme script may add "dark" before React hydrates.
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${theme === "dark" ? " dark" : ""}`}
+      className={`${geistSans.variable} h-full antialiased${theme === "dark" ? " dark" : ""}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: SYSTEM_THEME_SCRIPT }} />

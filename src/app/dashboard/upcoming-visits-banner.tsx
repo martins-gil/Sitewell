@@ -57,7 +57,7 @@ function WeekLine({ heading, visits }: { heading: string; visits: WeekVisit[] })
             className="inline-block h-2 w-2 rounded-full"
             style={{ backgroundColor: patientTone(v.colorId, v.subjectCode) }}
           />
-          <span className="font-mono text-xs">{v.subjectCode}</span> {v.visitType}
+          <span>{v.subjectCode}</span> {v.visitType}
           <span className="opacity-70">· {v.dayLabel}</span>
         </Link>
       ))}

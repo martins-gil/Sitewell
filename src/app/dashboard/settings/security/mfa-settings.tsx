@@ -81,7 +81,7 @@ export function MfaSettings({ initialEnabled }: { initialEnabled: boolean }) {
             {t("Scan with an authenticator app, then enter the 6-digit code to confirm.")}</p>
           <Image src={qrCodeDataUrl} alt={t("MFA QR code")} width={180} height={180} unoptimized />
           {secret && (
-            <p className="font-mono text-xs text-neutral-500">{t("Manual entry key: {0}", [secret])}</p>
+            <p className="text-xs text-neutral-500">{t("Manual entry key: {0}", [secret])}</p>
           )}
           <div className="flex gap-2">
             <input

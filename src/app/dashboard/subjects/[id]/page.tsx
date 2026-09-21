@@ -39,7 +39,7 @@ export default async function SubjectDetailPage({
         <Link href="/dashboard/subjects" className="text-sm text-neutral-500 hover:underline">
           {t("← Patients")}</Link>
         <div className="mt-1 flex items-center gap-3">
-          <h1 className="font-mono text-2xl font-semibold tracking-tight">{subject.subjectCode}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{subject.subjectCode}</h1>
           <Badge value={subject.status} />
         </div>
         <p className="mt-1 text-sm text-neutral-500">

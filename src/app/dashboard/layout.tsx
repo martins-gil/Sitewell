@@ -85,8 +85,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             aria-hidden
             className={`relative inline-block h-8 w-8 shrink-0 rounded-full ${LOGO_SRC ? "lg:hidden" : ""} ${darkBar ? "bg-white/15" : "bg-accent-soft"}`}
           >
-            <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-[#a78bfa]" />
-            <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-[#38bdf8]" />
+            <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-brand-blue" />
+            <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-brand-green" />
           </span>
           {LOGO_SRC ? (
             <span className="hidden lg:block">

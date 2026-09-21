@@ -4,28 +4,37 @@
    device's colour scheme when it's "Match my device"), not just the media query. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* The look: a soft lavender canvas with white, generously rounded cards and an indigo
-   accent. It is done with tokens so every existing screen picks it up: the neutral
-   greys are tinted violet, corners are rounder, and a card (anything that is
-   `rounded-lg border`) gets a surface colour and a light shadow. */
+/* The look: a cool, light canvas with white, generously rounded cards. The colours are
+   the LOGO's: a deep navy, a blue, a teal and a soft green. It is done with tokens so
+   every existing screen picks it up: the neutral greys are tinted navy, corners are
+   rounder, and a card (anything that is `rounded-lg border`) gets a surface colour and a
+   light shadow. */
 :root {
-  --background: #f1effa;
-  --foreground: #171629;
+  --background: #edf2f5;
+  --foreground: #0f2436;
   --surface: #ffffff;
-  --surface-muted: #f8f7fc;
-  --accent: #5b4bdb;
-  --accent-soft: #e9e6fb;
-  --shadow-card: 0 1px 2px rgb(23 22 41 / 0.04), 0 10px 28px -14px rgb(60 48 140 / 0.18);
+  --surface-muted: #f6f9fb;
+  --accent: #1d6a94;
+  --accent-soft: #dcebf3;
+  --brand-navy: #0f3b5c;
+  --brand-blue: #1d6a94;
+  --brand-teal: #2a8b9a;
+  --brand-green: #6aae8e;
+  --shadow-card: 0 1px 2px rgb(15 59 92 / 0.05), 0 10px 28px -14px rgb(15 59 92 / 0.2);
   color-scheme: light;
 }
 
 .dark {
-  --background: #0b0a16;
-  --foreground: #ececf6;
-  --surface: #15142a;
-  --surface-muted: #1b1a33;
-  --accent: #8b7dff;
-  --accent-soft: #2a2652;
+  --background: #08141f;
+  --foreground: #e6eef4;
+  --surface: #0f2231;
+  --surface-muted: #14293a;
+  --accent: #5bb4d6;
+  --accent-soft: #163449;
+  --brand-navy: #7fb6d6;
+  --brand-blue: #4aa3cf;
+  --brand-teal: #46b1c0;
+  --brand-green: #7fc4a3;
   --shadow-card: none;
   color-scheme: dark;
 }
@@ -37,23 +46,29 @@
   --color-surface-muted: var(--surface-muted);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-green: var(--brand-green);
   --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* One typeface everywhere: what used to be the code font (patient codes, protocol
+     IDs, times) is the regular font too. */
+  --font-mono: var(--font-geist-sans);
 }
 
 @theme {
-  /* Neutral greys with a hint of violet. */
-  --color-neutral-50: #f8f7fc;
-  --color-neutral-100: #f0eef8;
-  --color-neutral-200: #e5e2f1;
-  --color-neutral-300: #d3cfe4;
-  --color-neutral-400: #a9a5be;
-  --color-neutral-500: #77738f;
-  --color-neutral-600: #58556f;
-  --color-neutral-700: #403e57;
-  --color-neutral-800: #2b2a44;
-  --color-neutral-900: #171629;
-  --color-neutral-950: #0e0d1d;
+  /* Neutral greys with a hint of the logo's navy. */
+  --color-neutral-50: #f6f9fb;
+  --color-neutral-100: #edf2f6;
+  --color-neutral-200: #dfe7ee;
+  --color-neutral-300: #c9d5df;
+  --color-neutral-400: #96a8b7;
+  --color-neutral-500: #667a8b;
+  --color-neutral-600: #485c6d;
+  --color-neutral-700: #33475a;
+  --color-neutral-800: #1f3547;
+  --color-neutral-900: #0f3352;
+  --color-neutral-950: #08182a;
 
   /* Softer corners: buttons and inputs, cards, big panels. */
   --radius-sm: 0.5rem;
@@ -67,6 +82,15 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Unlayered on purpose (it must beat the browser / preflight defaults): no element gets a
+   monospace face of its own. */
+code,
+kbd,
+samp,
+pre {
+  font-family: inherit;
 }
 
 /* Buttons are pills, like the rest of the look. Unlayered on purpose: it has to beat the

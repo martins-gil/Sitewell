@@ -69,7 +69,7 @@ export default async function VisitDetailPage({
           <Badge value={visit.status} />
         </div>
         <p className="mt-1 text-sm text-neutral-500">
-          <Link href={`/dashboard/subjects/${visit.subject.id}`} className="font-mono hover:underline">
+          <Link href={`/dashboard/subjects/${visit.subject.id}`} className="hover:underline">
             {visit.subject.subjectCode}
           </Link>{" "}
           · {studyLabel(visit.study.protocolId, visit.study.title)}

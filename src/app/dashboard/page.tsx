@@ -15,11 +15,11 @@ import { NavIcon, type NavIconName } from "@/components/nav-icons";
 
 // The funnel's stages in order, each with its bar colour.
 const STAGES: { status: string; bar: string }[] = [
-  { status: "IDENTIFIED", bar: "bg-slate-400" },
-  { status: "PRE_SCREENED", bar: "bg-sky-400" },
-  { status: "SCREENED", bar: "bg-blue-500" },
-  { status: "CONSENTED", bar: "bg-violet-500" },
-  { status: "ENROLLED", bar: "bg-emerald-500" },
+  { status: "IDENTIFIED", bar: "bg-neutral-400" },
+  { status: "PRE_SCREENED", bar: "bg-brand-green" },
+  { status: "SCREENED", bar: "bg-brand-teal" },
+  { status: "CONSENTED", bar: "bg-brand-blue" },
+  { status: "ENROLLED", bar: "bg-brand-navy" },
   { status: "SCREEN_FAILED", bar: "bg-amber-500" },
   { status: "WITHDRAWN", bar: "bg-rose-400" },
 ];
@@ -124,14 +124,14 @@ export default async function DashboardOverviewPage() {
                   <span className={`text-sm font-medium ${total === 0 ? "text-neutral-300 dark:text-neutral-700" : ""}`}>{total}</span>
                   <div
                     className={`relative flex h-36 w-full max-w-[3.5rem] flex-col justify-end overflow-hidden rounded-xl ${
-                      d.isToday ? "bg-sky-100 dark:bg-sky-950" : "bg-neutral-100 dark:bg-neutral-800/60"
+                      d.isToday ? "bg-accent-soft" : "bg-neutral-100 dark:bg-neutral-800/60"
                     }`}
                   >
                     {d.monitoring > 0 && (
-                      <div className="w-full bg-violet-400" style={{ height: `${(d.monitoring / busiest) * 100}%` }} />
+                      <div className="w-full bg-brand-green" style={{ height: `${(d.monitoring / busiest) * 100}%` }} />
                     )}
                     {d.visits > 0 && (
-                      <div className="w-full bg-sky-500" style={{ height: `${(d.visits / busiest) * 100}%` }} />
+                      <div className="w-full bg-brand-blue" style={{ height: `${(d.visits / busiest) * 100}%` }} />
                     )}
                   </div>
                   <div className="text-center leading-tight">
@@ -148,11 +148,11 @@ export default async function DashboardOverviewPage() {
           </div>
           <div className="mt-4 flex flex-wrap gap-4 text-xs text-neutral-500">
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" />
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-brand-blue" />
               {t("Patient visits")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-violet-400" />
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-brand-green" />
               {t("Monitoring visits")}
             </span>
           </div>
@@ -229,7 +229,7 @@ export default async function DashboardOverviewPage() {
                             style={{ backgroundColor: patientTone(colors[v.studyId] ?? "blue", v.subject.subjectCode) }}
                           />
                           <span className="truncate">
-                            <span className="font-mono text-xs">{v.subject.subjectCode}</span> · {v.visitType} · {v.study.protocolId}
+                            <span>{v.subject.subjectCode}</span> · {v.visitType} · {v.study.protocolId}
                           </span>
                         </span>
                         <span className="shrink-0 rounded-full bg-white px-2.5 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
