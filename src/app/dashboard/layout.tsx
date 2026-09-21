@@ -13,8 +13,6 @@ import { BrandLogo } from "@/components/brand-logo";
 import type { NavIconName } from "@/components/nav-icons";
 import { LOGO_SRC } from "@/lib/brand";
 import { getT } from "@/lib/i18n/server";
-import { getSidebarColor } from "@/lib/preferences-server";
-import { SIDEBAR_COLORS } from "@/lib/preferences";
 
 const NAV: { href: string; label: string; icon: NavIconName }[] = [
   { href: "/dashboard", label: "Overview", icon: "overview" },
@@ -40,9 +38,6 @@ function initialsOf(name: string | null | undefined): string {
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const t = await getT();
   const session = await auth();
-  const sidebarId = await getSidebarColor();
-  const sidebar = SIDEBAR_COLORS.find((c) => c.id === sidebarId) ?? SIDEBAR_COLORS[0];
-  const darkBar = sidebar.bg !== null;
 
   // A platform admin has no organization of their own, so there's no "their"
   // kits or visits to warn about.
@@ -73,49 +68,42 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <div className="flex min-h-screen items-start gap-3 p-3 lg:gap-4 lg:p-4">
       {/* A floating panel: labels below the lg breakpoint collapse to icons. */}
-      <aside
-        style={sidebar.bg ? { backgroundColor: sidebar.bg } : undefined}
-        className={`sticky top-3 flex h-[calc(100vh-1.5rem)] w-[4.5rem] shrink-0 flex-col rounded-xl p-3 shadow-[var(--shadow-card)] lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:rounded-2xl lg:p-4 ${
-          darkBar ? "text-white" : "bg-surface"
-        }`}
-      >
+      <aside className="sticky top-3 flex h-[calc(100vh-1.5rem)] w-[4.5rem] shrink-0 flex-col rounded-xl bg-surface p-3 shadow-[var(--shadow-card)] lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:rounded-2xl lg:p-4">
         {/* The logo tops the sidebar (a small mark stands in for it on the icon rail). */}
         <div className="mb-5 flex items-center justify-center px-1 pt-1 lg:mb-6 lg:justify-start lg:px-2">
           <span
             aria-hidden
-            className={`relative inline-block h-8 w-8 shrink-0 rounded-full ${LOGO_SRC ? "lg:hidden" : ""} ${darkBar ? "bg-white/15" : "bg-accent-soft"}`}
+            className={`relative inline-block h-8 w-8 shrink-0 rounded-full bg-accent-soft ${LOGO_SRC ? "lg:hidden" : ""}`}
           >
             <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-brand-blue" />
             <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full bg-brand-green" />
           </span>
           {LOGO_SRC ? (
             <span className="hidden lg:block">
-              <BrandLogo size="sidebar" onDark={darkBar} />
+              <BrandLogo size="sidebar" />
             </span>
           ) : (
             <span className="ml-2.5 hidden text-lg font-semibold tracking-tight lg:inline">{t("SiteWell-ct")}</span>
           )}
         </div>
 
-        <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label), icon: item.icon }))} dark={darkBar} />
+        <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label), icon: item.icon }))} />
 
         <div className="mt-3 hidden lg:block">
-          <div className={`flex items-center gap-3 rounded-full p-2 ${darkBar ? "bg-white/10" : "bg-neutral-50 dark:bg-neutral-900"}`}>
+          <div className="flex items-center gap-3 rounded-full bg-neutral-50 p-2 dark:bg-neutral-900">
             <span
               aria-hidden
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
-                darkBar ? "bg-white text-neutral-900" : "bg-accent-soft text-accent"
-              }`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold text-accent"
             >
               {initialsOf(userName)}
             </span>
             <div className="min-w-0 flex-1">
-              <div className={`truncate text-sm font-medium ${darkBar ? "text-white" : ""}`}>{userName}</div>
-              <div className={`truncate text-xs ${darkBar ? "text-white/60" : "text-neutral-500"}`}>{session?.user?.role}</div>
+              <div className="truncate text-sm font-medium">{userName}</div>
+              <div className="truncate text-xs text-neutral-500">{session?.user?.role}</div>
             </div>
           </div>
           <div className="mt-2 flex justify-end px-1">
-            <SignOutButton dark={darkBar} />
+            <SignOutButton />
           </div>
         </div>
       </aside>
@@ -151,7 +139,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <GlobalSearch />
           {/* The sidebar's user card is hidden on small screens, so sign-out lives here. */}
           <div className="shrink-0 lg:hidden">
-            <SignOutButton dark={false} />
+            <SignOutButton />
           </div>
         </header>
 

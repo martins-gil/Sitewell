@@ -1,10 +1,10 @@
 import { getT } from "@/lib/i18n/server";
-import { getSectionModes, getSidebarColor, getTheme } from "@/lib/preferences-server";
+import { getSectionModes, getTheme } from "@/lib/preferences-server";
 import { PreferencesForm } from "./preferences-form";
 
 export default async function SettingsPage() {
   const t = await getT();
-  const [theme, sectionModes, sidebarColor] = await Promise.all([getTheme(), getSectionModes(), getSidebarColor()]);
+  const [theme, sectionModes] = await Promise.all([getTheme(), getSectionModes()]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -14,7 +14,7 @@ export default async function SettingsPage() {
           {t("How SiteWell-ct looks and reads on this browser. These are saved in the browser, so they also apply on the sign-in page, but not on your other devices.")}
         </p>
       </div>
-      <PreferencesForm theme={theme} sectionModes={sectionModes} sidebarColor={sidebarColor} />
+      <PreferencesForm theme={theme} sectionModes={sectionModes} />
     </div>
   );
 }

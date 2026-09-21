@@ -26,7 +26,6 @@ export function isLocale(value: unknown): value is Locale {
 export const LOCALE_COOKIE = "sw_locale";
 export const THEME_COOKIE = "sw_theme";
 export const SECTIONS_COOKIE = "sw_sections";
-export const SIDEBAR_COOKIE = "sw_sidebar";
 // Which sign-in picture this browser was shown last (so the next visit shows the next one).
 export const LOGIN_SEQ_COOKIE = "sw_login_seq";
 

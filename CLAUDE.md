@@ -525,12 +525,11 @@ picks this repo up next.
 - **Sign-in look and brand assets.** `src/lib/brand.ts` lists `LOGO_SRC` and
   `LOGIN_IMAGES` (files in `public/brand/`, which the middleware matcher exempts):
   `sitewell-logo.png` (the supplied logo with its baked-in grid background removed
-  — colour-to-alpha against white, so it's transparent and dark-blue; it needs a
-  light chip on any dark surface, which `BrandLogo` adds for a coloured bar and
-  in dark mode) and three login pictures, 1600 px wide. Each sign-in page load shows the picture
+  — colour-to-alpha against white, so it's transparent and dark-blue; in the DARK theme `BrandLogo` swaps it for `sitewell-logo-white.png` — the same
+  732x174 canvas, so nothing moves — by CSS (`dark:hidden` / `hidden dark:block`; no flash)) and three login pictures, 1600 px wide. Each sign-in page load shows the picture
   after the one this browser saw last (`sw_login_seq` cookie, written by
   `LoginArt`); the logo shows on the sign-in pages and, when set, at the bottom of
-  the TOP of the sidebar, where the wordmark used to be (a small mark stands in on the icon rail; on a light chip over a coloured bar). The sign-in pages (`auth-shell.tsx`): the picture fills the whole page (rotating), one white card is centred over it with the logo, the title and the form, and the language picker sits in the corner. No marketing text on them — the user asked for none.
+  the TOP of the sidebar, where the wordmark used to be (a small mark stands in on the icon rail). The sign-in pages (`auth-shell.tsx`): the picture fills the whole page (rotating), one white card is centred over it with the logo, the title and the form, and the language picker sits in the corner. No marketing text on them — the user asked for none.
 - **Forms that validate must use `onSubmit`, not `<form action={fn}>`.** React 19
   resets an uncontrolled form after an action, which wipes what the person typed
   when a validation error comes back. The new forms read `new FormData(e.currentTarget)`
@@ -545,8 +544,9 @@ picks this repo up next.
   `rounded-lg border border-neutral-200` card. The shell is `dashboard/layout.tsx`: a
   floating white sidebar (icons from `components/nav-icons.tsx`, the current page a dark
   pill; below `lg` it collapses to an icon rail and sign-out moves to the top bar), a
-  rounded top bar that holds only the search (centred and wide — who is signed in is in the sidebar's user card), and the banners as rounded strips above it. The sidebar
-  colour default is now `light`; a colour someone picked keeps working (white active pill).
+  rounded top bar that holds only the search (centred and wide — who is signed in is in the sidebar's user card), and the banners as rounded strips above it. There is
+  no sidebar colour choice any more (the user asked for light or dark only): the sidebar
+  is the white / dark card and the current page is a dark pill (a white one in dark mode).
 - **Visits calendar** (`visits/visits-calendar.tsx`): the details of the SELECTED DAY or
   WEEK are a panel that sits above a compact month grid on a narrow screen and BESIDE it (grid in a 23rem column) from xl up (Day / Week switch, prev / today / next, the
   date-aware "+ Add visit" and "+ Monitoring visit" (the latter opens MonitoringVisitForm, shared with the Monitoring visits page, with the day filled in); each entry card shows time, visit, patient, study, status,
@@ -554,9 +554,7 @@ picks this repo up next.
   everywhere (the digest, the banner, this grid). Clicking a grid day selects it; in Week
   mode its week is the highlighted band. The old Year view was dropped. `CalendarVisit` /
   `CalendarMonitoring` carry the extra fields (window, kits, point counts).
-- **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
-  `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
-  is an inline `backgroundColor` with light text (`dark` prop on the nav).
+
 
 ## Before calling a change done
 

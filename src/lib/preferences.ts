@@ -1,27 +1,5 @@
 // Display preferences (safe to import from client components).
 
-// Colours for the left bar with the sections. Every coloured option is dark
-// enough for white text, so it reads the same in the light and dark themes;
-// "light" is the plain grey bar. (The labels go through t() in Settings.)
-export const SIDEBAR_COLORS = [
-  { id: "navy", label: "Navy", bg: "#12284c" },
-  { id: "blue", label: "Blue", bg: "#1d4e89" },
-  { id: "teal", label: "Teal", bg: "#0f5257" },
-  { id: "green", label: "Green", bg: "#1b4d3e" },
-  { id: "purple", label: "Purple", bg: "#3d2a6b" },
-  { id: "wine", label: "Wine", bg: "#5a1f36" },
-  { id: "charcoal", label: "Charcoal", bg: "#20242b" },
-  { id: "light", label: "Light", bg: null },
-] as const;
-
-export type SidebarColorId = (typeof SIDEBAR_COLORS)[number]["id"];
-// The new look is a light, floating sidebar; a colour someone picked in Settings is kept.
-export const DEFAULT_SIDEBAR_COLOR: SidebarColorId = "light";
-
-export function isSidebarColor(value: unknown): value is SidebarColorId {
-  return SIDEBAR_COLORS.some((c) => c.id === value);
-}
-
 // Sections of a visit's page that can be shown, collapsed or hidden. The
 // labels are the English text used on the page and in Settings.
 export const VISIT_SECTIONS = [
