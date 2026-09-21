@@ -567,7 +567,10 @@ export type IeFormData = {
   exclusion: { text: string; met: boolean | null }[];
 };
 
-async function ieFormHeader(tx: Prisma.TransactionClient, studyId: string) {
+/** The study facts every printed source document's header and footer carry: PI,
+ * site number, protocol id, and the protocol document's version and release date.
+ * Shared by the I/E form and the monitoring visit's points document. */
+export async function ieFormHeader(tx: Prisma.TransactionClient, studyId: string) {
   const study = await tx.study.findUniqueOrThrow({
     where: { id: studyId },
     include: { sites: { select: { siteNumber: true }, take: 1 } },

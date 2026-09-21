@@ -9,6 +9,8 @@ import { KitExpiryBanner } from "./kit-expiry-banner";
 import { UpcomingVisitsBanner, type WeekVisit } from "./upcoming-visits-banner";
 import { SidebarNav } from "./sidebar-nav";
 import { GlobalSearch } from "./global-search";
+import { BrandLogo } from "@/components/brand-logo";
+import { LOGO_SRC } from "@/lib/brand";
 import { getT } from "@/lib/i18n/server";
 import { getSidebarColor } from "@/lib/preferences-server";
 import { SIDEBAR_COLORS } from "@/lib/preferences";
@@ -18,6 +20,7 @@ const NAV = [
   { href: "/dashboard/subjects", label: "Patients" },
   { href: "/dashboard/studies", label: "Studies" },
   { href: "/dashboard/visits", label: "Visits Schedule" },
+  { href: "/dashboard/monitoring", label: "Monitoring visits" },
   { href: "/dashboard/kits", label: "Kits Inventory" },
   { href: "/dashboard/documents", label: "Documents" },
   { href: "/dashboard/help", label: "Help" },
@@ -88,6 +91,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             darkBar ? "border-white/10 text-white/60" : "border-neutral-200 text-neutral-500 dark:border-neutral-800"
           }`}
         >
+          {LOGO_SRC && (
+            <div className="mb-3">
+              <BrandLogo size="sidebar" onDark={darkBar} />
+            </div>
+          )}
           <div
             className={`truncate font-medium ${darkBar ? "text-white" : "text-neutral-700 dark:text-neutral-300"}`}
           >

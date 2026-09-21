@@ -12,6 +12,7 @@ export type TableVisit = {
   studyId: string;
   visitType: string;
   targetDate: Date;
+  startTime: string | null;
   windowStart: Date;
   windowEnd: Date;
   actualDate: Date | null;
@@ -51,7 +52,10 @@ export function VisitsTable({ visits }: { visits: TableVisit[] }) {
                   {v.visitType}
                 </Link>
               </td>
-              <td className="whitespace-nowrap px-4 py-2">{formatDate(v.targetDate, t.locale)}</td>
+              <td className="whitespace-nowrap px-4 py-2">
+                {formatDate(v.targetDate, t.locale)}
+                {v.startTime && <span className="ml-1.5 text-neutral-500">{v.startTime}</span>}
+              </td>
               <td className="whitespace-nowrap px-4 py-2 text-neutral-500">
                 {formatDate(v.windowStart, t.locale)} – {formatDate(v.windowEnd, t.locale)}
               </td>

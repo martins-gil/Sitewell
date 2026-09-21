@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withTenantContext, type TenantContext } from "@/lib/db-context";
-import { buildIcs, loadFeedVisits, readFeedToken } from "@/lib/calendar-feed";
+import { buildIcs, loadFeedData, readFeedToken } from "@/lib/calendar-feed";
 
 // The calendar subscription URL Apple / Google / Outlook poll. There is no
 // login here — the signed token in the URL is the credential (see
@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ toke
     ) {
       return null;
     }
-    return loadFeedVisits(tx);
+    return loadFeedData(tx);
   });
   if (!visits) return notFound();
 

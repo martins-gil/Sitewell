@@ -11,6 +11,7 @@ export function SettingsTabs({ canManageTeam }: { canManageTeam: boolean }) {
   const router = useRouter();
   const tabs = [
     { href: "/dashboard/settings", label: t("Preferences") },
+    { href: "/dashboard/settings/notifications", label: t("Notifications") },
     ...(canManageTeam ? [{ href: "/dashboard/settings/team", label: t("Team") }] : []),
     { href: "/dashboard/settings/security", label: t("Security") },
   ];

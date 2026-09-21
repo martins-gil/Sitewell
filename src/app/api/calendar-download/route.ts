@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
-import { buildIcs, loadFeedVisits } from "@/lib/calendar-feed";
+import { buildIcs, loadFeedData } from "@/lib/calendar-feed";
 
 // A one-time .ics copy of the visit calendar for the signed-in user (open it to
 // import into Apple / Google / Outlook). Unlike the subscription link it isn't
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const studyId = url.searchParams.get("studyId") || undefined;
-  const visits = await withTenantContext(ctx, (tx) => loadFeedVisits(tx, { studyId }));
+  const visits = await withTenantContext(ctx, (tx) => loadFeedData(tx, { studyId }));
 
   return new NextResponse(buildIcs(visits, url.origin), {
     headers: {

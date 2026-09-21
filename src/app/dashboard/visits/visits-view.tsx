@@ -8,11 +8,13 @@ import {
 } from "@/components/add-visit-form";
 import { VisitsCalendar, type CalendarVisit } from "./visits-calendar";
 import { VisitsTable, type TableVisit } from "./visits-table";
+import type { CalendarMonitoring } from "@/lib/monitoring";
 import { useT } from "@/lib/i18n/client";
 
 export function VisitsView({
   tableVisits,
   calendarVisits,
+  monitoringVisits,
   studies,
   schedulingSubjects,
   schedulingTemplates,
@@ -20,6 +22,7 @@ export function VisitsView({
 }: {
   tableVisits: TableVisit[];
   calendarVisits: CalendarVisit[];
+  monitoringVisits: CalendarMonitoring[];
   studyColors: Record<string, string>;
   studies: { id: string; protocolId: string; title: string }[];
   schedulingSubjects: SchedulingSubject[];
@@ -39,6 +42,11 @@ export function VisitsView({
   const filteredCalendarVisits = useMemo(
     () => (studyId ? calendarVisits.filter((v) => v.studyId === studyId) : calendarVisits),
     [calendarVisits, studyId],
+  );
+
+  const filteredMonitoring = useMemo(
+    () => (studyId ? monitoringVisits.filter((v) => v.studyId === studyId) : monitoringVisits),
+    [monitoringVisits, studyId],
   );
 
   return (
@@ -94,6 +102,7 @@ export function VisitsView({
       {view === "calendar" ? (
         <VisitsCalendar
           visits={filteredCalendarVisits}
+          monitoring={filteredMonitoring}
           studyColors={studyColors}
           studies={studyId ? studies.filter((s) => s.id === studyId) : studies}
           onAddOnDay={(date) => setAdding({ date })}

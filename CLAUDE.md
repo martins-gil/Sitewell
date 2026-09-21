@@ -19,9 +19,10 @@ picks this repo up next.
   (DATABASE_URL, `app_runtime`, RLS-bound) is used for every ordinary
   business query via `withTenantContext`/`requireTenantContext` in
   `src/lib/db-context.ts`. `src/lib/prisma-auth.ts` (DIRECT_URL, owner role,
-  bypasses RLS) exists ONLY for the login bootstrap problem — looking a user
-  up by email before we know their `organization_id`. Never use
-  `prisma-auth.ts` for anything else; never let ordinary queries skip
+  bypasses RLS) exists ONLY for the "starts from an email address, before we
+  know the organization" problem: the sign-in lookup and its lockout
+  bookkeeping, and the forgot-password flow (`src/lib/password-reset.ts`).
+  Never use `prisma-auth.ts` for anything else; never let ordinary queries skip
   `withTenantContext`.
 - **`prisma/rls_and_audit.sql` is hand-maintained**, not a normal
   `prisma migrate dev`-generated migration — Prisma's schema language can't
@@ -440,6 +441,56 @@ picks this repo up next.
   (edited beside PI name / site number on the study page) feeds the footer. The
   template's "Subject History"-style category rows aren't supported: criteria
   are flat strings.
+- **Visit time and monitoring visits.** `Visit.startTime` is text "HH:mm" on the
+  clinic's wall clock (`src/lib/visit-time.ts`) — a floating time like the day-only
+  dates, never run through a `Date`. In the calendar feed a visit with a time is a
+  timed FLOATING event (no time zone; 1 h long, 2 h for monitoring — the model has
+  no end time), one without is all-day. `MonitoringVisit` (study, date at noon UTC,
+  time, room, notes) with `MonitoringVisitItem` points to verify (ticked, cascade
+  delete) are tenant tables (RLS + audit in `20260928100000_…`). They show in the
+  visit calendar (dashed chips), in the calendar feed (LOCATION = room) and in
+  the weekly digest. The printed points document IS `generateChecklistDocx` with
+  an optional `heading` / `columnLabels` (Portuguese, like the procedures
+  checklist). All monitoring actions RETURN results (masked-error rule).
+- **Weekly visit digest** (`src/lib/visit-digest.ts`, cron `/api/cron/visit-digest`,
+  `vercel.json`: `0 8 * * 3,4` UTC): on Wednesdays and Thursdays, email (and SMS for
+  those who opted in) the visits — patients' and monitoring — of the FOLLOWING
+  Monday–Sunday. "Following week, on Wednesdays and Thursdays" was read as "sent
+  on Wed/Thu about next week"; `DIGEST_WEEKDAYS` moves the days, and if it was
+  meant as "only visits that fall on a Wed/Thu" filter in `runVisitDigest`. Same
+  shape as the kit job: cron secret, platform-admin context via `withTenantContext`,
+  never `prisma-auth.ts`. Recipients: `User.notifyEmail` (default TRUE — everyone
+  gets the email once email is connected; opt out in Settings → Notifications) and
+  `notifySms` + `phone` + `smsConsentAt` (SMS is opt-in only; consent time recorded).
+  `lastVisitDigestAt` blocks a repeat within 20 h. Wording is per organization
+  (`Organization.visitAlertTemplates`, placeholders `{name} {week} {count} {visits}
+  {link}`, `visit-alert-templates.ts`), edited by org admins; texts are trimmed to
+  ~480 chars. `ANY` provider missing → messages are only logged (`emailConfigured()`,
+  `smsConfigured()` say so and the UI tells the user). SMS = Twilio (`sms.ts`,
+  `TWILIO_*`); dates read in `DIGEST_LOCALE` (default en-GB). `phone` is personal
+  data and is copied into `audit_log` by the users trigger like any other column.
+- **Forgot password / request access** (public pages, `auth.config.ts`
+  `PUBLIC_PAGES`). Reset: `password_reset_tokens` (only the SHA-256 is stored; 1 h;
+  single use; 3 per account per hour; completing one lifts a lockout and voids the
+  other links) is reachable ONLY through `prisma-auth.ts` — `app_runtime` has no
+  privileges on it. The answer is identical whether or not the email has an
+  account and the email goes out after it (`after()`); links are built from
+  `NEXTAUTH_URL` first (a forged Host header must not steer a reset email).
+  With no email service the form says so instead of pretending. Request access
+  stores nothing: it emails `ACCESS_REQUEST_EMAIL` (comma-separated) with the
+  requester as reply-to and a link that opens Settings → Team with the Add form
+  pre-filled (`?name=&email=&role=&phone=`); it never emails the requester. Both
+  have a honeypot field and per-IP throttling (in-memory, `throttle.ts`).
+- **Sign-in look and brand assets.** `src/lib/brand.ts` lists `LOGO_SRC` and
+  `LOGIN_IMAGES` (files in `public/brand/`, which the middleware matcher exempts);
+  empty until the assets are supplied. Each sign-in page load shows the picture
+  after the one this browser saw last (`sw_login_seq` cookie, written by
+  `LoginArt`); the logo shows on the sign-in pages and, when set, at the bottom of
+  the sidebar above the user's name (on a light chip over a coloured bar).
+- **Forms that validate must use `onSubmit`, not `<form action={fn}>`.** React 19
+  resets an uncontrolled form after an action, which wipes what the person typed
+  when a validation error comes back. The new forms read `new FormData(e.currentTarget)`
+  in an `onSubmit` handler instead.
 - **Left bar colour** is the `sw_sidebar` cookie (`SIDEBAR_COLORS` in
   `src/lib/preferences.ts`); `light` means no fill (the old look), anything else
   is an inline `backgroundColor` with light text (`dark` prop on the nav).

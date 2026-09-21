@@ -18,6 +18,7 @@ export function RepeatVisitForm({
   visitId,
   defaultName,
   sourceDate,
+  sourceTime = "",
   windowBeforeDays,
   windowAfterDays,
   subjectId,
@@ -27,6 +28,7 @@ export function RepeatVisitForm({
   visitId: string;
   defaultName: string;
   sourceDate: string; // YYYY-MM-DD
+  sourceTime?: string; // "HH:mm" or ""
   windowBeforeDays: number;
   windowAfterDays: number;
   subjectId: string;
@@ -76,6 +78,10 @@ export function RepeatVisitForm({
         <div>
           <label className="block text-xs font-medium">{t("Target date")}</label>
           <input type="date" name="targetDate" required defaultValue={sourceDate} className={inputClass} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium">{t("Time (optional)")}</label>
+          <input type="time" name="startTime" defaultValue={sourceTime} className={inputClass} />
         </div>
         {patients.length > 1 ? (
           <div>

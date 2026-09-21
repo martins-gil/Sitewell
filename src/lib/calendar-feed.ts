@@ -68,6 +68,7 @@ export async function loadFeedVisits(tx: Prisma.TransactionClient, options: { st
       id: true,
       visitType: true,
       targetDate: true,
+      startTime: true,
       windowStart: true,
       windowEnd: true,
       status: true,
@@ -91,6 +92,37 @@ export async function loadFeedVisits(tx: Prisma.TransactionClient, options: { st
 }
 
 export type FeedVisit = Awaited<ReturnType<typeof loadFeedVisits>>[number];
+
+/** Monitoring visits for the same window, with their points to verify. */
+export async function loadFeedMonitoring(tx: Prisma.TransactionClient, options: { studyId?: string } = {}) {
+  return tx.monitoringVisit.findMany({
+    where: {
+      ...(options.studyId ? { studyId: options.studyId } : {}),
+      visitDate: { gte: new Date(Date.now() - HISTORY_DAYS * DAY_MS) },
+    },
+    orderBy: { visitDate: "asc" },
+    select: {
+      id: true,
+      visitDate: true,
+      startTime: true,
+      room: true,
+      notes: true,
+      updatedAt: true,
+      study: { select: { protocolId: true, title: true } },
+      items: { select: { label: true, verified: true }, orderBy: { sortOrder: "asc" } },
+    },
+  });
+}
+
+export type FeedMonitoring = Awaited<ReturnType<typeof loadFeedMonitoring>>[number];
+
+/** Everything a calendar file is built from. */
+export async function loadFeedData(tx: Prisma.TransactionClient, options: { studyId?: string } = {}) {
+  const [visits, monitoring] = await Promise.all([loadFeedVisits(tx, options), loadFeedMonitoring(tx, options)]);
+  return { visits, monitoring };
+}
+
+export type FeedData = Awaited<ReturnType<typeof loadFeedData>>;
 
 // ---- iCalendar text (RFC 5545) ----
 
@@ -132,6 +164,27 @@ function fold(line: string): string {
   return out.join("\r\n");
 }
 
+// Visits have a start time but no end time, so a timed event gets a fixed length:
+// an hour for a patient visit, two for a monitoring visit.
+const VISIT_MINUTES = 60;
+const MONITORING_MINUTES = 120;
+
+/**
+ * DTSTART/DTEND lines for a day and an optional "HH:mm". With a time the event is
+ * "floating" (no time zone): it lands at 09:30 on the calendar owner's own clock,
+ * which is what a site's staff, all in one place, want. Without one it's all-day.
+ */
+function whenLines(day: Date, time: string | null, minutes: number): string[] {
+  if (!time) {
+    return [`DTSTART;VALUE=DATE:${dateValue(day)}`, `DTEND;VALUE=DATE:${dateValue(new Date(day.getTime() + DAY_MS))}`];
+  }
+  const [hours, mins] = time.split(":").map(Number);
+  const startMs = day.getTime() - (day.getUTCHours() * 60 + day.getUTCMinutes()) * 60_000 + (hours * 60 + mins) * 60_000;
+  const end = new Date(startMs + minutes * 60_000);
+  const local = (d: Date) => `${dateValue(d)}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00`;
+  return [`DTSTART:${local(new Date(startMs))}`, `DTEND:${local(end)}`];
+}
+
 const STATUS_LABEL: Record<string, string> = {
   SCHEDULED: "Scheduled",
   RESCHEDULED: "Rescheduled",
@@ -142,7 +195,7 @@ function kitLine(kit: { name: string; expiryDate: Date | null }): string {
   return `- ${kit.name}${kit.expiryDate ? ` (expires ${humanDate(kit.expiryDate)})` : ""}`;
 }
 
-function eventLines(visit: FeedVisit, origin: string): string[] {
+function visitEventLines(visit: FeedVisit, origin: string): string[] {
   const link = `${origin}/dashboard/visits/${visit.id}`;
   const done = visit.status === "COMPLETED";
   const linked = visit.kits;
@@ -153,6 +206,7 @@ function eventLines(visit: FeedVisit, origin: string): string[] {
     `Study: ${visit.study.protocolId} — ${visit.study.title}`,
     `Patient: ${visit.subject.subjectCode}`,
     `Visit: ${visit.visitType}`,
+    ...(visit.startTime ? [`Time: ${visit.startTime}`] : []),
     `Window: ${humanDate(visit.windowStart)} – ${humanDate(visit.windowEnd)}`,
     `Status: ${STATUS_LABEL[visit.status] ?? visit.status}`,
     ...(linked.length > 0 ? ["", "Kits for this visit:", ...linked.map(kitLine)] : []),
@@ -163,28 +217,54 @@ function eventLines(visit: FeedVisit, origin: string): string[] {
     `Open this visit in SiteWell-ct: ${link}`,
   ].join("\n");
 
-  const day = visit.targetDate;
-  const nextDay = new Date(day.getTime() + DAY_MS);
-
   return [
     "BEGIN:VEVENT",
     `UID:visit-${visit.id}@sitewell-ct`,
     `DTSTAMP:${stamp(visit.updatedAt)}`,
     `LAST-MODIFIED:${stamp(visit.updatedAt)}`,
-    `DTSTART;VALUE=DATE:${dateValue(day)}`,
-    `DTEND;VALUE=DATE:${dateValue(nextDay)}`,
+    ...whenLines(visit.targetDate, visit.startTime, VISIT_MINUTES),
     `SUMMARY:${escapeText(`${done ? "✓ " : ""}${visit.visitType} — ${visit.subject.subjectCode} (${visit.study.protocolId})`)}`,
     `DESCRIPTION:${escapeText(description)}`,
     `URL:${link}`,
     "STATUS:CONFIRMED",
     // An all-day visit shouldn't make the user look "busy" all day.
-    "TRANSP:TRANSPARENT",
+    ...(visit.startTime ? [] : ["TRANSP:TRANSPARENT"]),
+    "END:VEVENT",
+  ];
+}
+
+function monitoringEventLines(visit: FeedMonitoring, origin: string): string[] {
+  const link = `${origin}/dashboard/monitoring/${visit.id}`;
+  const description = [
+    `Study: ${visit.study.protocolId} — ${visit.study.title}`,
+    ...(visit.startTime ? [`Time: ${visit.startTime}`] : []),
+    ...(visit.room ? [`Room: ${visit.room}`] : []),
+    ...(visit.notes ? ["", visit.notes] : []),
+    ...(visit.items.length > 0
+      ? ["", "Points to verify:", ...visit.items.map((item) => `${item.verified ? "[x]" : "[ ]"} ${item.label}`)]
+      : []),
+    "",
+    `Open this monitoring visit in SiteWell-ct: ${link}`,
+  ].join("\n");
+
+  return [
+    "BEGIN:VEVENT",
+    `UID:monitoring-${visit.id}@sitewell-ct`,
+    `DTSTAMP:${stamp(visit.updatedAt)}`,
+    `LAST-MODIFIED:${stamp(visit.updatedAt)}`,
+    ...whenLines(visit.visitDate, visit.startTime, MONITORING_MINUTES),
+    `SUMMARY:${escapeText(`Monitoring visit — ${visit.study.protocolId}`)}`,
+    ...(visit.room ? [`LOCATION:${escapeText(visit.room)}`] : []),
+    `DESCRIPTION:${escapeText(description)}`,
+    `URL:${link}`,
+    "STATUS:CONFIRMED",
+    ...(visit.startTime ? [] : ["TRANSP:TRANSPARENT"]),
     "END:VEVENT",
   ];
 }
 
 /** The whole calendar file. `origin` is the app's address, for each visit's link. */
-export function buildIcs(visits: FeedVisit[], origin: string): string {
+export function buildIcs(data: FeedData, origin: string): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -195,7 +275,8 @@ export function buildIcs(visits: FeedVisit[], origin: string): string {
     // Hints for subscribing apps on how often to look again (they may use their own).
     "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
     "X-PUBLISHED-TTL:PT1H",
-    ...visits.flatMap((visit) => eventLines(visit, origin)),
+    ...data.visits.flatMap((visit) => visitEventLines(visit, origin)),
+    ...data.monitoring.flatMap((visit) => monitoringEventLines(visit, origin)),
     "END:VCALENDAR",
   ];
   return lines.map(fold).join("\r\n") + "\r\n";

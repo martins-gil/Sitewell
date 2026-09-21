@@ -9,6 +9,7 @@ import { canScheduleVisits, DAY_MS, parseDateOnly, wholeDays } from "@/lib/visit
 import { setStudyPiAndSite } from "@/lib/study-details";
 import { pickProtocolDocument } from "@/lib/protocol-document";
 import { canRenameVisit } from "@/lib/queries";
+import { parseStartTime } from "@/lib/visit-time";
 
 function refresh() {
   revalidatePath("/dashboard/visits");
@@ -28,6 +29,7 @@ export async function addVisit(formData: FormData): Promise<{ id: string }> {
   const templateId = String(formData.get("templateId") ?? "") || null;
   const customName = String(formData.get("customName") ?? "").trim();
   const targetDate = parseDateOnly(String(formData.get("targetDate") ?? ""));
+  const startTime = parseStartTime(formData.get("startTime"));
   const windowBefore = wholeDays(formData.get("windowBeforeDays"));
   const windowAfter = wholeDays(formData.get("windowAfterDays"));
 
@@ -57,6 +59,7 @@ export async function addVisit(formData: FormData): Promise<{ id: string }> {
         templateId,
         visitType,
         targetDate,
+        startTime,
         windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
         windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
         status: "SCHEDULED",
@@ -111,6 +114,7 @@ export async function updateVisit(visitId: string, formData: FormData) {
   const ctx = await requireTenantContext();
 
   const targetDate = parseDateOnly(String(formData.get("targetDate") ?? ""));
+  const startTime = parseStartTime(formData.get("startTime"));
   const windowBefore = wholeDays(formData.get("windowBeforeDays"));
   const windowAfter = wholeDays(formData.get("windowAfterDays"));
   const actualRaw = String(formData.get("actualDate") ?? "");
@@ -145,6 +149,7 @@ export async function updateVisit(visitId: string, formData: FormData) {
       data: {
         visitType,
         targetDate,
+        startTime,
         windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
         windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
         actualDate,
@@ -182,6 +187,7 @@ export async function repeatVisit(sourceVisitId: string, formData: FormData): Pr
 
   const name = String(formData.get("visitType") ?? "").trim();
   const dateRaw = String(formData.get("targetDate") ?? "");
+  const startTime = parseStartTime(formData.get("startTime"));
   const windowBefore = wholeDays(formData.get("windowBeforeDays"));
   const windowAfter = wholeDays(formData.get("windowAfterDays"));
   if (!name) return { ok: false, problem: "NAME_REQUIRED" };
@@ -204,6 +210,7 @@ export async function repeatVisit(sourceVisitId: string, formData: FormData): Pr
         templateId: source.templateId,
         visitType: name,
         targetDate,
+        startTime,
         windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
         windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
         status: "SCHEDULED",
@@ -258,6 +265,8 @@ export async function moveVisit(visitId: string, formData: FormData) {
   const windowBefore = wholeDays(formData.get("windowBeforeDays"));
   const windowAfter = wholeDays(formData.get("windowAfterDays"));
   const moveLater = formData.get("moveLater") === "on";
+  // Only touched when the form has a time field (an older form leaves it alone).
+  const timeChange = formData.has("startTime") ? { startTime: parseStartTime(formData.get("startTime")) } : {};
 
   const subjectId = await withTenantContext(ctx, async (tx) => {
     const visit = await tx.visit.findUniqueOrThrow({ where: { id: visitId } });
@@ -272,6 +281,7 @@ export async function moveVisit(visitId: string, formData: FormData) {
       where: { id: visitId },
       data: {
         targetDate,
+        ...timeChange,
         windowStart: new Date(targetDate.getTime() - windowBefore * DAY_MS),
         windowEnd: new Date(targetDate.getTime() + windowAfter * DAY_MS),
         // Moving a scheduled visit makes it Rescheduled, as the list's

@@ -77,7 +77,9 @@ BEGIN
       ('visit_checklist_results', 'organization_id'),
       ('checklist_task_library', 'organization_id'),
       ('kits', 'organization_id'),
-      ('departments', 'organization_id')
+      ('departments', 'organization_id'),
+      ('monitoring_visits', 'organization_id'),
+      ('monitoring_visit_items', 'organization_id')
     ) AS x(table_name, org_column)
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t.table_name);
@@ -193,7 +195,8 @@ BEGIN
     'organizations', 'users', 'studies', 'sites', 'study_assignments',
     'subjects', 'visit_schedule_templates', 'visits', 'documents',
     'feedback_submissions', 'checklist_template_items', 'visit_checklist_results',
-    'checklist_task_library', 'kits', 'departments'
+    'checklist_task_library', 'kits', 'departments',
+    'monitoring_visits', 'monitoring_visit_items'
   ]
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS audit_trigger ON %I', tbl);
@@ -203,3 +206,8 @@ BEGIN
   END LOOP;
 END
 $$;
+
+-- password_reset_tokens is NOT a tenant table: only the owner-role sign-in client touches it,
+-- so the app's normal role gets nothing (RLS on with no policy, and no privileges).
+ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON password_reset_tokens FROM app_runtime;

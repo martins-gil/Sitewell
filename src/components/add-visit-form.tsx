@@ -175,6 +175,11 @@ export function AddVisitForm({
           />
         </div>
 
+        <div>
+          <label className="block text-xs font-medium">{t("Time (optional)")}</label>
+          <input type="time" name="startTime" className={inputClass} />
+        </div>
+
         {choice === CUSTOM && (
           <div className="col-span-2">
             <label className="block text-xs font-medium">{t("Visit name")}</label>

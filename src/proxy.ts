@@ -15,5 +15,7 @@ export const config = {
   // every client-side `await res.json()` call (found by actually testing
   // login — see /api/login/precheck). Each API route enforces its own auth
   // via requireTenantContext() instead.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // public/brand/ holds the logo and the sign-in pictures, which the sign-in page shows to
+  // people who are not signed in.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|brand/).*)"],
 };

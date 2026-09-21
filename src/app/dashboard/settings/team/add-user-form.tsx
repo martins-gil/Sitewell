@@ -7,9 +7,13 @@ import { useT } from "@/lib/i18n/client";
 
 const ROLES = ["CRC", "PI", "ORG_ADMIN"] as const;
 
-export function AddUserForm() {
+// Someone who asked for access (src/app/request-access) arrives here through the link in
+// the admin's email, with their details filled in.
+export type AddUserPrefill = { name?: string; email?: string; role?: string; phone?: string };
+
+export function AddUserForm({ prefill }: { prefill?: AddUserPrefill }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(Boolean(prefill?.email || prefill?.name));
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +55,7 @@ export function AddUserForm() {
           <input
             name="name"
             required
+            defaultValue={prefill?.name}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
@@ -58,7 +63,7 @@ export function AddUserForm() {
           <label className="block text-xs font-medium">{t("Role")}</label>
           <select
             name="role"
-            defaultValue="CRC"
+            defaultValue={prefill?.role && (ROLES as readonly string[]).includes(prefill.role) ? prefill.role : "CRC"}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           >
             {ROLES.map((r) => (
@@ -74,6 +79,7 @@ export function AddUserForm() {
             type="email"
             name="email"
             required
+            defaultValue={prefill?.email}
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
@@ -88,6 +94,25 @@ export function AddUserForm() {
             className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
           />
         </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium">{t("Mobile phone (optional)")}</label>
+          <input
+            type="tel"
+            name="phone"
+            defaultValue={prefill?.phone}
+            placeholder={t("e.g. +351 912 345 678")}
+            className="mt-1 w-full rounded-md border border-neutral-300 px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-950"
+          />
+        </div>
+        <label className="flex items-start gap-2 self-end pb-1.5 text-xs">
+          <input type="checkbox" name="smsAsked" className="mt-0.5" />
+          <span>
+            {t("This person asked to receive text messages about visits")}
+            <span className="block text-neutral-500">{t("They can change it themselves under Settings → Notifications.")}</span>
+          </span>
+        </label>
       </div>
       <p className="text-xs text-neutral-500">
         {t("Share this password with them directly — there's no invite email yet. They'll be asked to change it after signing in.")}</p>

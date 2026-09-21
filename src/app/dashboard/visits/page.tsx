@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { getAllVisits, getCalendarFeedPath, getStudies, getVisitSchedulingData } from "@/lib/queries";
+import { getMonitoringForCalendar } from "@/lib/monitoring";
 import { CalendarShare } from "./calendar-share";
 import { SendRemindersButton } from "./send-reminders-button";
 import { VisitsView } from "./visits-view";
@@ -9,11 +10,12 @@ import { resolveStudyColors } from "@/lib/study-colors";
 
 export default async function VisitsPage() {
   const t = await getT();
-  const [visits, studies, scheduling, feedPath] = await Promise.all([
+  const [visits, studies, scheduling, feedPath, monitoringVisits] = await Promise.all([
     getAllVisits(),
     getStudies(),
     getVisitSchedulingData(),
     getCalendarFeedPath(),
+    getMonitoringForCalendar(),
   ]);
 
   // The link has to be absolute for a calendar app; build it from how this
@@ -31,6 +33,7 @@ export default async function VisitsPage() {
     protocolId: v.study.protocolId,
     visitType: v.visitType,
     targetDate: v.targetDate.toISOString(),
+    startTime: v.startTime,
     status: v.status,
   }));
 
@@ -51,6 +54,7 @@ export default async function VisitsPage() {
       <VisitsView
         tableVisits={visits}
         calendarVisits={calendarVisits}
+        monitoringVisits={monitoringVisits}
         studyColors={resolveStudyColors(studies)}
         studies={studies}
         schedulingSubjects={scheduling.subjects}

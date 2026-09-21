@@ -86,6 +86,7 @@ export default async function VisitDetailPage({
           windowLabel: `${formatDate(visit.windowStart, t.locale)} – ${formatDate(visit.windowEnd, t.locale)}`,
           actualLabel: formatDate(visit.actualDate, t.locale),
           targetInput: visit.targetDate.toISOString().slice(0, 10),
+          startTime: visit.startTime ?? "",
           actualInput: visit.actualDate ? visit.actualDate.toISOString().slice(0, 10) : "",
           windowBeforeDays: Math.round((visit.targetDate.getTime() - visit.windowStart.getTime()) / DAY_MS),
           windowAfterDays: Math.round((visit.windowEnd.getTime() - visit.targetDate.getTime()) / DAY_MS),
@@ -97,6 +98,7 @@ export default async function VisitDetailPage({
           visitId={visit.id}
           defaultName={visit.visitType}
           sourceDate={visit.targetDate.toISOString().slice(0, 10)}
+          sourceTime={visit.startTime ?? ""}
           windowBeforeDays={Math.round((visit.targetDate.getTime() - visit.windowStart.getTime()) / DAY_MS)}
           windowAfterDays={Math.round((visit.windowEnd.getTime() - visit.targetDate.getTime()) / DAY_MS)}
           subjectId={visit.subject.id}

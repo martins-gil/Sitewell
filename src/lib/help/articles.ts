@@ -30,6 +30,30 @@ export function helpArticles(t: TFunction): HelpArticle[] {
 
   return [
     {
+      id: "forgot-password",
+      category: start,
+      question: t("I forgot my password — can I reset it myself?"),
+      answer: t("Yes, if email is set up on the site: use “Forgot your password?” on the sign-in page and open the link that arrives by email. The link works once and for one hour."),
+      steps: [
+        t("On the sign-in page press “Forgot your password?” and enter your email address."),
+        t("Open the email and press the link, then choose a new password of at least 12 characters."),
+        t("No email arrives? Check your spam folder, or ask your organisation's admin to reset it under Settings → Team."),
+      ],
+      keywords: "reset recover lost password email link sign in login",
+    },
+    {
+      id: "request-access",
+      category: start,
+      question: t("I don't have an account yet — how do I get one?"),
+      answer: t("Press “Request access” on the sign-in page. Your details go to the site's administrator, who creates your account and gives you a temporary password."),
+      steps: [
+        t("On the sign-in page press “Don't have an account? Request access”."),
+        t("Fill in your name, email and role, and — if you want text messages about visits — your mobile number."),
+        t("Wait for the administrator to contact you with your temporary password; you'll be asked to choose your own when you sign in."),
+      ],
+      keywords: "register sign up new user create account join access",
+    },
+    {
       id: "sign-in",
       category: start,
       question: t("I can't sign in — what do I do?"),
@@ -157,6 +181,32 @@ export function helpArticles(t: TFunction): HelpArticle[] {
       ],
     },
     {
+      id: "monitoring-visits",
+      category: visits,
+      question: t("How do I plan a monitoring visit and its checklist?"),
+      answer: t("Monitoring visits have their own section. Each has a study, a date, a time and a room, and shows on the visit calendar; you can list the points to verify and print them like a procedure checklist."),
+      steps: [
+        t("Open Monitoring visits and press “+ Add monitoring visit”; choose the study, date, time and room."),
+        t("On the visit, add the points to verify one by one, or press “Paste a list of points →”. To reuse an earlier visit's points, copy them from the list."),
+        t("Tick each point as it is checked, and press “Download points to verify (.docx)” to print the document."),
+      ],
+      href: "/dashboard/monitoring",
+      keywords: "monitor cra sponsor visit room meeting checklist verify print",
+    },
+    {
+      id: "weekly-messages",
+      category: account,
+      question: t("How do I get a message about the visits of the coming week?"),
+      answer: t("On Wednesdays and Thursdays you can get an email — and, if you ask for it, a text message — listing the visits planned for the following week, including monitoring visits."),
+      steps: [
+        t("Open Settings → Notifications and check “Send me an email”."),
+        t("For text messages, enter your mobile number, tick “Also send me a text message” and save."),
+        t("Press “Send me a test message” to see what you'll receive. An organisation admin can rewrite the wording on the same page."),
+      ],
+      href: "/dashboard/settings/notifications",
+      keywords: "sms text phone email notification alert reminder week wednesday thursday",
+    },
+    {
       id: "print-ie",
       category: patients,
       question: t("How do I print the inclusion and exclusion criteria?"),
@@ -178,6 +228,7 @@ export function helpArticles(t: TFunction): HelpArticle[] {
         t("Open the patient and use the box above the list of visits."),
         t("Pick a visit type and a date to add one visit, or use “Add protocol visits” to create every visit of the protocol from a Day 0 date."),
         t("Fix a date later with “Edit dates” on that visit's row."),
+        t("Add the time of the visit if you know it: it shows on the calendar and in the shared calendar."),
       ],
     },
     {

@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { humanizeEnum } from "@/lib/format";
 import { patientTone, patientWash, studyColor } from "@/lib/study-colors";
+import { compareStartTime } from "@/lib/visit-time";
+import type { CalendarMonitoring } from "@/lib/monitoring";
 import { useT } from "@/lib/i18n/client";
 
 export type CalendarVisit = {
@@ -15,8 +17,14 @@ export type CalendarVisit = {
   protocolId: string;
   visitType: string;
   targetDate: string; // ISO date string
+  startTime: string | null; // "HH:mm"
   status: string;
 };
+
+// What a calendar day holds: a patient's visit, or a monitoring visit.
+type CalendarEntry =
+  | ({ kind: "visit" } & CalendarVisit)
+  | ({ kind: "monitoring" } & CalendarMonitoring);
 
 const STATUS_DOT: Record<string, string> = {
   SCHEDULED: "bg-blue-500",
@@ -31,7 +39,7 @@ function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function monthGridCells(monthStart: Date, visitsByDay: Map<string, CalendarVisit[]>) {
+function monthGridCells(monthStart: Date, visitsByDay: Map<string, CalendarEntry[]>) {
   const gridStart = new Date(monthStart);
   gridStart.setDate(gridStart.getDate() - monthStart.getDay());
 
@@ -52,11 +60,13 @@ const navButton =
 
 export function VisitsCalendar({
   visits,
+  monitoring = [],
   studyColors,
   studies,
   onAddOnDay,
 }: {
   visits: CalendarVisit[];
+  monitoring?: CalendarMonitoring[];
   // Each study's colour (see src/lib/study-colors.ts) and the studies to list in the legend.
   studyColors: Record<string, string>;
   studies: { id: string; protocolId: string }[];
@@ -72,15 +82,29 @@ export function VisitsCalendar({
   const [dayCursor, setDayCursor] = useState(() => new Date());
 
   const visitsByDay = useMemo(() => {
-    const map = new Map<string, CalendarVisit[]>();
-    for (const v of visits) {
+    const map = new Map<string, CalendarEntry[]>();
+    const entries: CalendarEntry[] = [
+      ...visits.map((v): CalendarEntry => ({ kind: "visit", ...v })),
+      ...monitoring.map((m): CalendarEntry => ({ kind: "monitoring", ...m })),
+    ];
+    for (const v of entries) {
       const key = toDateKey(new Date(v.targetDate));
       const existing = map.get(key);
       if (existing) existing.push(v);
       else map.set(key, [v]);
     }
+    // Within a day: by time (visits without one last), then monitoring, then by code.
+    for (const list of map.values()) {
+      list.sort(
+        (a, b) =>
+          compareStartTime(a.startTime, b.startTime) ||
+          (a.kind === b.kind ? 0 : a.kind === "monitoring" ? -1 : 1) ||
+          a.protocolId.localeCompare(b.protocolId) ||
+          (a.kind === "visit" && b.kind === "visit" ? a.subjectCode.localeCompare(b.subjectCode) : 0),
+      );
+    }
     return map;
-  }, [visits]);
+  }, [visits, monitoring]);
 
   const cells = useMemo(() => monthGridCells(monthCursor, visitsByDay), [monthCursor, visitsByDay]);
   // Day and month names come from the browser's own locale data for the chosen language.
@@ -99,13 +123,7 @@ export function VisitsCalendar({
     year: "numeric",
   });
   const dayKey = toDateKey(dayCursor);
-  const dayVisits = useMemo(
-    () =>
-      [...(visitsByDay.get(dayKey) ?? [])].sort(
-        (a, b) => a.protocolId.localeCompare(b.protocolId) || a.subjectCode.localeCompare(b.subjectCode),
-      ),
-    [visitsByDay, dayKey],
-  );
+  const dayVisits = useMemo(() => visitsByDay.get(dayKey) ?? [], [visitsByDay, dayKey]);
 
   function goToMonth(year: number, month: number) {
     setMonthCursor(new Date(year, month, 1));
@@ -142,7 +160,10 @@ export function VisitsCalendar({
     else setMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
-  const colorOf = (v: CalendarVisit) => studyColors[v.studyId] ?? "blue";
+  const colorOf = (v: CalendarEntry) => studyColors[v.studyId] ?? "blue";
+  // Monitoring visits are drawn in the study's plain colour, with a dashed edge.
+  const monitoringLabel = (m: CalendarMonitoring) =>
+    [t("Monitoring visit"), m.protocolId, m.room].filter(Boolean).join(" · ");
 
   return (
     <div className="rounded-lg border border-neutral-200 dark:border-neutral-800">
@@ -198,25 +219,44 @@ export function VisitsCalendar({
             <p className="text-sm text-neutral-500">{t("No visits on this day.")}</p>
           ) : (
             <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {dayVisits.map((v) => (
-                <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span
-                      aria-hidden
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: patientTone(colorOf(v), v.subjectCode) }}
-                    />
-                    <Link href={`/dashboard/visits/${v.id}`} className="font-medium hover:underline">
-                      {v.visitType}
-                    </Link>
-                    <Link href={`/dashboard/subjects/${v.subjectId}`} className="font-mono text-xs hover:underline">
-                      {v.subjectCode}
-                    </Link>
-                    <span className="text-xs text-neutral-500">{v.protocolId}</span>
-                  </div>
-                  <span className="text-xs text-neutral-500">{t(humanizeEnum(v.status))}</span>
-                </li>
-              ))}
+              {dayVisits.map((v) =>
+                v.kind === "monitoring" ? (
+                  <li key={`m-${v.id}`} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span
+                        aria-hidden
+                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                        style={{ backgroundColor: studyColor(colorOf(v)) }}
+                      />
+                      {v.startTime && <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{v.startTime}</span>}
+                      <Link href={`/dashboard/monitoring/${v.id}`} className="font-medium hover:underline">
+                        {t("Monitoring visit")}
+                      </Link>
+                      <span className="text-xs text-neutral-500">{v.protocolId}</span>
+                      {v.room && <span className="text-xs text-neutral-500">{v.room}</span>}
+                    </div>
+                  </li>
+                ) : (
+                  <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span
+                        aria-hidden
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: patientTone(colorOf(v), v.subjectCode) }}
+                      />
+                      {v.startTime && <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">{v.startTime}</span>}
+                      <Link href={`/dashboard/visits/${v.id}`} className="font-medium hover:underline">
+                        {v.visitType}
+                      </Link>
+                      <Link href={`/dashboard/subjects/${v.subjectId}`} className="font-mono text-xs hover:underline">
+                        {v.subjectCode}
+                      </Link>
+                      <span className="text-xs text-neutral-500">{v.protocolId}</span>
+                    </div>
+                    <span className="text-xs text-neutral-500">{t(humanizeEnum(v.status))}</span>
+                  </li>
+                ),
+              )}
             </ul>
           )}
           {onAddOnDay && (
@@ -273,26 +313,46 @@ export function VisitsCalendar({
                   )}
                 </div>
                 <div className="space-y-0.5">
-                  {dayCellVisits.slice(0, 3).map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => router.push(`/dashboard/visits/${v.id}`)}
-                      title={`${v.protocolId} ${v.subjectCode} — ${v.visitType} (${t(humanizeEnum(v.status))})`}
-                      style={{
-                        borderLeft: `3px solid ${patientTone(colorOf(v), v.subjectCode)}`,
-                        backgroundColor: patientWash(colorOf(v), v.subjectCode),
-                      }}
-                      className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:brightness-95 dark:hover:brightness-125"
-                    >
-                      <span className="truncate">
-                        <span className="font-mono">{v.subjectCode}</span>{" "}
-                        <span className="text-neutral-500">{v.visitType}</span>
-                      </span>
-                      <span
-                        className={`ml-auto h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`}
-                      />
-                    </button>
-                  ))}
+                  {dayCellVisits.slice(0, 3).map((v) =>
+                    v.kind === "monitoring" ? (
+                      <button
+                        key={`m-${v.id}`}
+                        onClick={() => router.push(`/dashboard/monitoring/${v.id}`)}
+                        title={`${monitoringLabel(v)}${v.startTime ? ` · ${v.startTime}` : ""}`}
+                        style={{
+                          border: `1px dashed ${studyColor(colorOf(v))}`,
+                          borderLeft: `3px solid ${studyColor(colorOf(v))}`,
+                        }}
+                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      >
+                        <span className="truncate">
+                          {v.startTime && <span className="font-mono">{v.startTime} </span>}
+                          <span className="font-medium">{t("Monitoring visit")}</span>{" "}
+                          <span className="text-neutral-500">{v.room ?? v.protocolId}</span>
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        key={v.id}
+                        onClick={() => router.push(`/dashboard/visits/${v.id}`)}
+                        title={`${v.startTime ? `${v.startTime} ` : ""}${v.protocolId} ${v.subjectCode} — ${v.visitType} (${t(humanizeEnum(v.status))})`}
+                        style={{
+                          borderLeft: `3px solid ${patientTone(colorOf(v), v.subjectCode)}`,
+                          backgroundColor: patientWash(colorOf(v), v.subjectCode),
+                        }}
+                        className="flex w-full items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[11px] hover:brightness-95 dark:hover:brightness-125"
+                      >
+                        <span className="truncate">
+                          {v.startTime && <span className="font-mono">{v.startTime} </span>}
+                          <span className="font-mono">{v.subjectCode}</span>{" "}
+                          <span className="text-neutral-500">{v.visitType}</span>
+                        </span>
+                        <span
+                          className={`ml-auto h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[v.status] ?? "bg-neutral-400"}`}
+                        />
+                      </button>
+                    ),
+                  )}
                   {dayCellVisits.length > 3 && (
                     <button
                       type="button"

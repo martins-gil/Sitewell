@@ -15,9 +15,12 @@ import type { ChecklistDraftItem } from "@/lib/text-import";
 export function ChecklistTextImport({
   onSave,
   saveLabel,
+  texts,
 }: {
   onSave: (items: ChecklistDraftItem[]) => Promise<{ added: number }>;
   saveLabel: string;
+  // Wording for a list that isn't a visit's procedures (a monitoring visit's points to verify).
+  texts?: { open: string; heading: string; placeholder: string; added: (n: number) => string; none: string };
 }) {
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -44,7 +47,7 @@ export function ChecklistTextImport({
           return;
         }
         if (result.items.length === 0) {
-          setError(t("No procedures were found in that text."));
+          setError(texts?.none ?? t("No procedures were found in that text."));
           return;
         }
         setItems((current) => [...current, ...result.items]);
@@ -69,7 +72,7 @@ export function ChecklistTextImport({
         const cleaned = items.map((i) => ({ label: i.label.trim(), detail: i.detail?.trim() || null })).filter((i) => i.label);
         const { added } = await onSave(cleaned);
         setItems([]);
-        setMessage(t("{0} procedure added.|{0} procedures added.", [added]));
+        setMessage(texts ? texts.added(added) : t("{0} procedure added.|{0} procedures added.", [added]));
         setOpen(false);
       } catch {
         setError(t("Something went wrong. Please try again."));
@@ -89,7 +92,7 @@ export function ChecklistTextImport({
           onClick={() => setOpen(true)}
           className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
         >
-          {t("Paste a list of procedures →")}
+          {texts?.open ?? t("Paste a list of procedures →")}
         </button>
         {message && <p className="text-xs text-green-700 dark:text-green-400">{message}</p>}
       </div>
@@ -99,13 +102,13 @@ export function ChecklistTextImport({
   return (
     <div className="space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
       <div className="space-y-2">
-        <label className="block text-xs font-medium">{t("Paste the procedures for this visit")}</label>
+        <label className="block text-xs font-medium">{texts?.heading ?? t("Paste the procedures for this visit")}</label>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={6}
           disabled={pending}
-          placeholder={t("Paste the visit's procedures here, one per line or as a list — for example from the protocol's schedule of assessments.")}
+          placeholder={texts?.placeholder ?? t("Paste the visit's procedures here, one per line or as a list — for example from the protocol's schedule of assessments.")}
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
         />
         <div className="flex flex-wrap items-center gap-3">

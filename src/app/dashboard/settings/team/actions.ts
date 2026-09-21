@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { Prisma, UserRole } from "@prisma/client";
 import { requireTenantContext, withTenantContext } from "@/lib/db-context";
 import { checkNewPassword, hashPassword, type PasswordProblem } from "@/lib/password";
+import { normalizePhone } from "@/lib/sms";
 
 // Platform Admin is a cross-org role, not something an org's own team page
 // should be able to grant — only roles that make sense within one org.
@@ -24,9 +25,14 @@ export async function addTeamMember(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "") as UserRole;
+  const phoneRaw = String(formData.get("phone") ?? "").trim();
+  const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
+  const smsAsked = formData.get("smsAsked") === "on";
 
   if (!name || !email) throw new Error("Name and email are required.");
   if (!ASSIGNABLE_ROLES.includes(role)) throw new Error("Invalid role.");
+  if (phoneRaw && !phone) throw new Error("That doesn't look like a phone number — use the international format, e.g. +351 912 345 678.");
+  if (smsAsked && !phone) throw new Error("Add a mobile number to send this person text messages.");
   if (checkNewPassword(password, email)) {
     throw new Error("The temporary password must be at least 12 characters and not contain the email address.");
   }
@@ -37,7 +43,18 @@ export async function addTeamMember(formData: FormData) {
     await withTenantContext(ctx, (tx) =>
       tx.user.create({
         // A password an admin chose is temporary: the user is asked to replace it.
-        data: { organizationId: ctx.organizationId, email, name, role, passwordHash, mustChangePassword: true },
+        data: {
+          organizationId: ctx.organizationId,
+          email,
+          name,
+          role,
+          passwordHash,
+          mustChangePassword: true,
+          phone,
+          // Texts only when the person asked for them (the admin says so here); they can change it in Settings.
+          notifySms: smsAsked,
+          smsConsentAt: smsAsked ? new Date() : null,
+        },
       }),
     );
   } catch (e) {

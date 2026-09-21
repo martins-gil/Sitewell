@@ -13,6 +13,8 @@ export type VisitDetailsValues = {
   windowLabel: string;
   actualLabel: string;
   targetInput: string;
+  // "HH:mm", or "" when the visit has no time.
+  startTime: string;
   actualInput: string;
   windowBeforeDays: number;
   windowAfterDays: number;
@@ -49,6 +51,8 @@ export function EditVisitForm({ visitId, values }: { visitId: string; values: Vi
         <dl className="grid grid-cols-2 gap-y-2">
           <dt className="text-neutral-500">{t("Target date")}</dt>
           <dd>{values.targetLabel}</dd>
+          <dt className="text-neutral-500">{t("Time")}</dt>
+          <dd>{values.startTime || "—"}</dd>
           <dt className="text-neutral-500">{t("Window")}</dt>
           <dd>{values.windowLabel}</dd>
           <dt className="text-neutral-500">{t("Actual date")}</dt>
@@ -84,6 +88,10 @@ export function EditVisitForm({ visitId, values }: { visitId: string; values: Vi
           <input type="date" name="targetDate" required defaultValue={values.targetInput} className={inputClass} />
         </div>
         <div>
+          <label className="block text-xs font-medium">{t("Time (optional)")}</label>
+          <input type="time" name="startTime" defaultValue={values.startTime} className={inputClass} />
+        </div>
+        <div>
           <label className="block text-xs font-medium">{t("Status")}</label>
           <select name="status" defaultValue={values.status} className={inputClass}>
             {STATUSES.map((s) => (
@@ -95,11 +103,11 @@ export function EditVisitForm({ visitId, values }: { visitId: string; values: Vi
         </div>
         <div>
           <label className="block text-xs font-medium">{t("Window before (days)")}</label>
-          <input type="number" name="windowBeforeDays" min={0} defaultValue={values.windowBeforeDays} className={inputClass} />
+          <input type="number" name="windowBeforeDays" min={0} defaultValue={Math.max(0, values.windowBeforeDays)} className={inputClass} />
         </div>
         <div>
           <label className="block text-xs font-medium">{t("Window after (days)")}</label>
-          <input type="number" name="windowAfterDays" min={0} defaultValue={values.windowAfterDays} className={inputClass} />
+          <input type="number" name="windowAfterDays" min={0} defaultValue={Math.max(0, values.windowAfterDays)} className={inputClass} />
         </div>
         <div className="col-span-2">
           <label className="block text-xs font-medium">{t("Actual date (leave blank if it hasn't happened)")}</label>

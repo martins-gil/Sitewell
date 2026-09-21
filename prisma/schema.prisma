@@ -72,13 +72,17 @@ enum FeedbackArea {
 }
 
 model Organization {
-  id                String   @id @default(cuid())
-  name              String
-  plan              String   @default("pilot")
-  region            String?
-  hostingPreference String?  @map("hosting_preference")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(cuid())
+  name                String
+  plan                String   @default("pilot")
+  region              String?
+  hostingPreference   String?  @map("hosting_preference")
+  // The organization's own wording for the weekly visit email and text message
+  // ({ emailSubject, emailBody, smsBody }, validated by src/lib/visit-alert-templates.ts);
+  // null = the built-in wording. Edited by an org admin under Settings → Notifications.
+  visitAlertTemplates Json?    @map("visit_alert_templates")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   users                User[]
   studies              Study[]
@@ -94,6 +98,8 @@ model Organization {
   checklistTaskLibrary ChecklistTaskLibrary[]
   kits                 Kit[]
   departments          Department[]
+  monitoringVisits     MonitoringVisit[]
+  monitoringItems      MonitoringVisitItem[]
 
   @@map("organizations")
 }
@@ -113,18 +119,28 @@ model User {
   // True while the user is on a password somebody else chose (a temporary one
   // set when the account was created or reset by an admin): they're nudged to
   // change it, and it clears when they do.
-  mustChangePassword Boolean   @default(false) @map("must_change_password")
-  passwordChangedAt  DateTime? @map("password_changed_at")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  passwordChangedAt   DateTime? @map("password_changed_at")
   // Sign-in throttling: 5 wrong attempts in a row lock the account for 15
   // minutes (src/auth.ts). Reset by a correct sign-in or an admin password reset.
-  failedLoginCount Int       @default(0) @map("failed_login_count")
-  lockedUntil      DateTime? @map("locked_until")
+  failedLoginCount    Int       @default(0) @map("failed_login_count")
+  lockedUntil         DateTime? @map("locked_until")
   // The user's private calendar link (Apple / Google / Outlook subscription,
   // src/lib/calendar-feed.ts). The link itself isn't stored: it's signed with
   // AUTH_SECRET and carries this version, so making a new link bumps the
   // version and the old one stops working, and turning it off blocks them all.
-  calendarFeedEnabled Boolean @default(false) @map("calendar_feed_enabled")
-  calendarFeedVersion Int     @default(0) @map("calendar_feed_version")
+  calendarFeedEnabled Boolean   @default(false) @map("calendar_feed_enabled")
+  calendarFeedVersion Int       @default(0) @map("calendar_feed_version")
+
+  // Heads-up messages about the coming week's visits (src/lib/visit-digest.ts).
+  // Email is on by default; a text message needs a phone number AND the person's
+  // own opt-in (smsConsentAt records when they gave it). `phone` is in international
+  // format (+351912345678). lastVisitDigestAt stops a retried job from sending twice.
+  phone             String?
+  notifyEmail       Boolean   @default(true) @map("notify_email")
+  notifySms         Boolean   @default(false) @map("notify_sms")
+  smsConsentAt      DateTime? @map("sms_consent_at")
+  lastVisitDigestAt DateTime? @map("last_visit_digest_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -133,6 +149,7 @@ model User {
   studyAssignments    StudyAssignment[]
   signedDocuments     Document[]           @relation("documentSigner")
   feedbackSubmissions FeedbackSubmission[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([organizationId])
   @@map("users")
@@ -175,15 +192,16 @@ model Study {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  organization Organization            @relation(fields: [organizationId], references: [id])
-  department   Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  sites        Site[]
-  subjects     Subject[]
-  templates    VisitScheduleTemplate[]
-  documents    Document[]
-  assignments  StudyAssignment[]
-  visits       Visit[]
-  kits         Kit[]
+  organization     Organization            @relation(fields: [organizationId], references: [id])
+  department       Department?             @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  sites            Site[]
+  subjects         Subject[]
+  templates        VisitScheduleTemplate[]
+  documents        Document[]
+  assignments      StudyAssignment[]
+  visits           Visit[]
+  kits             Kit[]
+  monitoringVisits MonitoringVisit[]
 
   @@unique([organizationId, protocolId])
   @@index([organizationId])
@@ -268,28 +286,28 @@ model Subject {
 }
 
 model VisitScheduleTemplate {
-  id               String   @id @default(cuid())
-  organizationId   String   @map("organization_id")
-  studyId          String   @map("study_id")
-  name             String
-  targetDayOffset  Int      @map("target_day_offset")
-  windowBeforeDays Int      @default(0) @map("window_before_days")
-  windowAfterDays  Int      @default(0) @map("window_after_days")
-  sortOrder        Int      @default(0) @map("sort_order")
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  studyId           String   @map("study_id")
+  name              String
+  targetDayOffset   Int      @map("target_day_offset")
+  windowBeforeDays  Int      @default(0) @map("window_before_days")
+  windowAfterDays   Int      @default(0) @map("window_after_days")
+  sortOrder         Int      @default(0) @map("sort_order")
   // Printed on this visit type's checklist .docx: the "(V3)" after the
   // heading, and the footnote under the table (e.g. "*hematologia, BQ, ...").
-  checklistVersion  String? @map("checklist_version")
-  checklistFootnote String? @map("checklist_footnote")
+  checklistVersion  String?  @map("checklist_version")
+  checklistFootnote String?  @map("checklist_footnote")
   // Which last column this visit type's checklist document has: "VERIFIED"
   // (a tick) or "DATETIME" (the date and time each procedure was done). A
   // plain string rather than an enum — two values, validated where it's set.
-  checklistColumn   String  @default("VERIFIED") @map("checklist_column")
+  checklistColumn   String   @default("VERIFIED") @map("checklist_column")
   // The standard nursing record ("Documento fonte - Registos de enfermagem")
   // for this visit type: sections of rows to fill in by hand. Shape and
   // validation live in src/lib/nursing-sheet.ts.
-  nursingSheet      Json?   @map("nursing_sheet")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  nursingSheet      Json?    @map("nursing_sheet")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   study          Study                   @relation(fields: [studyId], references: [id])
   visits         Visit[]
@@ -390,6 +408,10 @@ model Visit {
   templateId     String?     @map("template_id")
   visitType      String      @map("visit_type")
   targetDate     DateTime    @map("target_date")
+  // The time of day the visit is booked for, "HH:mm" as on the clinic's wall
+  // clock (a floating time: no time zone, the same way visit dates are day-only).
+  // Null = no time set, and the visit shows as all-day in a shared calendar.
+  startTime      String?     @map("start_time")
   windowStart    DateTime    @map("window_start")
   windowEnd      DateTime    @map("window_end")
   actualDate     DateTime?   @map("actual_date")
@@ -429,20 +451,20 @@ model Visit {
 // doesn't see a "missing" template item and recreate it every time this
 // visit's checklist is viewed.
 model VisitChecklistResult {
-  id             String   @id @default(cuid())
-  organizationId String   @map("organization_id")
-  visitId        String   @map("visit_id")
-  templateItemId String?  @map("template_item_id")
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  visitId        String    @map("visit_id")
+  templateItemId String?   @map("template_item_id")
   label          String
   detail         String?
-  sortOrder      Int      @default(0) @map("sort_order")
-  verified       Boolean  @default(false)
+  sortOrder      Int       @default(0) @map("sort_order")
+  verified       Boolean   @default(false)
   // When the procedure was done. A "floating" wall-clock value: the digits the
   // coordinator entered, stored as if UTC and shown back the same way, so it
   // reads identically on every device and on the printed document.
   performedAt    DateTime? @map("performed_at")
-  removed        Boolean  @default(false)
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  removed        Boolean   @default(false)
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   visit        Visit                  @relation(fields: [visitId], references: [id])
   templateItem ChecklistTemplateItem? @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
@@ -539,4 +561,71 @@ model AuditLog {
   @@index([organizationId])
   @@index([tableName, recordId])
   @@map("audit_log")
+}
+
+// A visit FROM a monitor (CRA) to the site for one study: on a date, at a time, in
+// a room, with its own list of points to verify (MonitoringVisitItem) that can be
+// printed like a visit's procedure checklist. Shown in the visit calendar and in
+// the shared calendar feed, and included in the weekly heads-up message.
+// Tenant-scoped: has RLS + the audit trigger (see its migration).
+model MonitoringVisit {
+  id             String   @id @default(cuid())
+  organizationId String   @map("organization_id")
+  studyId        String   @map("study_id")
+  // Day only, stored at noon UTC like every other visit date (parseDateOnly).
+  visitDate      DateTime @map("visit_date")
+  // "HH:mm" on the clinic's wall clock, or null.
+  startTime      String?  @map("start_time")
+  room           String?
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization          @relation(fields: [organizationId], references: [id])
+  study        Study                 @relation(fields: [studyId], references: [id])
+  items        MonitoringVisitItem[]
+
+  @@index([organizationId, visitDate])
+  @@index([studyId])
+  @@map("monitoring_visits")
+}
+
+// One point to verify during a monitoring visit, ticked off as it is checked.
+// Tenant-scoped like its visit.
+model MonitoringVisitItem {
+  id                String   @id @default(cuid())
+  organizationId    String   @map("organization_id")
+  monitoringVisitId String   @map("monitoring_visit_id")
+  label             String
+  detail            String?
+  sortOrder         Int      @default(0) @map("sort_order")
+  verified          Boolean  @default(false)
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  organization    Organization    @relation(fields: [organizationId], references: [id])
+  monitoringVisit MonitoringVisit @relation(fields: [monitoringVisitId], references: [id], onDelete: Cascade)
+
+  @@index([monitoringVisitId])
+  @@index([organizationId])
+  @@map("monitoring_visit_items")
+}
+
+// A one-time "choose a new password" link sent by email (src/lib/password-reset.ts).
+// Only the SHA-256 of the token is stored. NOT tenant-scoped and not reachable by
+// the app's normal database role: like the sign-in lookup, a reset starts from an
+// email address alone, before anyone's organization is known, so it goes through
+// the owner-role client (prisma-auth.ts) and app_runtime has no access at all (see
+// its migration).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }

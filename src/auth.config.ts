@@ -1,5 +1,8 @@
 import type { NextAuthConfig } from "next-auth";
 
+// Pages anyone can open without being signed in.
+const PUBLIC_PAGES = ["/forgot-password", "/reset-password", "/request-access"];
+
 /**
  * Edge-safe half of the NextAuth config: no providers that touch Prisma
  * (Prisma's Node bindings don't run in the Edge middleware runtime), so this
@@ -15,10 +18,12 @@ export default {
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isLoginPage = request.nextUrl.pathname.startsWith("/login");
-      if (isLoginPage) {
+      const path = request.nextUrl.pathname;
+      if (path.startsWith("/login")) {
         return isLoggedIn ? Response.redirect(new URL("/dashboard", request.nextUrl)) : true;
       }
+      // Forgot password / reset password / request access: open to everyone.
+      if (PUBLIC_PAGES.some((page) => path === page || path.startsWith(`${page}/`))) return true;
       return isLoggedIn;
     },
   },

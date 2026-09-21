@@ -1,22 +1,21 @@
-import { LoginForm } from "./login-form";
-import { LanguageSelect } from "@/components/language-select";
+import Link from "next/link";
+import { AuthShell } from "@/components/auth-shell";
 import { getT } from "@/lib/i18n/server";
+import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
   const t = await getT();
   return (
-    <div className="flex flex-1 items-center justify-center bg-neutral-50 px-4 py-16 dark:bg-neutral-950">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <h1 className="text-xl font-semibold tracking-tight">{t("SiteWell-ct")}</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {t("Sign in to your organization's workspace")}</p>
-        </div>
-        <LoginForm />
-        <div className="mt-6 flex justify-center">
-          <LanguageSelect />
-        </div>
+    <AuthShell title={t("Sign in")} subtitle={t("Sign in to your organization's workspace")}>
+      <LoginForm />
+      <div className="mt-4 flex flex-col items-center gap-1.5 text-sm">
+        <Link href="/forgot-password" className="text-neutral-600 hover:underline dark:text-neutral-400">
+          {t("Forgot your password?")}
+        </Link>
+        <Link href="/request-access" className="text-neutral-600 hover:underline dark:text-neutral-400">
+          {t("Don't have an account? Request access")}
+        </Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }

@@ -4,9 +4,15 @@ import { AddUserForm } from "./add-user-form";
 import { TeamMemberRow } from "./team-member-row";
 import { getT } from "@/lib/i18n/server";
 
-export default async function TeamPage() {
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ name?: string; email?: string; role?: string; phone?: string }>;
+}) {
   const t = await getT();
   const session = await auth();
+  // Details of someone who asked for access, from the link in the admin's email.
+  const prefill = await searchParams;
   const canManage = session?.user?.role === "ORG_ADMIN" || session?.user?.isPlatformAdmin;
 
   if (!canManage) {
@@ -29,7 +35,14 @@ export default async function TeamPage() {
         </p>
       </div>
 
-      <AddUserForm />
+      <AddUserForm
+        prefill={{
+          name: prefill.name?.slice(0, 120),
+          email: prefill.email?.slice(0, 200),
+          role: prefill.role,
+          phone: prefill.phone?.slice(0, 40),
+        }}
+      />
 
       <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
         <table className="min-w-full divide-y divide-neutral-200 text-sm dark:divide-neutral-800">

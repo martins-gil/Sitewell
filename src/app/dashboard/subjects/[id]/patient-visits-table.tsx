@@ -14,6 +14,7 @@ export type PatientVisit = {
   targetLabel: string;
   windowLabel: string;
   targetInput: string; // YYYY-MM-DD
+  startTime: string; // "HH:mm" or ""
   windowBeforeDays: number;
   windowAfterDays: number;
 };
@@ -63,6 +64,7 @@ function VisitRow({ visit, repeat }: { visit: PatientVisit; repeat: RepeatOption
             visitId={visit.id}
             defaultName={visit.visitType}
             sourceDate={visit.targetInput}
+            sourceTime={visit.startTime}
             windowBeforeDays={visit.windowBeforeDays}
             windowAfterDays={visit.windowAfterDays}
             subjectId={repeat.subjectId}
@@ -93,12 +95,16 @@ function VisitRow({ visit, repeat }: { visit: PatientVisit; repeat: RepeatOption
                 />
               </div>
               <div>
+                <label className="block text-xs text-neutral-500">{t("Time (optional)")}</label>
+                <input type="time" name="startTime" defaultValue={visit.startTime} className={inputClass} />
+              </div>
+              <div>
                 <label className="block text-xs text-neutral-500">{t("Window before (days)")}</label>
                 <input
                   type="number"
                   name="windowBeforeDays"
                   min={0}
-                  defaultValue={visit.windowBeforeDays}
+                  defaultValue={Math.max(0, visit.windowBeforeDays)}
                   className={`${inputClass} w-24`}
                 />
               </div>
@@ -108,7 +114,7 @@ function VisitRow({ visit, repeat }: { visit: PatientVisit; repeat: RepeatOption
                   type="number"
                   name="windowAfterDays"
                   min={0}
-                  defaultValue={visit.windowAfterDays}
+                  defaultValue={Math.max(0, visit.windowAfterDays)}
                   className={`${inputClass} w-24`}
                 />
               </div>

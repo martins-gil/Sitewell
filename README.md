@@ -270,6 +270,24 @@ to org A, and a cross-tenant insert is rejected).
   - **Copying a patient**: entering the Baseline / Day 0 date places every
     protocol visit on its day from Baseline with the protocol's window (a
     repeated visit keeps its spacing).
+- ✅ Visit times, monitoring visits, weekly messages, and a friendlier sign-in:
+  - **Visit time**: each visit can have a time; it shows on the calendar and in
+    lists, and the shared calendar (Apple / Google / Outlook) gets a timed event
+    instead of an all-day one.
+  - **Monitoring visits** (sidebar): study, date, time, room, plus a checklist of
+    points to verify (tick them, paste a list, or copy an earlier visit's) that
+    prints like a procedure checklist. They appear in the visit calendar and the
+    shared calendar, room as the location.
+  - **Weekly message**: on Wednesdays and Thursdays an email — and, for people who
+    opt in with their phone number, a text — lists next week's visits (patients'
+    and monitoring). Everyone sets their own phone / opt-in under Settings →
+    Notifications (and an admin can add them when creating an account); admins
+    write the wording. Needs email (Resend) and, for texts, Twilio — until then
+    messages are only logged, and the screen says so.
+  - **Sign-in**: "Forgot your password?" (a one-hour, single-use link by email) and
+    "Request access" (emails the administrator, with the Add team member form
+    pre-filled), a rotating picture beside the form and the SiteWell logo — once the
+    image files are added (see `src/lib/brand.ts`).
 - ✅ Team management (`/dashboard/settings/team` — the old `/dashboard/team`
   redirects; org-admin-only — hidden from the tabs
   and blocked server-side for anyone else): add a coordinator/PI/org admin

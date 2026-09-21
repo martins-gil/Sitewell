@@ -39,6 +39,11 @@ export type ChecklistDocxHeader = {
   kits: string[];
   // The coordinator's free-text notes for this visit.
   notes: string | null;
+  // The same document laid out for something other than a patient visit (a
+  // monitoring visit's points to verify): its own heading instead of "Ordem de
+  // procedimentos <visit>", and its own names for the first two columns.
+  heading?: string;
+  columnLabels?: { order: string; items: string };
 };
 
 // A4 with 3 cm side margins, measured off the site's own template (the "V3"
@@ -180,7 +185,7 @@ export async function generateChecklistDocx(
             spacing: { before: 360, after: 160 },
             children: [
               new TextRun({
-                text: `Ordem de procedimentos ${header.visitType}${versionLabel ? ` (${versionLabel})` : ""}`,
+                text: header.heading ?? `Ordem de procedimentos ${header.visitType}${versionLabel ? ` (${versionLabel})` : ""}`,
                 bold: true,
                 smallCaps: true,
                 size: SECTION_HEADING,
@@ -196,8 +201,8 @@ export async function generateChecklistDocx(
               new TableRow({
                 tableHeader: true,
                 children: [
-                  headerCell(widths[0], "Ordem das avaliações"),
-                  headerCell(widths[1], "Avaliações"),
+                  headerCell(widths[0], header.columnLabels?.order ?? "Ordem das avaliações"),
+                  headerCell(widths[1], header.columnLabels?.items ?? "Avaliações"),
                   headerCell(widths[2], header.checklistColumn === "DATETIME" ? "Data/hora" : "Verificado"),
                 ],
               }),
