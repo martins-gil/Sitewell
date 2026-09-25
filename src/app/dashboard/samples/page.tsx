@@ -31,7 +31,20 @@ export default async function LabSamplesPage({
     frozenCount: s.frozenCount,
     notes: s.notes ?? "",
     kitIds: s.kits.map((k) => k.id),
-    kits: s.kits.map((k) => `${k.name} · ${k.visit?.subject.subjectCode ?? ""} · ${k.visit?.visitType ?? ""}`),
+    // The kit, its use (still in inventory or already used), the visit and the patient —
+    // each kit's samples are traceable back to exactly where they were collected.
+    kits: s.kits.map((k) => ({
+      name: k.name,
+      used: k.usedAt !== null,
+      subjectId: k.visit?.subject.id ?? null,
+      subjectCode: k.visit?.subject.subjectCode ?? null,
+      visitId: k.visit?.id ?? null,
+      visitType: k.visit?.visitType ?? null,
+      visitDateLabel: k.visit ? formatDate(k.visit.actualDate ?? k.visit.targetDate, t.locale) : null,
+    })),
+    confirmedShipped: s.confirmedShipped,
+    confirmedAtLabel: s.confirmedAt ? formatDate(s.confirmedAt, t.locale) : null,
+    notShippedReason: s.notShippedReason,
   }));
 
   const totals = shipments.reduce(
@@ -53,6 +66,9 @@ export default async function LabSamplesPage({
         <h1 className="text-2xl font-semibold tracking-tight">{t("Lab samples")}</h1>
         <p className="mt-1 text-sm text-neutral-500">
           {t("Shipments of the samples collected with the study kits: the airway bill (AWB), the date and how many samples went ambient, refrigerated and frozen.")}
+        </p>
+        <p className="mt-1 text-sm text-neutral-500">
+          {t("An e-mail asks in the afternoon whether the day's shipments actually went out; the answer (and, if not, why) shows on each row.")}
         </p>
       </div>
 

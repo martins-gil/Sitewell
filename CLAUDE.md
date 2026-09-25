@@ -554,6 +554,52 @@ picks this repo up next.
   everywhere (the digest, the banner, this grid). Clicking a grid day selects it; in Week
   mode its week is the highlighted band. The old Year view was dropped. `CalendarVisit` /
   `CalendarMonitoring` carry the extra fields (window, kits, point counts).
+- **Lab samples: kit traceability and the afternoon shipment confirmation.**
+  `getLabShipments` now also selects each kit's `usedAt` and its visit's subject/visit —
+  the table shows, per kit, whether it's used and a link to the patient AND the visit
+  (`shipments-table.tsx`'s `KitLine`). Confirmation ("were today's samples actually
+  shipped?", like a meeting invite's Yes/No) is four columns on `LabShipment`
+  (`confirmationSentAt`, `confirmedAt`, `confirmedShipped`, `notShippedReason` — no new
+  table, `lab_shipments` already has RLS). The e-mail is a DAILY cron,
+  `/api/cron/sample-shipment-confirm` (`vercel.json`: `0 15 * * *` UTC — that's an
+  ASSUMPTION about "the afternoon", move it if the user wants a different local time),
+  same shape as the other cron jobs: `CRON_SECRET`, platform-admin context via
+  `withTenantContext`, one e-mail per user of the shipment's organisation, and
+  `confirmationSentAt` stops it asking about the same shipment twice (checked in
+  `src/lib/sample-confirm-emails.ts`, only for shipments whose `shipDate` is today).
+  The Yes/No links carry a SIGNED, STATELESS token (`src/lib/sample-confirm.ts`,
+  `shipmentId.organizationId.HMAC-SHA256(AUTH_SECRET)` — same shape as the calendar
+  feed token) to a PUBLIC page, `/samples-confirm/[token]` (added to `PUBLIC_PAGES` in
+  `auth.config.ts`), which builds a tenant context SCOPED TO THAT ORGANISATION from the
+  token (never platform-admin, never `prisma-auth.ts` — same pattern as the calendar
+  feed route) so RLS still blocks a tampered token from touching another organisation's
+  shipment. Yes is one click; No opens a box that requires a reason before it submits —
+  deliberately NOT a bare GET-triggered write, because some corporate mail scanners
+  pre-fetch every link in an email, which would falsely "confirm" a shipment if clicking
+  alone mutated anything; the page requires an explicit button press (a server action)
+  every time. `setShipmentConfirmation` in `dashboard/samples/actions.ts` writes the
+  same fields from inside the app (an org-admin-free manual override, for when nobody
+  answers the e-mail or the answer needs correcting), shown as "Mark shipped" / "Mark not
+  shipped" next to "Awaiting confirmation" on a row with no answer yet.
+- **Country flags, not the language dropdown, on the sign-in pages.**
+  `components/country-flags.tsx` (top right, one row) replaces `LanguageSelect` inside
+  `auth-shell.tsx` only — Settings still uses the dropdown. The flags are hand-drawn SVG
+  (`components/flag-icons.tsx`), NOT emoji: emoji flags don't reliably render as flags on
+  every browser/OS (found by trying it — this environment showed the bare two-letter
+  code instead of a flag). English is the Union Jack; there's no single flag for a
+  language, only for a country.
+- **Pending issues** (`/dashboard/issues`, `PendingIssue`, tenant table with RLS + audit
+  in `20261001100000_…`): free text, optionally tied to a study (`studyId` nullable,
+  `ON DELETE SET NULL`) — a site-wide issue has none. Ticking the checkbox is a soft
+  "resolved" (`resolved` + `resolvedAt`), never a delete — `deletePendingIssue` (a
+  genuine "shouldn't have been logged" removal) is separate and does NOT appear in the
+  history. `/dashboard/issues/history` groups resolved issues by MONTH then WEEK
+  (Monday–Sunday, in UTC — the same convention as `getUpcomingWeeks`/`getWeekLoad`
+  elsewhere), newest first, computed in the page itself (not a shared query) since it
+  needs the locale for month/week labels; "Reopen" there just clears `resolved`. The
+  sidebar badge (`SidebarNav`'s new `badge` prop) is `getPendingIssueCount()` (open
+  issues only), read alongside the other layout queries — don't forget to add it to that
+  `Promise.all` if you touch that block.
 
 
 ## Before calling a change done

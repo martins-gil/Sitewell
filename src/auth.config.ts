@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
 // Pages anyone can open without being signed in.
-const PUBLIC_PAGES = ["/forgot-password", "/reset-password", "/request-access"];
+const PUBLIC_PAGES = ["/forgot-password", "/reset-password", "/request-access", "/samples-confirm"];
 
 /**
  * Edge-safe half of the NextAuth config: no providers that touch Prisma

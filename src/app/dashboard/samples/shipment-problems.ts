@@ -23,5 +23,7 @@ export function shipmentProblemText(t: TFunction, problem: ShipmentProblem, awb:
       return t("A kit you ticked hasn't been given to a patient's visit, so it has no samples.");
     case "KIT_TAKEN":
       return t("A kit you ticked is already in another shipment.");
+    case "MISSING_REASON":
+      return t("Enter a short reason.");
   }
 }

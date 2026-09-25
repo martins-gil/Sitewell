@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
-import { LanguageSelect } from "@/components/language-select";
+import { CountryFlags } from "@/components/country-flags";
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginArt } from "@/components/login-art";
 import { LOGIN_IMAGES } from "@/lib/brand";
@@ -19,6 +19,11 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
     <div className="relative flex min-h-screen items-center justify-center p-4">
       <LoginArt images={LOGIN_IMAGES} index={index} />
 
+      {/* One row of flags, top right, in place of a language dropdown. */}
+      <div className="absolute right-4 top-4 rounded-full bg-black/20 p-1.5 backdrop-blur">
+        <CountryFlags />
+      </div>
+
       <div className="relative w-full max-w-md rounded-2xl bg-surface p-8 shadow-2xl sm:p-10">
         <div className="mb-7 flex flex-col items-center text-center">
           <BrandLogo size="login" />
@@ -26,10 +31,6 @@ export async function AuthShell({ title, subtitle, children }: { title: string; 
           {subtitle && <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>}
         </div>
         {children}
-      </div>
-
-      <div className="absolute bottom-4 right-4 rounded-full bg-surface/90 p-1 shadow-md backdrop-blur">
-        <LanguageSelect className="rounded-full bg-transparent px-3 py-1 text-sm disabled:opacity-60" />
       </div>
     </div>
   );

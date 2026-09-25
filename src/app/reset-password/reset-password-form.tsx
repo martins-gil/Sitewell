@@ -45,7 +45,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   if (done) {
     return (
-      <div className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="space-y-4">
         <p>{t("Your password has been changed. You can sign in with it now.")}</p>
         <Link
           href="/login"
@@ -60,7 +60,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+      className="space-y-4"
     >
       <div>
         <label htmlFor="next" className="block text-sm font-medium">

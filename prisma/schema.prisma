@@ -101,6 +101,7 @@ model Organization {
   monitoringVisits     MonitoringVisit[]
   monitoringItems      MonitoringVisitItem[]
   labShipments         LabShipment[]
+  pendingIssues        PendingIssue[]
 
   @@map("organizations")
 }
@@ -210,6 +211,7 @@ model Study {
   kits             Kit[]
   monitoringVisits MonitoringVisit[]
   labShipments     LabShipment[]
+  pendingIssues    PendingIssue[]
 
   @@unique([organizationId, protocolId])
   @@index([organizationId])
@@ -417,19 +419,28 @@ model Kit {
 // visits, so a shipment can list those kits (Kit.shipmentId). The counts are typed in,
 // not derived from the kits. Tenant-scoped: RLS + the audit trigger (see its migration).
 model LabShipment {
-  id                String   @id @default(cuid())
-  organizationId    String   @map("organization_id")
-  studyId           String   @map("study_id")
+  id                 String    @id @default(cuid())
+  organizationId     String    @map("organization_id")
+  studyId            String    @map("study_id")
   // Upper-case, one per organization.
-  awb               String
+  awb                String
   // The day it went out — noon UTC, like every date-only value here.
-  shipDate          DateTime @map("ship_date")
-  ambientCount      Int      @default(0) @map("ambient_count")
-  refrigeratedCount Int      @default(0) @map("refrigerated_count")
-  frozenCount       Int      @default(0) @map("frozen_count")
-  notes             String?
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  shipDate           DateTime  @map("ship_date")
+  ambientCount       Int       @default(0) @map("ambient_count")
+  refrigeratedCount  Int       @default(0) @map("refrigerated_count")
+  frozenCount        Int       @default(0) @map("frozen_count")
+  notes              String?
+  // Afternoon confirmation e-mail ("were today's samples shipped?", like a meeting
+  // invite's Yes/No): confirmationSentAt is set once the email goes out (so the cron
+  // sends it only once per shipment); confirmedAt/confirmedShipped record the answer
+  // (null/null = no answer yet); notShippedReason is filled in only on a No answer.
+  // See src/lib/sample-confirm.ts and src/app/samples-confirm/.
+  confirmationSentAt DateTime? @map("confirmation_sent_at")
+  confirmedAt        DateTime? @map("confirmed_at")
+  confirmedShipped   Boolean?  @map("confirmed_shipped")
+  notShippedReason   String?   @map("not_shipped_reason")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id])
   study        Study        @relation(fields: [studyId], references: [id])
@@ -439,6 +450,28 @@ model LabShipment {
   @@index([organizationId])
   @@index([studyId, shipDate])
   @@map("lab_shipments")
+}
+
+// A pending issue to track down and resolve — free text, optionally tied to a study
+// (site-wide issues have no study). Ticking it off is a soft "resolved" (kept for the
+// history, grouped by week and month) rather than a delete, so nothing is lost.
+// Tenant-scoped: RLS + the audit trigger, see its migration.
+model PendingIssue {
+  id             String    @id @default(cuid())
+  organizationId String    @map("organization_id")
+  studyId        String?   @map("study_id")
+  text           String
+  resolved       Boolean   @default(false)
+  resolvedAt     DateTime? @map("resolved_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  study        Study?       @relation(fields: [studyId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([studyId])
+  @@map("pending_issues")
 }
 
 model Visit {

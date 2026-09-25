@@ -371,6 +371,33 @@ export function helpArticles(t: TFunction): HelpArticle[] {
       keywords: "awb airway bill lab laboratory samples shipment courier ambient refrigerated frozen send dispatch",
     },
     {
+      id: "sample-confirm",
+      category: kits,
+      question: t("What is the afternoon e-mail asking whether samples were shipped?"),
+      answer: t("For every shipment logged for that day, an e-mail goes out in the afternoon asking whether it actually went out — like a meeting invite, with a Yes and a No link. No opens a page asking for a short reason."),
+      steps: [
+        t("Click “Yes, they were shipped” or “No, they weren't” in the e-mail — it opens a page to confirm."),
+        t("Choosing No asks for a short reason before it's sent."),
+        t("The answer shows on the shipment's row in Lab samples; if nobody answers, mark it there by hand."),
+        t("You can change an answer at any time, from the e-mail's page or from Lab samples."),
+      ],
+      href: "/dashboard/samples",
+      keywords: "confirm confirmation shipped yes no accept decline afternoon email courier sent",
+    },
+    {
+      id: "pending-issues",
+      category: kits,
+      question: t("How do I keep track of pending issues?"),
+      answer: t("Pending issues is a running to-do list — free text, optionally tied to a study. Ticking one off moves it to the history, grouped by week and month; nothing is deleted."),
+      steps: [
+        t("Open Pending issues and describe the issue; pick a study if it's about one."),
+        t("Tick the box once it's sorted out — it moves to the history."),
+        t("Open History to see what was resolved, by week and month, or to reopen one by mistake."),
+      ],
+      href: "/dashboard/issues",
+      keywords: "issue issues pending todo to-do task tracker problem history resolved",
+    },
+    {
       id: "team",
       category: account,
       question: t("How do I add a colleague, or help someone who forgot their password?"),

@@ -18,7 +18,8 @@ export type ShipmentProblem =
   | "DUPLICATE_AWB"
   | "WRONG_STUDY"
   | "KIT_NOT_USED"
-  | "KIT_TAKEN";
+  | "KIT_TAKEN"
+  | "MISSING_REASON";
 export type ShipmentResult = { ok: true } | { ok: false; problem: ShipmentProblem };
 
 type Parsed = {
@@ -147,6 +148,30 @@ export async function updateShipment(shipmentId: string, formData: FormData): Pr
 export async function deleteShipment(shipmentId: string): Promise<ShipmentResult> {
   const ctx = await requireTenantContext();
   await withTenantContext(ctx, (tx) => tx.labShipment.delete({ where: { id: shipmentId } }));
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Records the afternoon confirmation ("were these samples shipped?") from inside the app —
+ * the same fields the public Yes/No link in the confirmation e-mail writes
+ * (src/app/samples-confirm/), for when nobody clicks it or the answer needs correcting.
+ */
+export async function setShipmentConfirmation(
+  shipmentId: string,
+  shipped: boolean,
+  reason?: string,
+): Promise<ShipmentResult> {
+  const ctx = await requireTenantContext();
+  const clean = shipped ? null : (reason ?? "").trim().slice(0, 1000) || null;
+  if (!shipped && !clean) return { ok: false, problem: "MISSING_REASON" };
+
+  await withTenantContext(ctx, (tx) =>
+    tx.labShipment.update({
+      where: { id: shipmentId },
+      data: { confirmedShipped: shipped, confirmedAt: new Date(), notShippedReason: clean },
+    }),
+  );
   refresh();
   return { ok: true };
 }

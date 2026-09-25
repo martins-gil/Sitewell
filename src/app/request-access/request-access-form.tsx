@@ -40,7 +40,7 @@ export function RequestAccessForm() {
 
   if (sent) {
     return (
-      <div className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="space-y-4">
         <p>{t("Thank you — your request has been sent to the administrator. You'll be contacted at the email address you gave once your account is ready.")}</p>
         <Link href="/login" className="inline-block font-medium hover:underline">
           {t("← Back to sign in")}
@@ -52,7 +52,7 @@ export function RequestAccessForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+      className="space-y-4"
     >
       <div>
         <label htmlFor="name" className="block text-sm font-medium">

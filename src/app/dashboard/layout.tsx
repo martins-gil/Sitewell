@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { auth } from "@/auth";
 import { getExpiringKitAlerts, getKitStockAlerts, getMustChangePassword, getStudies, getUpcomingWeeks } from "@/lib/queries";
+import { getPendingIssueCount } from "@/lib/pending-issues";
 import { daysUntil, formatDate, formatDayShort } from "@/lib/format";
 import { resolveStudyColors } from "@/lib/study-colors";
 import { SignOutButton } from "./sign-out-button";
@@ -23,6 +24,7 @@ const NAV: { href: string; label: string; icon: NavIconName }[] = [
   { href: "/dashboard/kits", label: "Kits Inventory", icon: "kits" },
   { href: "/dashboard/samples", label: "Lab samples", icon: "samples" },
   { href: "/dashboard/documents", label: "Documents", icon: "documents" },
+  { href: "/dashboard/issues", label: "Pending issues", icon: "issues" },
   { href: "/dashboard/help", label: "Help", icon: "help" },
   { href: "/dashboard/feedback", label: "Feedback", icon: "feedback" },
   // Display preferences, Team and Security all live under Settings.
@@ -42,9 +44,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // A platform admin has no organization of their own, so there's no "their"
   // kits or visits to warn about.
   const hasOrg = Boolean(session?.user?.organizationId);
-  const [kitAlerts, stockAlerts, weeks, studies, mustChangePassword] = hasOrg
-    ? await Promise.all([getExpiringKitAlerts(), getKitStockAlerts(), getUpcomingWeeks(), getStudies(), getMustChangePassword()])
-    : [[], [], { thisWeek: [], nextWeek: [] }, [], false];
+  const [kitAlerts, stockAlerts, weeks, studies, mustChangePassword, openIssues] = hasOrg
+    ? await Promise.all([
+        getExpiringKitAlerts(),
+        getKitStockAlerts(),
+        getUpcomingWeeks(),
+        getStudies(),
+        getMustChangePassword(),
+        getPendingIssueCount(),
+      ])
+    : [[], [], { thisWeek: [], nextWeek: [] }, [], false, 0];
 
   const expiringKits = kitAlerts.map((k) => ({
     id: k.id,
@@ -87,7 +96,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           )}
         </div>
 
-        <SidebarNav items={NAV.map((item) => ({ href: item.href, label: t(item.label), icon: item.icon }))} />
+        <SidebarNav
+          items={NAV.map((item) => ({
+            href: item.href,
+            label: t(item.label),
+            icon: item.icon,
+            badge: item.href === "/dashboard/issues" ? openIssues : undefined,
+          }))}
+        />
 
         <div className="mt-3 hidden lg:block">
           <div className="flex items-center gap-3 rounded-full bg-neutral-50 p-2 dark:bg-neutral-900">

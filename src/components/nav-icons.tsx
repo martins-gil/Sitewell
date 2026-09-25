@@ -10,6 +10,7 @@ export type NavIconName =
   | "kits"
   | "samples"
   | "documents"
+  | "issues"
   | "help"
   | "feedback"
   | "settings";
@@ -68,6 +69,15 @@ const PATHS: Record<NavIconName, React.ReactNode> = {
     <>
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+    </>
+  ),
+  // A checklist: a clipboard with a tick — pending issues to sort out.
+  issues: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z" />
+      <path d="m8.5 13 1.75 1.75L14.5 11" />
+      <path d="M8 17.5h8" />
     </>
   ),
   help: (

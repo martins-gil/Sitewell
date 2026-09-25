@@ -35,7 +35,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <div className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="space-y-4">
         <p>{t("If that email address has an account, we've sent it a link to choose a new password. The link works for one hour.")}</p>
         <p className="text-neutral-500">{t("Nothing arrived? Check your spam folder, or ask your administrator.")}</p>
         <Link href="/login" className="inline-block font-medium hover:underline">
@@ -48,7 +48,7 @@ export function ForgotPasswordForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+      className="space-y-4"
     >
       <div>
         <label htmlFor="email" className="block text-sm font-medium">

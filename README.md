@@ -278,8 +278,15 @@ to org A, and a cross-tenant insert is rejected).
     an email every 3 days ask for more, until someone marks them as requested. Kits can
     be added several at a time.
   - **Lab samples** (sidebar): one record per shipment with the airway bill (AWB), the
-    date and how many samples went ambient, refrigerated and frozen, optionally listing
-    the kits the samples were collected with; filter by study and dates, with totals.
+    date and how many samples went ambient, refrigerated and frozen; each kit line shows
+    whether it's used and links to its patient and visit; filter by study and dates,
+    with totals. An e-mail in the afternoon asks, for each of that day's shipments,
+    whether it actually went out — a Yes link and a No link (No asks for a short
+    reason first), like a meeting invite; the answer shows on the shipment's row, or can
+    be set there by hand if nobody answers.
+- ✅ Pending issues (sidebar): a running to-do list, optionally tied to a study; tick one
+  off and it moves to a history grouped by week and month, with a "Reopen" if that was a
+  mistake. The sidebar shows how many are still open.
 - ✅ Visit times, monitoring visits, weekly messages, and a friendlier sign-in:
   - **Visit time**: each visit can have a time; it shows on the calendar and in
     lists, and the shared calendar (Apple / Google / Outlook) gets a timed event

@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/kit-expiry", "schedule": "0 8 * * *" },
-    { "path": "/api/cron/visit-digest", "schedule": "0 8 * * 3,4" }
+    { "path": "/api/cron/visit-digest", "schedule": "0 8 * * 3,4" },
+    { "path": "/api/cron/sample-shipment-confirm", "schedule": "0 15 * * *" }
   ]
 }

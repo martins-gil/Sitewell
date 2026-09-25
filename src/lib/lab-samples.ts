@@ -23,11 +23,22 @@ export async function getLabShipments(filters: ShipmentFilters = {}) {
       },
       include: {
         study: { select: { protocolId: true } },
+        // Kit use (used / still in inventory), the visit and the patient — shown on
+        // each shipment's row so it's clear where every sample came from.
         kits: {
           select: {
             id: true,
             name: true,
-            visit: { select: { visitType: true, subject: { select: { subjectCode: true } } } },
+            usedAt: true,
+            visit: {
+              select: {
+                id: true,
+                visitType: true,
+                targetDate: true,
+                actualDate: true,
+                subject: { select: { id: true, subjectCode: true } },
+              },
+            },
           },
           orderBy: { name: "asc" },
         },

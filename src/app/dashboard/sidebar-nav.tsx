@@ -11,7 +11,11 @@ import { NavIcon, type NavIconName } from "@/components/nav-icons";
  * as it was until you switched sections and came back. (If the address carries
  * filters — /patients?study=… — the click is a normal navigation, which clears them.)
  */
-export function SidebarNav({ items }: { items: { href: string; label: string; icon: NavIconName }[] }) {
+export function SidebarNav({
+  items,
+}: {
+  items: { href: string; label: string; icon: NavIconName; badge?: number }[];
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [refreshing, startTransition] = useTransition();
@@ -38,8 +42,29 @@ export function SidebarNav({ items }: { items: { href: string; label: string; ic
                 : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white"
             } ${refreshing && pathname === item.href ? "animate-pulse" : ""}`}
           >
-            <NavIcon name={item.icon} className="h-[18px] w-[18px] shrink-0" />
-            <span className="hidden truncate lg:inline">{item.label}</span>
+            <span className="relative shrink-0">
+              <NavIcon name={item.icon} className="h-[18px] w-[18px]" />
+              {!!item.badge && (
+                <span
+                  aria-hidden
+                  className={`absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[9px] font-semibold lg:hidden ${
+                    active ? "bg-white text-neutral-900 dark:bg-neutral-900 dark:text-white" : "bg-accent text-white"
+                  }`}
+                >
+                  {item.badge > 9 ? "9+" : item.badge}
+                </span>
+              )}
+            </span>
+            <span className="hidden flex-1 truncate lg:inline">{item.label}</span>
+            {!!item.badge && (
+              <span
+                className={`hidden shrink-0 rounded-full px-1.5 py-0.5 text-xs font-semibold lg:inline ${
+                  active ? "bg-white/20" : "bg-accent text-white"
+                }`}
+              >
+                {item.badge}
+              </span>
+            )}
           </Link>
         );
       })}
