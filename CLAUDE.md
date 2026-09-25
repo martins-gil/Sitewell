@@ -581,13 +581,11 @@ picks this repo up next.
   same fields from inside the app (an org-admin-free manual override, for when nobody
   answers the e-mail or the answer needs correcting), shown as "Mark shipped" / "Mark not
   shipped" next to "Awaiting confirmation" on a row with no answer yet.
-- **Country flags, not the language dropdown, on the sign-in pages.**
-  `components/country-flags.tsx` (top right, one row) replaces `LanguageSelect` inside
-  `auth-shell.tsx` only — Settings still uses the dropdown. The flags are hand-drawn SVG
-  (`components/flag-icons.tsx`), NOT emoji: emoji flags don't reliably render as flags on
+- **Country flags on the sign-in pages were tried and reverted** (the user didn't like
+  them, once live) — `auth-shell.tsx` is back to the `LanguageSelect` dropdown,
+  bottom right. If this comes up again: emoji flags don't reliably render as flags on
   every browser/OS (found by trying it — this environment showed the bare two-letter
-  code instead of a flag). English is the Union Jack; there's no single flag for a
-  language, only for a country.
+  code instead of a flag), so hand-drawn SVG would be needed, not emoji.
 - **Pending issues** (`/dashboard/issues`, `PendingIssue`, tenant table with RLS + audit
   in `20261001100000_…`): free text, optionally tied to a study (`studyId` nullable,
   `ON DELETE SET NULL`) — a site-wide issue has none. Ticking the checkbox is a soft
